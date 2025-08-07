@@ -2,7 +2,7 @@
 
 ## One-Stop Digital Solution for Small & Mid-Sized Businesses
 
-PocketShop transforms your payment QR into a powerful business tool. Go beyond payments - create a complete online presence, manage orders, and engage customers, all through a single QR code. No apps, no websites, just scan and grow.
+PocketShop transforms your payment QR into a powerful business tool. Go beyond payments - create a complete online presence, manage orders, and engage customers, all through a single QR code. just scan and grow.
 
 ### Features
 - 🚀 Transform payment QR into a business portal
