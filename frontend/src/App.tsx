@@ -218,7 +218,7 @@ function LandingPage() {
         position: 'relative',
         zIndex: 10,
         padding: '1.5rem 0',
-        background: 'rgba(255, 255, 255, 0.05)',
+        background: 'rgba(29, 21, 21, 0.05)',
         backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         opacity: isVisible ? 1 : 0,
