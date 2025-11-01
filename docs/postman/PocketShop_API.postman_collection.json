@@ -1,0 +1,380 @@
+{
+  "info": {
+    "name": "PocketShop API",
+    "description": "API collection for PocketShop - Virtual Storefront Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "pocketshop"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Sign Up (Vendor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.access_token) {",
+                  "        pm.environment.set(\"access_token\", jsonData.access_token);",
+                  "        pm.environment.set(\"user_id\", jsonData.user.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vendor@example.com\",\n  \"password\": \"securepassword123\",\n  \"data\": {\n    \"full_name\": \"John Doe\",\n    \"role\": \"vendor\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/v1/signup",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "v1", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                  "    pm.environment.set(\"user_id\", jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vendor@example.com\",\n  \"password\": \"securepassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/v1/token?grant_type=password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "v1", "token"],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/v1/user",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "v1", "user"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Businesses",
+      "item": [
+        {
+          "name": "Create Business",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData[0] && jsonData[0].id) {",
+                  "        pm.environment.set(\"business_id\", jsonData[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Restaurant\",\n  \"description\": \"A test restaurant\",\n  \"category\": \"restaurant\",\n  \"address\": \"123 Main St\",\n  \"phone\": \"+1234567890\",\n  \"email\": \"restaurant@example.com\",\n  \"qr_code\": \"test-qr-{{$randomInt}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rest/v1/businesses",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "businesses"]
+            }
+          }
+        },
+        {
+          "name": "Get Business by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/businesses?id=eq.{{business_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "businesses"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "eq.{{business_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Business by QR Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/businesses?qr_code=eq.test-qr-123&is_active=eq.true",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "businesses"],
+              "query": [
+                {
+                  "key": "qr_code",
+                  "value": "eq.test-qr-123"
+                },
+                {
+                  "key": "is_active",
+                  "value": "eq.true"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"business_id\": \"{{business_id}}\",\n  \"name\": \"Burger\",\n  \"description\": \"Delicious burger\",\n  \"price\": 9.99,\n  \"category\": \"food\",\n  \"preparation_time\": 15\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rest/v1/products",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/products?business_id=eq.{{business_id}}&is_available=eq.true",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "products"],
+              "query": [
+                {
+                  "key": "business_id",
+                  "value": "eq.{{business_id}}"
+                },
+                {
+                  "key": "is_available",
+                  "value": "eq.true"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"business_id\": \"{{business_id}}\",\n  \"customer_name\": \"Jane Customer\",\n  \"customer_phone\": \"+1987654321\",\n  \"customer_email\": \"customer@example.com\",\n  \"total_amount\": 19.98,\n  \"status\": \"pending\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rest/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{anon_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rest/v1/orders?business_id=eq.{{business_id}}&select=*,order_items(*,products(*))",
+              "host": ["{{base_url}}"],
+              "path": ["rest", "v1", "orders"],
+              "query": [
+                {
+                  "key": "business_id",
+                  "value": "eq.{{business_id}}"
+                },
+                {
+                  "key": "select",
+                  "value": "*,order_items(*,products(*))"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "anon_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
+
