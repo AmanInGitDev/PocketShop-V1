@@ -2,6 +2,17 @@
 
 Transform any QR code into a powerful, app-free virtual storefront for local businesses.
 
+## 📁 Project Structure
+
+This project is organized into separate frontend and backend directories:
+
+- **`frontend/`** - React + TypeScript + Vite application
+- **`backend/`** - Backend services (Future implementation)
+- **`docs/`** - Project documentation
+- **`Reports/`** - Project reports and updates
+
+See [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) for detailed structure information.
+
 ## 🎯 Project Overview
 
 PocketShop is an innovative platform that converts standard QR codes into comprehensive digital storefronts. Local businesses can manage orders in real-time, engage customers with interactive menus, and access AI-driven insights—all without requiring customers to download any apps.
@@ -27,6 +38,33 @@ PocketShop is an innovative platform that converts standard QR codes into compre
 - **Build Tool**: Vite
 
 ## 🚀 Quick Start
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+### Backend Setup
+
+Backend implementation is planned for future releases. See `backend/README.md` for details.
+
+## 📚 Documentation
+
+- [Project Structure](./PROJECT_STRUCTURE.md) - Detailed folder structure
+- [Supabase Setup Guide](./frontend/SUPABASE_SETUP.md) - Authentication setup
+- [API Documentation](./docs/api/) - API documentation
+- [Component Library](./docs/COMPONENT_LIBRARY.md) - UI components
+
+---
+
+## 🚀 Quick Start (Legacy)
 
 ### Prerequisites
 

@@ -1,21 +1,22 @@
 {
   "name": "pocketshop",
   "version": "1.0.0",
-  "type": "module",
   "description": "Transform QR codes into powerful, app-free virtual storefronts for local businesses",
-  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --maxWorkers=2"
+    "dev": "npm run dev --workspace=frontend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "install:all": "npm install && npm install --workspace=frontend && npm install --workspace=backend",
+    "lint": "npm run lint --workspace=frontend",
+    "test": "npm run test --workspace=frontend"
   },
   "keywords": [
     "qr-code",
@@ -25,37 +26,5 @@
     "typescript"
   ],
   "author": "Aman",
-  "license": "MIT",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.38.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.1",
-    "lucide-react": "^0.294.0",
-    "tailwindcss": "^3.3.0"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/user-event": "^14.5.1",
-    "@types/jest": "^29.5.11",
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
-    "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.10.0",
-    "@vitejs/plugin-react": "^4.1.0",
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.53.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.4",
-    "identity-obj-proxy": "^3.0.0",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "postcss": "^8.4.31",
-    "prettier": "^3.1.1",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2",
-    "vite": "^4.5.0"
-  }
+  "license": "MIT"
 }
