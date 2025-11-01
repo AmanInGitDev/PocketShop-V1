@@ -43,23 +43,112 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (error) {
           console.error('Error getting session:', error);
           setError(error.message);
-        } else if (session?.user) {
-          // Fetch user profile data
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
+          setLoading(false);
+          return;
+        }
+        
+        // If no session, user is not logged in
+        if (!session?.user) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch vendor profile data
+        try {
+          const { data: vendorProfile, error: profileError } = await supabase
+            .from('vendor_profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('user_id', session.user.id)
             .single();
 
           if (profileError) {
-            console.error('Error fetching user profile:', profileError);
-            setError(profileError.message);
-          } else {
+            console.log('Profile error:', profileError.code, profileError.message);
+            
+            // If vendor profile doesn't exist, create it (for users added directly in Supabase)
+            if (profileError.code === 'PGRST116') {
+              console.log('Profile not found, creating new vendor profile...');
+              const userMetadata = session.user.user_metadata || {};
+              const { error: createError } = await supabase
+                .from('vendor_profiles')
+                .insert([
+                  {
+                    user_id: session.user.id,
+                    email: session.user.email || '',
+                    business_name: userMetadata.business_name || userMetadata.full_name || session.user.email?.split('@')[0] || 'My Business',
+                    mobile_number: userMetadata.mobile_number || '',
+                    owner_name: userMetadata.full_name || userMetadata.name || session.user.email?.split('@')[0] || 'Vendor',
+                    onboarding_status: 'incomplete',
+                  },
+                ]);
+
+              if (createError) {
+                console.error('Error creating vendor profile:', createError);
+                // Still set basic user info even if profile creation fails
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  full_name: session.user.email?.split('@')[0] || 'Vendor',
+                  role: 'vendor',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              } else {
+                // Fetch the newly created profile
+                const { data: newProfile } = await supabase
+                  .from('vendor_profiles')
+                  .select('*')
+                  .eq('user_id', session.user.id)
+                  .single();
+                
+                if (newProfile) {
+                  // Map vendor_profiles to User type
+                  setUser({
+                    id: newProfile.user_id,
+                    email: newProfile.email,
+                    full_name: newProfile.owner_name || newProfile.business_name || 'Vendor',
+                    avatar_url: newProfile.logo_url || undefined,
+                    role: 'vendor',
+                    created_at: newProfile.created_at,
+                    updated_at: newProfile.updated_at,
+                  });
+                }
+              }
+            } else {
+              console.error('Error fetching vendor profile:', profileError);
+              // If RLS policy issue or other error, still allow login with basic info
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                full_name: session.user.email?.split('@')[0] || 'Vendor',
+                role: 'vendor',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+            }
+          } else if (vendorProfile) {
+            // Map vendor_profiles to User type
             setUser({
-              ...profile,
-              avatar_url: profile.avatar_url || undefined,
+              id: vendorProfile.user_id,
+              email: vendorProfile.email,
+              full_name: vendorProfile.owner_name || vendorProfile.business_name || 'Vendor',
+              avatar_url: vendorProfile.logo_url || undefined,
+              role: 'vendor',
+              created_at: vendorProfile.created_at,
+              updated_at: vendorProfile.updated_at,
             });
           }
+        } catch (profileErr) {
+          console.error('Exception fetching vendor profile:', profileErr);
+          // Still allow login with basic info
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: session.user.email?.split('@')[0] || 'Vendor',
+            role: 'vendor',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
         }
       } catch (err) {
         console.error('Unexpected error:', err);
@@ -82,57 +171,86 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Auth state changed:', event, session?.user?.id);
         
         if (session?.user) {
-          // Check if user profile exists, create if it doesn't (for OAuth and OTP users)
-          let { data: profile, error: profileError } = await supabase
-            .from('users')
+          // Check if vendor profile exists, create if it doesn't (for OAuth and OTP users)
+          let { data: vendorProfile, error: profileError } = await supabase
+            .from('vendor_profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('user_id', session.user.id)
             .single();
 
-          // If profile doesn't exist, create one (for OAuth/OTP users)
+          // If vendor profile doesn't exist, create one (for OAuth/OTP users)
           if (profileError && profileError.code === 'PGRST116') {
             // Profile doesn't exist, create it
             const userMetadata = session.user.user_metadata || {};
             const { error: createError } = await supabase
-              .from('users')
+              .from('vendor_profiles')
               .insert([
                 {
-                  id: session.user.id,
+                  user_id: session.user.id,
                   email: session.user.email || '',
-                  full_name: userMetadata.full_name || userMetadata.name || session.user.email?.split('@')[0] || 'Vendor',
-                  role: userMetadata.role || 'vendor',
-                  avatar_url: userMetadata.avatar_url || userMetadata.picture || null,
+                  business_name: userMetadata.business_name || userMetadata.full_name || session.user.email?.split('@')[0] || 'My Business',
+                  mobile_number: userMetadata.mobile_number || '',
+                  owner_name: userMetadata.full_name || userMetadata.name || session.user.email?.split('@')[0] || 'Vendor',
+                  onboarding_status: 'incomplete',
                 },
               ]);
 
             if (createError) {
-              console.error('Error creating user profile:', createError);
+              console.error('Error creating vendor profile:', createError);
               setError(createError.message);
-              setUser(null);
+              // Still set basic user info even if profile creation fails
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                full_name: session.user.email?.split('@')[0] || 'Vendor',
+                role: 'vendor',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
             } else {
               // Fetch the newly created profile
               const { data: newProfile } = await supabase
-                .from('users')
+                .from('vendor_profiles')
                 .select('*')
-                .eq('id', session.user.id)
+                .eq('user_id', session.user.id)
                 .single();
               
               if (newProfile) {
+                // Map vendor_profiles to User type
                 setUser({
-                  ...newProfile,
-                  avatar_url: newProfile.avatar_url || undefined,
+                  id: newProfile.user_id,
+                  email: newProfile.email,
+                  full_name: newProfile.owner_name || newProfile.business_name || 'Vendor',
+                  avatar_url: newProfile.logo_url || undefined,
+                  role: 'vendor',
+                  created_at: newProfile.created_at,
+                  updated_at: newProfile.updated_at,
                 });
                 setError(null);
               }
             }
           } else if (profileError) {
-            console.error('Error fetching user profile:', profileError);
+            console.error('Error fetching vendor profile:', profileError);
             setError(profileError.message);
-            setUser(null);
-          } else if (profile) {
+            // Still set basic user info from session even if profile fetch fails
             setUser({
-              ...profile,
-              avatar_url: profile.avatar_url || undefined,
+              id: session.user.id,
+              email: session.user.email || '',
+              full_name: session.user.email?.split('@')[0] || 'Vendor',
+              role: 'vendor',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          } else if (vendorProfile) {
+            // Map vendor_profiles to User type
+            setUser({
+              id: vendorProfile.user_id,
+              email: vendorProfile.email,
+              full_name: vendorProfile.owner_name || vendorProfile.business_name || 'Vendor',
+              avatar_url: vendorProfile.logo_url || undefined,
+              role: 'vendor',
+              created_at: vendorProfile.created_at,
+              updated_at: vendorProfile.updated_at,
             });
             setError(null);
           }
@@ -168,21 +286,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { data: null, error };
       }
 
-      // If signup is successful, create user profile
-      if (data.user) {
+      // If signup is successful, create vendor profile
+      if (data.user && userData.role === 'vendor') {
         const { error: profileError } = await supabase
-          .from('users')
+          .from('vendor_profiles')
           .insert([
             {
-              id: data.user.id,
+              user_id: data.user.id,
               email: data.user.email!,
-              full_name: userData.full_name,
-              role: userData.role,
+              business_name: userData.full_name || 'My Business',
+              owner_name: userData.full_name,
+              mobile_number: '', // Will be updated during onboarding
+              onboarding_status: 'incomplete',
             },
           ]);
 
         if (profileError) {
-          console.error('Error creating user profile:', profileError);
+          console.error('Error creating vendor profile:', profileError);
           setError(profileError.message);
           return { data, error: profileError };
         }

@@ -58,7 +58,9 @@ Backend implementation is planned for future releases. See `backend/README.md` f
 ## 📚 Documentation
 
 - [Project Structure](./PROJECT_STRUCTURE.md) - Detailed folder structure
-- [Supabase Setup Guide](./frontend/SUPABASE_SETUP.md) - Authentication setup
+- [Login Setup Guide](./docs/development/LOGIN_SETUP.md) - Vendor authentication setup
+- [Supabase Setup Guide](./docs/development/SUPABASE_SETUP.md) - Complete Supabase configuration
+- [Database Setup](./docs/database/) - Database schema and RLS policies
 - [API Documentation](./docs/api/) - API documentation
 - [Component Library](./docs/COMPONENT_LIBRARY.md) - UI components
 
@@ -174,8 +176,8 @@ Progress is tracked daily in the `Reports/Daily/` directory. Each report include
 
 1. Create a new Supabase project
 2. Run the database migrations (see `docs/database/`)
-3. Set up Row Level Security (RLS) policies
-4. Configure authentication settings
+3. Set up Row Level Security (RLS) policies (see `docs/database/RLS_POLICIES.sql`)
+4. Configure authentication settings (see `docs/development/SUPABASE_SETUP.md`)
 
 ### Environment Variables
 

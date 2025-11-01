@@ -5,7 +5,7 @@
  * It provides a clean login form with proper validation.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { signInWithGoogle, sendOTP, verifyOTP } from '@/services/supabase';
@@ -41,7 +41,14 @@ interface FormErrors {
 
 const VendorLogin: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, user } = useAuth();
+  
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/vendor/dashboard');
+    }
+  }, [user, loading, navigate]);
   
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [emailFormData, setEmailFormData] = useState<EmailFormData>({
@@ -141,8 +148,8 @@ const VendorLogin: React.FC = () => {
       if (error) {
         setErrors({ submit: error.message });
       } else {
-        // Check if onboarding is complete, if not redirect to onboarding
-        navigate('/vendor/onboarding');
+        // Redirect to dashboard after successful login
+        navigate('/vendor/dashboard');
       }
     } catch (err) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
@@ -199,8 +206,8 @@ const VendorLogin: React.FC = () => {
       if (error) {
         setErrors({ submit: error.message });
       } else {
-        // Check if onboarding is complete, if not redirect to onboarding
-        navigate('/vendor/onboarding');
+        // Redirect to dashboard after successful login
+        navigate('/vendor/dashboard');
       }
     } catch (err) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
@@ -208,6 +215,24 @@ const VendorLogin: React.FC = () => {
       setOtpLoading(false);
     }
   };
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="vendor-login">
+        <div className="login-container">
+          <div className="login-content">
+            <div className="login-card">
+              <div className="card-header">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="vendor-login">
