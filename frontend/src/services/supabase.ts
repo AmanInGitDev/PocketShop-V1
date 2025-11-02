@@ -77,7 +77,12 @@ export const signUp = async (email: string, password: string, userData: {
     email,
     password,
     options: {
-      data: userData,
+      data: {
+        ...userData,
+        user_type: userData.role, // Trigger expects user_type
+        business_name: userData.full_name, // For vendors
+      },
+      emailRedirectTo: `${window.location.origin}/vendor/onboarding/stage-1`,
     },
   });
   return { data, error };
@@ -109,7 +114,7 @@ export const signInWithGoogle = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/vendor/dashboard`,
+      redirectTo: `${window.location.origin}/vendor/auth`,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
@@ -140,6 +145,9 @@ export const verifyOTP = async (phone: string, token: string) => {
     phone,
     token,
     type: 'sms',
+    options: {
+      redirectTo: `${window.location.origin}/vendor/onboarding/stage-1`,
+    },
   });
   return { data, error };
 };

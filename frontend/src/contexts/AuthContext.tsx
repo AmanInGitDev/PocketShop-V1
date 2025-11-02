@@ -27,6 +27,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Force stop loading after maximum 15 seconds - safety net
+  useEffect(() => {
+    const forceStopTimer = setTimeout(() => {
+      if (loading) {
+        console.warn('Force stopping loading after 15 second timeout');
+        setLoading(false);
+        setError('Connection timeout. Please refresh the page.');
+      }
+    }, 15000);
+
+    return () => clearTimeout(forceStopTimer);
+  }, [loading]);
+
   useEffect(() => {
     // Get initial session with timeout
     const getInitialSession = async () => {
@@ -68,13 +81,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Fetch vendor profile data
+        // Fetch vendor profile data with timeout
         try {
-          const { data: vendorProfile, error: profileError } = await supabase
+          // Add timeout for profile query to prevent hanging
+          const profileTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Profile query timeout')), 8000)
+          );
+
+          const profileQuery = supabase
             .from('vendor_profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
+
+          const { data: vendorProfile, error: profileError } = await Promise.race([
+            profileQuery,
+            profileTimeout
+          ]) as any;
 
           if (profileError) {
             console.log('Profile error:', profileError.code, profileError.message);
@@ -190,13 +213,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             return;
           }
           
+          // Handle OAuth callback redirects
+          if (event === 'SIGNED_IN' && session?.user) {
+            // Check if this is an OAuth callback
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('code') || window.location.hash.includes('access_token')) {
+              // Clear URL params after OAuth
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+          
           if (session?.user) {
             // Check if vendor profile exists, create if it doesn't (for OAuth and OTP users)
-            let { data: vendorProfile, error: profileError } = await supabase
+            // Add timeout to prevent hanging
+            const profileTimeout = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Profile query timeout')), 8000)
+            );
+
+            const profileQuery = supabase
               .from('vendor_profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .single();
+
+            let { data: vendorProfile, error: profileError } = await Promise.race([
+              profileQuery,
+              profileTimeout
+            ]) as any;
 
             // If vendor profile doesn't exist, create one (for OAuth/OTP users)
             if (profileError && profileError.code === 'PGRST116') {
@@ -247,6 +290,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     updated_at: newProfile.updated_at,
                   });
                   setError(null);
+                  
+                  // Redirect to onboarding if this is a new user (OAuth/OTP)
+                  if (event === 'SIGNED_IN') {
+                    const onboardingStatus = newProfile.onboarding_status;
+                    if (onboardingStatus === 'completed') {
+                      setTimeout(() => {
+                        window.location.href = '/vendor/dashboard';
+                      }, 100);
+                    } else {
+                      setTimeout(() => {
+                        window.location.href = '/vendor/onboarding/stage-1';
+                      }, 100);
+                    }
+                  }
                 }
               }
             } else if (profileError) {
@@ -273,15 +330,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 updated_at: vendorProfile.updated_at,
               });
               setError(null);
+              
+              // Redirect based on onboarding status (only on SIGNED_IN event, not INITIAL_SESSION)
+              if (event === 'SIGNED_IN') {
+                const onboardingStatus = vendorProfile.onboarding_status;
+                if (onboardingStatus === 'completed') {
+                  // Redirect to dashboard if onboarding is complete
+                  setTimeout(() => {
+                    window.location.href = '/vendor/dashboard';
+                  }, 100);
+                } else {
+                  // Redirect to onboarding if not completed
+                  setTimeout(() => {
+                    window.location.href = '/vendor/onboarding/stage-1';
+                  }, 100);
+                }
+              }
             }
           } else {
             setUser(null);
             setError(null);
+            setLoading(false);
           }
         } catch (err) {
           console.error('Error in auth state change:', err);
           setError('An error occurred during authentication');
+          // Always set loading to false, even on error
+          setLoading(false);
         } finally {
+          // Ensure loading is always set to false
           setLoading(false);
         }
       }

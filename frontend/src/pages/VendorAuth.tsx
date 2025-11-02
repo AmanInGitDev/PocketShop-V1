@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { signInWithGoogle, sendOTP, verifyOTP } from '@/services/supabase';
+import { signInWithGoogle, sendOTP, verifyOTP, supabase } from '@/services/supabase';
 import { 
   Store, 
   ArrowLeft, 
@@ -52,11 +52,70 @@ const VendorAuth: React.FC = () => {
   const navigate = useNavigate();
   const { signUp, signIn, loading, user } = useAuth();
   
-  // Redirect to dashboard if already logged in
+  // Redirect based on onboarding status if already logged in
+  // Only redirect if user is fully authenticated (session exists and valid)
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/vendor/dashboard');
-    }
+    let isMounted = true;
+    
+    const checkAndRedirect = async () => {
+      // Don't redirect if still loading
+      if (loading) {
+        return;
+      }
+
+      // Only redirect if user exists
+      if (!user) {
+        return;
+      }
+
+      try {
+        // Check session directly from Supabase to verify email confirmation
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
+        if (!isMounted) return;
+        
+        // If session exists and user has email, check if confirmed
+        if (session?.user?.email && !session.user.email_confirmed_at) {
+          // Email not confirmed - stay on auth page
+          // Don't redirect, let user see confirmation message
+          console.log('Email not confirmed, staying on auth page');
+          return;
+        }
+        
+        // Email confirmed or OAuth/OTP user - proceed with redirect
+        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
+        const redirectPath = await getOnboardingRedirectPath(user.id);
+        
+        if (!isMounted) return;
+        
+        // Only navigate if path is different from current
+        if (window.location.pathname !== redirectPath) {
+          console.log('Redirecting to:', redirectPath);
+          navigate(redirectPath, { replace: true });
+        }
+      } catch (err) {
+        console.error('Error checking session/onboarding:', err);
+        // On error, default to onboarding (safer than dashboard)
+        if (isMounted && window.location.pathname !== '/vendor/onboarding/stage-1') {
+          navigate('/vendor/onboarding/stage-1', { replace: true });
+        }
+      }
+    };
+
+    // Add small delay to prevent race conditions
+    const timer = setTimeout(() => {
+      checkAndRedirect();
+    }, 100);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [user, loading, navigate]);
   
   const [mode, setMode] = useState<Mode>('login');
@@ -213,9 +272,10 @@ const VendorAuth: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setErrors({});
 
     try {
-      const { error } = await signUp(
+      const { data, error } = await signUp(
         registerFormData.email,
         registerFormData.password,
         {
@@ -227,12 +287,36 @@ const VendorAuth: React.FC = () => {
 
       if (error) {
         setErrors({ submit: error.message });
+      } else if (data?.user) {
+        // Check if email confirmation is required
+        // If user.email is null OR user is not confirmed, email confirmation needed
+        if (!data.user.email || !data.user.email_confirmed_at) {
+          // Don't redirect - stay on register page with confirmation message
+          setErrors({ 
+            submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
+            success: true
+          });
+          // Clear form data
+          setRegisterFormData({
+            businessName: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            mobileNumber: ''
+          });
+        } else {
+          // User is already confirmed, redirect to onboarding
+          navigate('/vendor/onboarding/stage-1');
+        }
       } else {
-        // Redirect to onboarding after successful registration
-        navigate('/vendor/onboarding');
+        // No user data but no error - usually means confirmation email sent
+        setErrors({ 
+          submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
+          success: true
+        });
       }
-    } catch (err) {
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
+    } catch (err: any) {
+      setErrors({ submit: err.message || 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -248,13 +332,18 @@ const VendorAuth: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await signIn(emailFormData.email, emailFormData.password);
+      const { data, error } = await signIn(emailFormData.email, emailFormData.password);
 
       if (error) {
         setErrors({ submit: error.message });
+      } else if (data?.user) {
+        // Check onboarding status and redirect accordingly
+        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
+        const redirectPath = await getOnboardingRedirectPath(data.user.id);
+        navigate(redirectPath);
       } else {
-        // Redirect to dashboard after successful login
-        navigate('/vendor/dashboard');
+        // Fallback redirect
+        navigate('/vendor/onboarding/stage-1');
       }
     } catch (err) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
@@ -265,14 +354,17 @@ const VendorAuth: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    setErrors({});
     try {
       const { error } = await signInWithGoogle();
       if (error) {
         setErrors({ submit: error.message });
+        setGoogleLoading(false);
       }
-    } catch (err) {
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-    } finally {
+      // OAuth redirect will be handled by onAuthStateChange in AuthContext
+      // The redirect happens automatically after successful OAuth
+    } catch (err: any) {
+      setErrors({ submit: err.message || 'An unexpected error occurred. Please try again.' });
       setGoogleLoading(false);
     }
   };
@@ -307,12 +399,17 @@ const VendorAuth: React.FC = () => {
 
     setOtpLoading(true);
     try {
-      const { error } = await verifyOTP(phoneFormData.phone, phoneFormData.otp);
+      const { data, error } = await verifyOTP(phoneFormData.phone, phoneFormData.otp);
       if (error) {
         setErrors({ submit: error.message });
+      } else if (data?.user) {
+        // Check onboarding status and redirect accordingly
+        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
+        const redirectPath = await getOnboardingRedirectPath(data.user.id);
+        navigate(redirectPath);
       } else {
-        // Redirect to dashboard after successful login
-        navigate('/vendor/dashboard');
+        // Fallback redirect
+        navigate('/vendor/onboarding/stage-1');
       }
     } catch (err) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
@@ -397,7 +494,8 @@ const VendorAuth: React.FC = () => {
               </p>
             </div>
 
-            {/* Google OAuth Button */}
+            {/* Google OAuth Button - Only show on Login, not Register */}
+            {mode === 'login' && (
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -421,10 +519,14 @@ const VendorAuth: React.FC = () => {
                 </>
               )}
             </button>
+            )}
 
+            {/* Divider - Only show on Login (when Google button is visible) */}
+            {mode === 'login' && (
             <div className="divider">
               <span>or</span>
             </div>
+            )}
 
             {/* Register Form */}
             {mode === 'register' && (
@@ -558,10 +660,10 @@ const VendorAuth: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Submit Error */}
+                {/* Submit Error/Success */}
                 {errors.submit && (
-                  <div className="submit-error">
-                    <AlertCircle className="error-icon" />
+                  <div className={errors.success ? "submit-success" : "submit-error"}>
+                    {!errors.success && <AlertCircle className="error-icon" />}
                     {errors.submit}
                   </div>
                 )}

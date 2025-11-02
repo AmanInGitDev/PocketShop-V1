@@ -338,6 +338,19 @@
   flex-shrink: 0;
 }
 
+.submit-success {
+  background-color: #d1fae5;
+  border: 1px solid #10b981;
+  color: #065f46;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
 .submit-error {
   display: flex;
   align-items: center;
