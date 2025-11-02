@@ -9,7 +9,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { signInWithGoogle, sendOTP, verifyOTP, supabase } from '@/services/supabase';
 import { 
-  Store, 
   ArrowLeft, 
   Eye, 
   EyeOff, 
@@ -21,6 +20,7 @@ import {
   Phone,
   Smartphone
 } from 'lucide-react';
+import logoImage from '../logo.png';
 import './VendorAuth.css';
 
 type Mode = 'register' | 'login';
@@ -48,9 +48,33 @@ interface FormErrors {
   [key: string]: string;
 }
 
-const VendorAuth: React.FC = () => {
+interface VendorAuthProps {
+  mode?: Mode;
+}
+
+const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
   const navigate = useNavigate();
   const { signUp, signIn, loading, user } = useAuth();
+  
+  // Determine initial mode from prop or URL
+  const getInitialMode = (): Mode => {
+    if (initialMode) return initialMode;
+    const path = window.location.pathname;
+    if (path === '/register') return 'register';
+    return 'login';
+  };
+  
+  const [mode, setMode] = useState<Mode>(getInitialMode());
+  
+  // Sync mode with URL changes
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/register' && mode !== 'register') {
+      setMode('register');
+    } else if (path === '/login' && mode !== 'login') {
+      setMode('login');
+    }
+  }, [mode]);
   
   // Redirect based on onboarding status if already logged in
   // Only redirect if user is fully authenticated (session exists and valid)
@@ -117,8 +141,6 @@ const VendorAuth: React.FC = () => {
       clearTimeout(timer);
     };
   }, [user, loading, navigate]);
-  
-  const [mode, setMode] = useState<Mode>('login');
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
 
   // Register form state
@@ -447,7 +469,7 @@ const VendorAuth: React.FC = () => {
           </Link>
           
           <div className="header-logo">
-            <Store className="logo-icon" />
+            <img src={logoImage} alt="PocketShop Logo" className="logo-icon" />
             <span className="logo-text">PocketShop</span>
           </div>
         </header>
@@ -462,6 +484,7 @@ const VendorAuth: React.FC = () => {
                 className={`mode-btn ${mode === 'login' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('login');
+                  navigate('/login');
                   setErrors({});
                   setOtpSent(false);
                 }}
@@ -474,6 +497,7 @@ const VendorAuth: React.FC = () => {
                 className={`mode-btn ${mode === 'register' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('register');
+                  navigate('/register');
                   setErrors({});
                   setOtpSent(false);
                 }}

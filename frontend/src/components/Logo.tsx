@@ -1,11 +1,11 @@
 /**
  * Logo Component
  * 
- * Sample logo component for PocketShop.
- * This will be replaced with the actual logo when available.
+ * Logo component for PocketShop.
  */
 
 import React from 'react';
+import logoImage from '../logo.png';
 
 interface LogoProps {
   className?: string;
@@ -14,23 +14,26 @@ interface LogoProps {
 
 const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
   const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-12 w-12'
+    sm: 'h-8',
+    md: 'h-10',
+    lg: 'h-12'
+  };
+
+  const textSizeClasses = {
+    sm: 'text-xl',
+    md: 'text-2xl',
+    lg: 'text-3xl'
   };
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Sample Logo - Purple gradient circle with "P" */}
-      <div
-        className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-lg`}
-      >
-        <span className="text-white font-bold text-lg">P</span>
-      </div>
+      <img
+        src={logoImage}
+        alt="PocketShop Logo"
+        className={`${sizeClasses[size]} w-auto object-contain`}
+      />
       <span
-        className={`text-white font-bold ${
-          size === 'sm' ? 'text-xl' : size === 'md' ? 'text-2xl' : 'text-3xl'
-        }`}
+        className={`text-white font-bold ${textSizeClasses[size]}`}
       >
         PocketShop
       </span>
