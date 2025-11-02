@@ -27,6 +27,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Force stop loading after maximum 15 seconds - safety net
+  useEffect(() => {
+    const forceStopTimer = setTimeout(() => {
+      if (loading) {
+        console.warn('Force stopping loading after 15 second timeout');
+        setLoading(false);
+        setError('Connection timeout. Please refresh the page.');
+      }
+    }, 15000);
+
+    return () => clearTimeout(forceStopTimer);
+  }, [loading]);
+
   useEffect(() => {
     // Get initial session with timeout
     const getInitialSession = async () => {
@@ -40,17 +53,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         console.log('Getting session...');
         
-        // Add timeout to prevent infinite loading
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session request timeout')), 10000)
-        );
-        
-        const sessionPromise = supabase.auth.getSession();
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        // Get session directly - if it hangs, the force stop timer will catch it
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
@@ -61,20 +65,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         console.log('Session result:', session?.user?.id ? 'User logged in' : 'No session');
         
-        // If no session, user is not logged in
+        // If no session, user is not logged in - stop loading immediately
         if (!session?.user) {
+          console.log('No session found, user not logged in');
           setUser(null);
           setLoading(false);
           return;
         }
 
-        // Fetch vendor profile data
+        // User has session - fetch profile but don't block on it
+        // Set loading to false quickly, profile can load in background
+        console.log('Session found, fetching vendor profile...');
+        setLoading(false); // Stop loading immediately - we have a session
+        
+        // Fetch vendor profile data - don't block if it fails
         try {
-          const { data: vendorProfile, error: profileError } = await supabase
+          // Query profile with a reasonable timeout
+          const profilePromise = supabase
             .from('vendor_profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
+          
+          // Set a timeout for profile query (3 seconds)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+          );
+          
+          const { data: vendorProfile, error: profileError } = await Promise.race([
+            profilePromise,
+            timeoutPromise
+          ]) as any;
 
           if (profileError) {
             console.log('Profile error:', profileError.code, profileError.message);
@@ -83,6 +104,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (profileError.code === 'PGRST116') {
               console.log('Profile not found, creating new vendor profile...');
               const userMetadata = session.user.user_metadata || {};
+              
+              // Try to create vendor profile directly
+              // Note: This requires user_roles entry to exist (created by trigger or manually)
+              // If this fails due to missing role, we'll set user anyway and let onboarding handle it
               const { error: createError } = await supabase
                 .from('vendor_profiles')
                 .insert([
@@ -98,7 +123,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
               if (createError) {
                 console.error('Error creating vendor profile:', createError);
-                // Still set basic user info even if profile creation fails
+                console.log('Note: If profile creation fails, user_roles entry may be missing. Profile will be created during onboarding.');
+                // Still set basic user info - profile can be created during onboarding
                 setUser({
                   id: session.user.id,
                   email: session.user.email || '',
@@ -154,7 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } catch (profileErr) {
           console.error('Exception fetching vendor profile:', profileErr);
-          // Still allow login with basic info
+          // Still allow login with basic info - profile can load later
           setUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -167,9 +193,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (err) {
         console.error('Unexpected error:', err);
         setError('An unexpected error occurred');
-      } finally {
-        setLoading(false);
+        // If we have a session, still set user
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: session.user.email?.split('@')[0] || 'Vendor',
+            role: 'vendor',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
       }
+      // Loading already set to false above when session found
     };
 
     getInitialSession();
@@ -190,99 +226,125 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             return;
           }
           
+          // Handle OAuth callback redirects
+          if (event === 'SIGNED_IN' && session?.user) {
+            // Check if this is an OAuth callback
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('code') || window.location.hash.includes('access_token')) {
+              // Clear URL params after OAuth
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+          
           if (session?.user) {
-            // Check if vendor profile exists, create if it doesn't (for OAuth and OTP users)
-            let { data: vendorProfile, error: profileError } = await supabase
-              .from('vendor_profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .single();
-
-            // If vendor profile doesn't exist, create one (for OAuth/OTP users)
-            if (profileError && profileError.code === 'PGRST116') {
-              // Profile doesn't exist, create it
-              const userMetadata = session.user.user_metadata || {};
-              const { error: createError } = await supabase
-                .from('vendor_profiles')
-                .insert([
-                  {
-                    user_id: session.user.id,
-                    email: session.user.email || '',
-                    business_name: userMetadata.business_name || userMetadata.full_name || session.user.email?.split('@')[0] || 'My Business',
-                    mobile_number: userMetadata.mobile_number || '',
-                    owner_name: userMetadata.full_name || userMetadata.name || session.user.email?.split('@')[0] || 'Vendor',
-                    onboarding_status: 'incomplete',
-                  },
-                ]);
-
-              if (createError) {
-                console.error('Error creating vendor profile:', createError);
-                setError(createError.message);
-                // Still set basic user info even if profile creation fails
-                setUser({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  full_name: session.user.email?.split('@')[0] || 'Vendor',
-                  role: 'vendor',
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                });
-              } else {
-                // Fetch the newly created profile
-                const { data: newProfile } = await supabase
+            // Stop loading immediately - we have a session
+            setLoading(false);
+            
+            // Set user immediately from session (non-blocking)
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Vendor',
+              role: 'vendor',
+              created_at: session.user.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+            
+            // Load profile in background (non-blocking) - don't await
+            (async () => {
+              try {
+                // Check if vendor profile exists, create if it doesn't (for OAuth and OTP users)
+                const { data: vendorProfile, error: profileError } = await supabase
                   .from('vendor_profiles')
                   .select('*')
                   .eq('user_id', session.user.id)
                   .single();
+
+                // If vendor profile doesn't exist, create one (for OAuth/OTP users)
+                if (profileError && profileError.code === 'PGRST116') {
+                  // Profile doesn't exist, create it
+                  const userMetadata = session.user.user_metadata || {};
                 
-                if (newProfile) {
-                  // Map vendor_profiles to User type
+                  // Try to create vendor profile directly
+                  // Note: This requires user_roles entry to exist (created by trigger or manually)
+                  // If this fails due to missing role, we'll set user anyway and let onboarding handle it
+                  const { error: createError } = await supabase
+                    .from('vendor_profiles')
+                    .insert([
+                      {
+                        user_id: session.user.id,
+                        email: session.user.email || '',
+                        business_name: userMetadata.business_name || userMetadata.full_name || session.user.email?.split('@')[0] || 'My Business',
+                        mobile_number: userMetadata.mobile_number || '',
+                        owner_name: userMetadata.full_name || userMetadata.name || session.user.email?.split('@')[0] || 'Vendor',
+                        onboarding_status: 'incomplete',
+                      },
+                    ]);
+
+                  if (createError) {
+                    console.error('Error creating vendor profile:', createError);
+                    console.log('Note: If profile creation fails, user_roles entry may be missing. Profile will be created during onboarding.');
+                    // Profile creation failed, but user is already set from session above
+                  } else {
+                    // Fetch the newly created profile and update user
+                    const { data: newProfile } = await supabase
+                      .from('vendor_profiles')
+                      .select('*')
+                      .eq('user_id', session.user.id)
+                      .single();
+                    
+                    if (newProfile) {
+                      // Update user with full profile data
+                      setUser({
+                        id: newProfile.user_id,
+                        email: newProfile.email,
+                        full_name: newProfile.owner_name || newProfile.business_name || 'Vendor',
+                        avatar_url: newProfile.logo_url || undefined,
+                        role: 'vendor',
+                        created_at: newProfile.created_at,
+                        updated_at: newProfile.updated_at,
+                      });
+                      setError(null);
+                      
+                      // Don't redirect here - let VendorAuth handle redirects to prevent loops
+                    }
+                  }
+                } else if (profileError) {
+                  console.error('Error fetching vendor profile:', profileError);
+                  // Profile fetch failed, but user is already set from session above
+                } else if (vendorProfile) {
+                  // Update user with full profile data
                   setUser({
-                    id: newProfile.user_id,
-                    email: newProfile.email,
-                    full_name: newProfile.owner_name || newProfile.business_name || 'Vendor',
-                    avatar_url: newProfile.logo_url || undefined,
+                    id: vendorProfile.user_id,
+                    email: vendorProfile.email,
+                    full_name: vendorProfile.owner_name || vendorProfile.business_name || 'Vendor',
+                    avatar_url: vendorProfile.logo_url || undefined,
                     role: 'vendor',
-                    created_at: newProfile.created_at,
-                    updated_at: newProfile.updated_at,
+                    created_at: vendorProfile.created_at,
+                    updated_at: vendorProfile.updated_at,
                   });
                   setError(null);
+                  
+                  // Don't redirect here - let VendorAuth or other components handle redirects
+                  // This prevents infinite reload loops
+                  // The redirect will be handled by VendorAuth useEffect or login handler
                 }
+              } catch (profileErr: any) {
+                console.error('Exception in profile fetch/creation:', profileErr);
+                // User is already set from session above, so no need to set again
               }
-            } else if (profileError) {
-              console.error('Error fetching vendor profile:', profileError);
-              setError(profileError.message);
-              // Still set basic user info from session even if profile fetch fails
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                full_name: session.user.email?.split('@')[0] || 'Vendor',
-                role: 'vendor',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-            } else if (vendorProfile) {
-              // Map vendor_profiles to User type
-              setUser({
-                id: vendorProfile.user_id,
-                email: vendorProfile.email,
-                full_name: vendorProfile.owner_name || vendorProfile.business_name || 'Vendor',
-                avatar_url: vendorProfile.logo_url || undefined,
-                role: 'vendor',
-                created_at: vendorProfile.created_at,
-                updated_at: vendorProfile.updated_at,
-              });
-              setError(null);
-            }
+            })(); // End of background profile loading
           } else {
             setUser(null);
             setError(null);
+            setLoading(false);
           }
         } catch (err) {
           console.error('Error in auth state change:', err);
           setError('An error occurred during authentication');
-        } finally {
           setLoading(false);
+          // Clear user on error
+          setUser(null);
         }
       }
     );

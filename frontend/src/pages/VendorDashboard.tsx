@@ -4,7 +4,7 @@
  * Main dashboard route that handles sub-routes for different sections.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -15,20 +15,70 @@ import Inventory from './Inventory';
 import Insights from './Insights';
 import Payouts from './Payouts';
 import Settings from './Settings';
+import { getOnboardingRedirectPath } from '../utils/onboardingCheck';
+import { supabase } from '../services/supabase';
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  // Redirect to auth if not authenticated
+  // Redirect to auth if not authenticated, or to onboarding if incomplete
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/vendor/auth');
-    }
+    const checkAuthAndOnboarding = async () => {
+      if (!loading && !user) {
+        navigate('/login');
+        return;
+      }
+
+      if (!loading && user) {
+        // Check onboarding status
+        try {
+          const { data: vendorProfile, error } = await supabase
+            .from('vendor_profiles')
+            .select('onboarding_status')
+            .eq('user_id', user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching vendor profile:', error);
+            // If profile doesn't exist (PGRST116), redirect to onboarding where it can be created
+            // AuthContext should have created it, but if not, onboarding will handle it
+            if (error.code === 'PGRST116') {
+              console.log('Vendor profile not found, redirecting to onboarding');
+            }
+            navigate('/vendor/onboarding/stage-1');
+            return;
+          }
+
+          if (!vendorProfile) {
+            console.log('No vendor profile found, redirecting to onboarding');
+            navigate('/vendor/onboarding/stage-1');
+            return;
+          }
+
+          if (vendorProfile.onboarding_status !== 'completed') {
+            // Onboarding incomplete - redirect to stage 1
+            console.log('Onboarding incomplete, redirecting to stage-1');
+            navigate('/vendor/onboarding/stage-1');
+            return;
+          }
+
+          // Onboarding complete - stay on dashboard
+          console.log('Onboarding complete, staying on dashboard');
+          setCheckingOnboarding(false);
+        } catch (err) {
+          console.error('Error checking onboarding:', err);
+          navigate('/vendor/onboarding/stage-1');
+        }
+      }
+    };
+
+    checkAuthAndOnboarding();
   }, [user, loading, navigate]);
 
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth or onboarding
+  if (loading || checkingOnboarding) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

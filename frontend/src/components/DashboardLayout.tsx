@@ -14,12 +14,12 @@ import {
   DollarSign, 
   Settings, 
   LogOut,
-  Store,
   Menu,
   X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import logoImage from '../logo.png';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -83,7 +83,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/vendor/auth');
+    navigate('/business');
   };
 
   const isActiveRoute = (path: string): boolean => {
@@ -96,7 +96,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Store className="w-6 h-6 text-blue-600" />
+            <img src={logoImage} alt="PocketShop Logo" className="h-6 w-auto object-contain" />
             <span className="text-lg font-bold text-gray-900">PocketShop</span>
           </div>
           <button
@@ -128,9 +128,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         >
           {/* Desktop Logo */}
           <div className="hidden lg:flex items-center gap-3 px-6 py-6 border-b border-gray-200">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <Store className="w-6 h-6 text-white" />
-            </div>
+            <img src={logoImage} alt="PocketShop Logo" className="h-10 w-auto object-contain" />
             <div>
               <h1 className="text-xl font-bold text-gray-900">PocketShop</h1>
               <p className="text-xs text-gray-500">Vendor Portal</p>
