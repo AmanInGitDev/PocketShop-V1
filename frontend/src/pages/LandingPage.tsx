@@ -99,7 +99,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 bg-black/30 backdrop-blur-md border-b border-white/10">
+      <header className="fixed top-0 w-full z-50 bg-purple-900/10 backdrop-blur-[12px] border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -108,7 +108,9 @@ const LandingPage: React.FC = () => {
             {/* Desktop Navigation Menu */}
             <nav className="hidden md:flex items-center gap-8">
               <a
-                href="#"
+                href="/about-us"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-white/90 hover:text-white text-sm font-medium transition-colors"
               >
                 About us
@@ -188,7 +190,9 @@ const LandingPage: React.FC = () => {
             <nav className="md:hidden mt-4 pb-4 border-t border-white/10">
               <div className="flex flex-col gap-4 pt-4">
                 <a
-                  href="#"
+                  href="/about-us"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white/90 hover:text-white text-sm font-medium transition-colors py-2"
                 >
                   About us
@@ -224,7 +228,7 @@ const LandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 py-16 lg:py-24">
+      <section className="relative z-10 pt-28 pb-16 lg:pt-32 lg:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Main Headline */}
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white text-center mb-20">
@@ -1148,7 +1152,9 @@ const LandingPage: React.FC = () => {
                   </li>
                   <li>
                     <a 
-                      href="#" 
+                      href="/about-us"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="footer-link group relative inline-block text-white/70 text-sm
                                  transition-all duration-300 hover:text-white"
                     >

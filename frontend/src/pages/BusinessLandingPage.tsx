@@ -8,51 +8,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { signInWithGoogle, sendOTP, verifyOTP, supabase } from '../services/supabase';
-import { 
-  Eye, 
-  EyeOff, 
-  LogIn,
-  UserPlus,
-  AlertCircle,
-  Loader2,
-  Mail,
-  Phone,
-  Smartphone,
-  Store,
-  ArrowLeft
-} from 'lucide-react';
+import { supabase } from '../services/supabase';
+import { Loader2 } from 'lucide-react';
 import Logo from '../components/Logo';
-import './VendorAuth.css';
-
-type Mode = 'register' | 'login';
-type LoginMethod = 'email' | 'phone';
-
-interface RegisterFormData {
-  businessName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  mobileNumber: string;
-}
-
-interface EmailFormData {
-  email: string;
-  password: string;
-}
-
-interface PhoneFormData {
-  phone: string;
-  otp: string;
-}
-
-interface FormErrors {
-  [key: string]: string;
-}
 
 const BusinessLandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp, signIn, loading, user } = useAuth();
+  const { loading, user } = useAuth();
+  const [footerAccordions, setFooterAccordions] = useState({
+    platform: false,
+    resources: false,
+    company: false,
+  });
   
   // Redirect based on onboarding status if already logged in
   useEffect(() => {
@@ -108,311 +75,13 @@ const BusinessLandingPage: React.FC = () => {
       clearTimeout(timer);
     };
   }, [user, loading, navigate]);
-  
-  const [mode, setMode] = useState<Mode>('login');
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
-  const [showAuthForm, setShowAuthForm] = useState(false);
-
-  // Register form state
-  const [registerFormData, setRegisterFormData] = useState<RegisterFormData>({
-    businessName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    mobileNumber: ''
-  });
-
-  // Login form state
-  const [emailFormData, setEmailFormData] = useState<EmailFormData>({
-    email: '',
-    password: ''
-  });
-  const [phoneFormData, setPhoneFormData] = useState<PhoneFormData>({
-    phone: '',
-    otp: ''
-  });
-
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-
-  const validateRegisterForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!registerFormData.businessName.trim()) {
-      newErrors.businessName = 'Business name is required';
-    }
-
-    if (!registerFormData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(registerFormData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!registerFormData.password) {
-      newErrors.password = 'Password is required';
-    } else if (registerFormData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (!registerFormData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (registerFormData.password !== registerFormData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!registerFormData.mobileNumber.trim()) {
-      newErrors.mobileNumber = 'Mobile number is required';
-    } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(registerFormData.mobileNumber.replace(/\s/g, ''))) {
-      newErrors.mobileNumber = 'Please enter a valid mobile number';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateEmailLogin = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!emailFormData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(emailFormData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!emailFormData.password) {
-      newErrors.password = 'Password is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validatePhoneLogin = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!phoneFormData.phone.trim()) {
-      newErrors.phone = 'Mobile number is required';
-    } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(phoneFormData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid mobile number';
-    }
-
-    if (otpSent && !phoneFormData.otp.trim()) {
-      newErrors.otp = 'OTP is required';
-    } else if (otpSent && phoneFormData.otp.length !== 6) {
-      newErrors.otp = 'OTP must be 6 digits';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleRegisterInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setRegisterFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEmailFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handlePhoneInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPhoneFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateRegisterForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrors({});
-
-    try {
-      const { data, error } = await signUp(
-        registerFormData.email,
-        registerFormData.password,
-        {
-          full_name: registerFormData.businessName,
-          mobile_number: registerFormData.mobileNumber,
-          role: 'vendor'
-        }
-      );
-
-      if (error) {
-        setErrors({ submit: error.message });
-      } else if (data?.user) {
-        if (!data.user.email || !data.user.email_confirmed_at) {
-          setErrors({ 
-            submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
-            success: true
-          });
-          setRegisterFormData({
-            businessName: '',
-            email: '',
-            password: '',
-            confirmPassword: '',
-            mobileNumber: ''
-          });
-        } else {
-          navigate('/vendor/onboarding/stage-1');
-        }
-      } else {
-        setErrors({ 
-          submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
-          success: true
-        });
-      }
-    } catch (err: any) {
-      setErrors({ submit: err.message || 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleEmailLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateEmailLogin()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const { data, error } = await signIn(emailFormData.email, emailFormData.password);
-
-      if (error) {
-        setErrors({ submit: error.message });
-      } else if (data?.user) {
-        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
-        const redirectPath = await getOnboardingRedirectPath(data.user.id);
-        navigate(redirectPath);
-      } else {
-        navigate('/vendor/onboarding/stage-1');
-      }
-    } catch (err) {
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
-    setErrors({});
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        setErrors({ submit: error.message });
-        setGoogleLoading(false);
-      }
-    } catch (err: any) {
-      setErrors({ submit: err.message || 'An unexpected error occurred. Please try again.' });
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleSendOTP = async () => {
-    if (!validatePhoneLogin()) {
-      return;
-    }
-
-    setOtpLoading(true);
-    try {
-      const { error } = await sendOTP(phoneFormData.phone);
-      if (error) {
-        setErrors({ submit: error.message });
-      } else {
-        setOtpSent(true);
-        setErrors({});
-      }
-    } catch (err) {
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validatePhoneLogin()) {
-      return;
-    }
-
-    setOtpLoading(true);
-    try {
-      const { data, error } = await verifyOTP(phoneFormData.phone, phoneFormData.otp);
-      if (error) {
-        setErrors({ submit: error.message });
-      } else if (data?.user) {
-        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
-        const redirectPath = await getOnboardingRedirectPath(data.user.id);
-        navigate(redirectPath);
-      } else {
-        navigate('/vendor/onboarding/stage-1');
-      }
-    } catch (err) {
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   const handleGetStarted = () => {
-    setShowAuthForm(true);
-    setMode('register');
-    // Scroll to auth form
-    setTimeout(() => {
-      document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    navigate('/register');
   };
 
   const handleSignInClick = () => {
-    setShowAuthForm(true);
-    setMode('login');
-    setTimeout(() => {
-      document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    navigate('/login');
   };
 
   // Show loading while checking auth
@@ -427,7 +96,7 @@ const BusinessLandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <header className="bg-black/30 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+      <header className="bg-transparent backdrop-blur-md border-b border-white/10 fixed top-0 w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <Link to="/">
@@ -452,7 +121,7 @@ const BusinessLandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-32">
+      <section className="pt-28 py-20 lg:pt-32 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
@@ -466,53 +135,69 @@ const BusinessLandingPage: React.FC = () => {
           </div>
 
           {/* Before/After Comparison */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 md:p-12 border border-white/20 mb-16">
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Before */}
+          <div className="mb-16">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Before - Darker, Desaturated Glass Card */}
               <div className="text-center">
-                <h3 className="text-2xl font-bold text-red-400 mb-6">Before</h3>
-                <div className="bg-red-500/20 rounded-lg p-6 border border-red-500/30">
-                  <ul className="space-y-3 text-white/70 text-left">
-                    <li className="flex items-start">
-                      <span className="text-red-400 mr-2">✗</span>
-                      Limited customer reach
+                <h3 className="text-2xl font-bold text-gray-400 mb-6">Before</h3>
+                <div className="bg-purple-900/20 backdrop-blur-md rounded-xl p-8 border border-purple-800/30 shadow-lg">
+                  <ul className="space-y-4 text-white/70 text-left">
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>Relied on "data-blind" intuition for big decisions</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-red-400 mr-2">✗</span>
-                      Manual order management
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>Manual, cumbersome order tracking</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-red-400 mr-2">✗</span>
-                      No sales analytics
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>Verbal orders prone to miscommunication and errors</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-red-400 mr-2">✗</span>
-                      Difficult customer discovery
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>Customers left waiting with no order status</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>Static menus that are hard to update</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-700 text-lg font-bold flex-shrink-0 mt-0.5">✗</span>
+                      <span>High costs and complex training for other "solutions"</span>
                     </li>
                   </ul>
                 </div>
               </div>
 
-              {/* After */}
+              {/* After - Brighter Glass Card with Pink Border */}
               <div className="text-center">
-                <h3 className="text-2xl font-bold text-green-400 mb-6">After</h3>
-                <div className="bg-green-500/20 rounded-lg p-6 border border-green-500/30">
-                  <ul className="space-y-3 text-white/70 text-left">
-                    <li className="flex items-start">
-                      <span className="text-green-400 mr-2">✓</span>
-                      Expanded customer base
+                <h3 className="text-2xl font-bold text-pink-500 mb-6">After</h3>
+                <div className="bg-purple-800/25 backdrop-blur-md rounded-xl p-8 border border-pink-500/50 shadow-lg relative">
+                  <ul className="space-y-4 text-white text-left">
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>Data-driven decision-making with an AI-powered engine</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-green-400 mr-2">✓</span>
-                      Automated order system
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>A smart dashboard with live, real-time orders</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-green-400 mr-2">✓</span>
-                      Real-time analytics dashboard
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>Customers place their own accurate, customized digital orders</span>
                     </li>
-                    <li className="flex items-start">
-                      <span className="text-green-400 mr-2">✓</span>
-                      Easy customer discovery
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>Customers track their order status in real-time</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>Dynamic menu customization from your dashboard</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-pink-500 text-lg font-bold flex-shrink-0 mt-0.5">✓</span>
+                      <span>A lightweight, cost-effective platform with no new hardware needed</span>
                     </li>
                   </ul>
                 </div>
@@ -634,494 +319,369 @@ const BusinessLandingPage: React.FC = () => {
               >
                 Sign Up Now
               </button>
-              <button
-                onClick={handleSignInClick}
-                className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors border border-white/30"
-              >
-                Sign In
-              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Authentication Section */}
-      {showAuthForm && (
-        <section id="auth-section" className="py-16 bg-white/5 backdrop-blur-sm">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
-              {/* Mode Toggle */}
-              <div className="mode-toggle mb-6">
-                <button
-                  type="button"
-                  className={`mode-btn ${mode === 'login' ? 'active' : ''}`}
-                  onClick={() => {
-                    setMode('login');
-                    setErrors({});
-                    setOtpSent(false);
-                  }}
+      {/* Footer */}
+      <footer className="relative z-10 bg-black/60 backdrop-blur-md border-t border-white/10 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          {/* Main Footer Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 mb-12">
+            {/* Left Section - Brand Info */}
+            <div className="lg:col-span-2">
+              <Logo size="lg" />
+              <p className="text-white/80 text-lg font-medium mt-4 mb-3">
+                Empower Your Business
+              </p>
+              <p className="text-white/60 text-sm leading-relaxed max-w-md mb-6">
+                Join thousands of businesses using PocketShop to reach more customers, 
+                track sales, and grow with data-driven insights.
+              </p>
+              
+              {/* Social Media Icons - No Dark Boxes */}
+              <div className="flex gap-4 justify-center md:justify-start mb-8 md:mb-0">
+                <a
+                  href="#"
+                  className="group transition-all duration-300 hover:scale-110"
                 >
-                  <LogIn className="mode-icon" />
-                  Login
-                </button>
-                <button
-                  type="button"
-                  className={`mode-btn ${mode === 'register' ? 'active' : ''}`}
-                  onClick={() => {
-                    setMode('register');
-                    setErrors({});
-                    setOtpSent(false);
-                  }}
-                >
-                  <UserPlus className="mode-icon" />
-                  Register
-                </button>
-              </div>
-
-              <div className="card-header">
-                <h1 className="card-title">
-                  {mode === 'register' ? 'Join PocketShop' : 'Welcome Back'}
-                </h1>
-                <p className="card-subtitle">
-                  {mode === 'register' 
-                    ? 'Create your account and start building your smart storefront'
-                    : 'Sign in to your PocketShop account'}
-                </p>
-              </div>
-
-              {/* Google OAuth Button - Only show on Login */}
-              {mode === 'login' && (
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={googleLoading || isSubmitting || otpLoading}
-                  className="btn btn-google"
-                >
-                  {googleLoading ? (
-                    <>
-                      <Loader2 className="btn-icon spinning" />
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="btn-icon" width="20" height="20" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      Sign in with Google
-                    </>
-                  )}
-                </button>
-              )}
-
-              {/* Divider - Only show on Login */}
-              {mode === 'login' && (
-                <div className="divider">
-                  <span>or</span>
-                </div>
-              )}
-
-              {/* Register Form */}
-              {mode === 'register' && (
-                <form onSubmit={handleRegisterSubmit} className="auth-form">
-                  <div className="form-group">
-                    <label htmlFor="businessName" className="form-label">
-                      Business Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="businessName"
-                      name="businessName"
-                      value={registerFormData.businessName}
-                      onChange={handleRegisterInputChange}
-                      className={`form-input ${errors.businessName ? 'error' : ''}`}
-                      placeholder="Enter your business name"
-                    />
-                    {errors.businessName && (
-                      <div className="form-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.businessName}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="email" className="form-label">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={registerFormData.email}
-                      onChange={handleRegisterInputChange}
-                      className={`form-input ${errors.email ? 'error' : ''}`}
-                      placeholder="Enter your email address"
-                      autoComplete="email"
-                    />
-                    {errors.email && (
-                      <div className="form-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.email}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="mobileNumber" className="form-label">
-                      Mobile Number *
-                    </label>
-                    <input
-                      type="tel"
-                      id="mobileNumber"
-                      name="mobileNumber"
-                      value={registerFormData.mobileNumber}
-                      onChange={handleRegisterInputChange}
-                      className={`form-input ${errors.mobileNumber ? 'error' : ''}`}
-                      placeholder="Enter your mobile number"
-                      autoComplete="tel"
-                    />
-                    {errors.mobileNumber && (
-                      <div className="form-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.mobileNumber}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="password" className="form-label">
-                        Password *
-                      </label>
-                      <div className="password-input">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          id="password"
-                          name="password"
-                          value={registerFormData.password}
-                          onChange={handleRegisterInputChange}
-                          className={`form-input ${errors.password ? 'error' : ''}`}
-                          placeholder="Create a password"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff /> : <Eye />}
-                        </button>
-                      </div>
-                      {errors.password && (
-                        <div className="form-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.password}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="confirmPassword" className="form-label">
-                        Confirm Password *
-                      </label>
-                      <div className="password-input">
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          value={registerFormData.confirmPassword}
-                          onChange={handleRegisterInputChange}
-                          className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-                          placeholder="Confirm your password"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? <EyeOff /> : <Eye />}
-                        </button>
-                      </div>
-                      {errors.confirmPassword && (
-                        <div className="form-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.confirmPassword}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Submit Error/Success */}
-                  {errors.submit && (
-                    <div className={errors.success ? "submit-success" : "submit-error"}>
-                      {!errors.success && <AlertCircle className="error-icon" />}
-                      {errors.submit}
-                    </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-lg submit-btn"
-                    disabled={isSubmitting}
+                  <svg 
+                    className="w-6 h-6 text-white/70 group-hover:text-white transition-colors duration-300" 
+                    fill="currentColor" 
+                    viewBox="0 0 24 24"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="btn-icon spinning" />
-                        Creating Account...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="btn-icon" />
-                        Register
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </a>
+                <a
+                  href="#"
+                  className="group transition-all duration-300 hover:scale-110"
+                >
+                  <svg 
+                    className="w-6 h-6 text-white/70 group-hover:text-white transition-colors duration-300" 
+                    fill="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12.317 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                </a>
+                <a
+                  href="#"
+                  className="group transition-all duration-300 hover:scale-110"
+                >
+                  <svg 
+                    className="w-6 h-6 text-white/70 group-hover:text-white transition-colors duration-300" 
+                    fill="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
 
-              {/* Login Forms */}
-              {mode === 'login' && (
-                <>
-                  {/* Login Method Toggle */}
-                  <div className="login-method-toggle">
-                    <button
-                      type="button"
-                      className={`method-btn ${loginMethod === 'email' ? 'active' : ''}`}
-                      onClick={() => {
-                        setLoginMethod('email');
-                        setOtpSent(false);
-                        setErrors({});
-                      }}
+            {/* Right Section - Navigation Links */}
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 md:mt-0">
+              {/* Platform */}
+              <div>
+                <button
+                  onClick={() => setFooterAccordions(prev => ({ ...prev, platform: !prev.platform }))}
+                  className="md:pointer-events-none w-full md:w-auto flex items-center justify-between md:justify-start mb-4"
+                >
+                  <h4 className="text-white font-bold text-sm uppercase tracking-wide relative inline-block">
+                    Platform
+                    <span className="hidden md:block absolute bottom-0 left-0 w-full h-0.5 bg-pink-500"></span>
+                  </h4>
+                  <svg 
+                    className={`md:hidden w-5 h-5 text-white transition-transform ${footerAccordions.platform ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <ul className={`space-y-3 mt-6 ${footerAccordions.platform ? 'block' : 'hidden md:block'}`}>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
                     >
-                      <Mail className="method-icon" />
-                      Email
-                    </button>
-                    <button
-                      type="button"
-                      className={`method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
-                      onClick={() => {
-                        setLoginMethod('phone');
-                        setOtpSent(false);
-                        setErrors({});
-                      }}
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Order Management
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Order Management
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
                     >
-                      <Phone className="method-icon" />
-                      Phone OTP
-                    </button>
-                  </div>
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Analytics
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Analytics
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Menu Management
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Menu Management
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Payments
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Payments
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
 
-                  {/* Email/Password Form */}
-                  {loginMethod === 'email' && (
-                    <form onSubmit={handleEmailLoginSubmit} className="auth-form">
-                      <div className="form-group">
-                        <label htmlFor="email" className="form-label">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          id="email"
-                          name="email"
-                          value={emailFormData.email}
-                          onChange={handleEmailInputChange}
-                          className={`form-input ${errors.email ? 'error' : ''}`}
-                          placeholder="Enter your email address"
-                          autoComplete="email"
-                        />
-                        {errors.email && (
-                          <div className="form-error">
-                            <AlertCircle className="error-icon" />
-                            {errors.email}
-                          </div>
-                        )}
-                      </div>
+              {/* Resources */}
+              <div>
+                <button
+                  onClick={() => setFooterAccordions(prev => ({ ...prev, resources: !prev.resources }))}
+                  className="md:pointer-events-none w-full md:w-auto flex items-center justify-between md:justify-start mb-4"
+                >
+                  <h4 className="text-white font-bold text-sm uppercase tracking-wide relative inline-block">
+                    Resources
+                    <span className="hidden md:block absolute bottom-0 left-0 w-full h-0.5 bg-pink-500"></span>
+                  </h4>
+                  <svg 
+                    className={`md:hidden w-5 h-5 text-white transition-transform ${footerAccordions.resources ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <ul className={`space-y-3 mt-6 ${footerAccordions.resources ? 'block' : 'hidden md:block'}`}>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Help Center
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Help Center
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Documentation
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Documentation
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Blog
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Blog
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Community
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Community
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
 
-                      <div className="form-group">
-                        <label htmlFor="password" className="form-label">
-                          Password
-                        </label>
-                        <div className="password-input">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            id="password"
-                            name="password"
-                            value={emailFormData.password}
-                            onChange={handleEmailInputChange}
-                            className={`form-input ${errors.password ? 'error' : ''}`}
-                            placeholder="Enter your password"
-                            autoComplete="current-password"
-                          />
-                          <button
-                            type="button"
-                            className="password-toggle"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <EyeOff /> : <Eye />}
-                          </button>
-                        </div>
-                        {errors.password && (
-                          <div className="form-error">
-                            <AlertCircle className="error-icon" />
-                            {errors.password}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Submit Error */}
-                      {errors.submit && (
-                        <div className="submit-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.submit}
-                        </div>
-                      )}
-
-                      {/* Submit Button */}
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-lg submit-btn"
-                        disabled={isSubmitting || loading || googleLoading || otpLoading}
-                      >
-                        {isSubmitting || loading ? (
-                          <>
-                            <Loader2 className="btn-icon spinning" />
-                            Signing In...
-                          </>
-                        ) : (
-                          <>
-                            <LogIn className="btn-icon" />
-                            Sign In
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Phone OTP Form */}
-                  {loginMethod === 'phone' && (
-                    <form onSubmit={otpSent ? handleVerifyOTP : undefined} className="auth-form">
-                      <div className="form-group">
-                        <label htmlFor="phone" className="form-label">
-                          Mobile Number
-                        </label>
-                        <input
-                          type="tel"
-                          id="phone"
-                          name="phone"
-                          value={phoneFormData.phone}
-                          onChange={handlePhoneInputChange}
-                          className={`form-input ${errors.phone ? 'error' : ''}`}
-                          placeholder="Enter your mobile number"
-                          autoComplete="tel"
-                          disabled={otpSent}
-                        />
-                        {errors.phone && (
-                          <div className="form-error">
-                            <AlertCircle className="error-icon" />
-                            {errors.phone}
-                          </div>
-                        )}
-                      </div>
-
-                      {otpSent && (
-                        <div className="form-group">
-                          <label htmlFor="otp" className="form-label">
-                            Enter OTP
-                          </label>
-                          <input
-                            type="text"
-                            id="otp"
-                            name="otp"
-                            value={phoneFormData.otp}
-                            onChange={handlePhoneInputChange}
-                            className={`form-input ${errors.otp ? 'error' : ''}`}
-                            placeholder="Enter 6-digit OTP"
-                            maxLength={6}
-                            pattern="[0-9]{6}"
-                          />
-                          {errors.otp && (
-                            <div className="form-error">
-                              <AlertCircle className="error-icon" />
-                              {errors.otp}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOtpSent(false);
-                              setPhoneFormData(prev => ({ ...prev, otp: '' }));
-                            }}
-                            className="link text-sm mt-2"
-                          >
-                            Change number
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Submit Error */}
-                      {errors.submit && (
-                        <div className="submit-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.submit}
-                        </div>
-                      )}
-
-                      {/* Submit/Verify Button */}
-                      {!otpSent ? (
-                        <button
-                          type="button"
-                          onClick={handleSendOTP}
-                          className="btn btn-primary btn-lg submit-btn"
-                          disabled={otpLoading || isSubmitting || googleLoading || loading}
-                        >
-                          {otpLoading ? (
-                            <>
-                              <Loader2 className="btn-icon spinning" />
-                              Sending OTP...
-                            </>
-                          ) : (
-                            <>
-                              <Smartphone className="btn-icon" />
-                              Send OTP
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          type="submit"
-                          className="btn btn-primary btn-lg submit-btn"
-                          disabled={otpLoading || isSubmitting || googleLoading || loading}
-                        >
-                          {otpLoading ? (
-                            <>
-                              <Loader2 className="btn-icon spinning" />
-                              Verifying...
-                            </>
-                          ) : (
-                            <>
-                              <LogIn className="btn-icon" />
-                              Verify OTP
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </form>
-                  )}
-                </>
-              )}
+              {/* Company */}
+              <div>
+                <button
+                  onClick={() => setFooterAccordions(prev => ({ ...prev, company: !prev.company }))}
+                  className="md:pointer-events-none w-full md:w-auto flex items-center justify-between md:justify-start mb-4"
+                >
+                  <h4 className="text-white font-bold text-sm uppercase tracking-wide relative inline-block">
+                    Company
+                    <span className="hidden md:block absolute bottom-0 left-0 w-full h-0.5 bg-pink-500"></span>
+                  </h4>
+                  <svg 
+                    className={`md:hidden w-5 h-5 text-white transition-transform ${footerAccordions.company ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <ul className={`space-y-3 mt-6 ${footerAccordions.company ? 'block' : 'hidden md:block'}`}>
+                  <li>
+                    <Link
+                      to="/"
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        For Customers
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        For Customers
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </Link>
+                  </li>
+                  <li>
+                    <a 
+                      href="/about-us"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        About Us
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        About Us
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Privacy Policy
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Privacy Policy
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                  <li>
+                    <a 
+                      href="#" 
+                      className="footer-link group relative inline-block text-white/70 text-sm
+                                 transition-all duration-300 hover:text-white"
+                    >
+                      <span className="relative z-10 inline-block transition-transform duration-300 
+                                       group-hover:-translate-y-1 group-hover:opacity-0">
+                        Terms of Service
+                      </span>
+                      <span className="absolute left-0 top-0 opacity-0 translate-y-1 transition-all duration-300 
+                                       group-hover:opacity-100 group-hover:translate-y-0 text-white z-10">
+                        Terms of Service
+                      </span>
+                      <span className="absolute bottom-0 left-0 h-0.5 bg-pink-500 w-0 
+                                       transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-        </section>
-      )}
 
-      {/* Footer */}
-      <footer className="bg-black/40 backdrop-blur-md border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center text-white/60 text-sm">
-            <p>© 2025 PocketShop. All rights reserved.</p>
+          {/* Bottom Copyright Section */}
+          <div className="border-t border-white/10 pt-8 mt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-white/60 text-sm text-center md:text-left mb-4 md:mb-0">
+                © 2025 PocketShop. All rights reserved.
+              </p>
+              <p className="text-white/60 text-sm text-center md:text-right">
+                Made with <span className="text-pink-500">❤️</span> for local businesses
+              </p>
+            </div>
           </div>
         </div>
       </footer>

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import BusinessLandingPage from './pages/BusinessLandingPage';
+import AboutUs from './pages/AboutUs';
 import VendorAuth from './pages/VendorAuth';
 import VendorDashboard from './pages/VendorDashboard';
 import OnboardingLayout from './components/onboarding/OnboardingLayout';
@@ -19,8 +20,12 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/business" element={<BusinessLandingPage />} />
-          {/* Redirect old vendor/auth route to business landing page */}
-          <Route path="/vendor/auth" element={<Navigate to="/business" replace />} />
+          <Route path="/about-us" element={<AboutUs />} />
+          {/* Vendor authentication routes */}
+          <Route path="/login" element={<VendorAuth mode="login" />} />
+          <Route path="/register" element={<VendorAuth mode="register" />} />
+          {/* Redirect old vendor/auth route to login */}
+          <Route path="/vendor/auth" element={<Navigate to="/login" replace />} />
           
           {/* Onboarding routes - wrapped with OnboardingLayout for shared context */}
           <Route
