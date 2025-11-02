@@ -30,42 +30,65 @@ const OnboardingCompletion: React.FC = () => {
         throw new Error('User not authenticated. Please log in again.');
       }
 
+      // Check if profile already exists for this user
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('vendor_profiles')
+        .select('mobile_number')
+        .eq('user_id', user.id)
+        .single();
+
       // Get user's phone number from auth metadata or phone field
       const userPhone = user.phone || user.user_metadata?.phone || '';
 
-      // Create vendor profile in Supabase
-      const { error: insertError } = await supabase
-        .from('vendor_profiles')
-        .insert([
-          {
-            user_id: user.id,
-            business_name: data.restaurantName,
-            owner_name: data.ownerName,
-            business_type: data.restaurantType,
-            // Store business_category and selected_plan in metadata JSONB field
-            // Note: These fields don't exist in the base schema, using metadata
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            postal_code: data.postalCode,
-            country: data.country || 'IN',
-            working_days: data.workingDays,
-            onboarding_status: 'completed',
-            is_active: true,
-            metadata: {
-              business_category: data.businessCategory,
-              selected_plan: data.selectedPlan,
-            },
-            // Email from user or fallback
-            email: user.email || user.user_metadata?.email || '',
-            // Mobile number from user phone
-            mobile_number: userPhone,
-          },
-        ]);
+      // If profile exists, keep existing mobile_number to avoid unique constraint violation
+      // Only update mobile_number if it's currently empty or we're sure it's safe
+      let mobileNumberToUse = userPhone;
+      if (existingProfile && existingProfile.mobile_number) {
+        // Profile exists and has mobile_number - keep it to avoid conflicts
+        mobileNumberToUse = existingProfile.mobile_number;
+      } else if (!userPhone) {
+        // No phone provided and no existing profile - this is an error
+        throw new Error('Mobile number is required. Please ensure your account has a verified phone number.');
+      }
 
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw insertError;
+      // Prepare profile data
+      const profileData: any = {
+        user_id: user.id,
+        business_name: data.restaurantName,
+        owner_name: data.ownerName,
+        business_type: data.restaurantType,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        postal_code: data.postalCode,
+        country: data.country || 'IN',
+        working_days: data.workingDays,
+        onboarding_status: 'completed',
+        is_active: true,
+        metadata: {
+          business_category: data.businessCategory,
+          selected_plan: data.selectedPlan,
+        },
+        email: user.email || user.user_metadata?.email || '',
+        mobile_number: mobileNumberToUse,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Upsert vendor profile (insert or update if exists)
+      const { error: upsertError } = await supabase
+        .from('vendor_profiles')
+        .upsert(profileData, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false,
+        });
+
+      if (upsertError) {
+        console.error('Upsert error:', upsertError);
+        // Check if it's a mobile_number conflict
+        if (upsertError.message?.includes('mobile_number_key')) {
+          throw new Error('This mobile number is already registered with another account. Please use a different number or contact support.');
+        }
+        throw upsertError;
       }
 
       // Reset onboarding context
