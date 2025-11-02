@@ -21,3 +21,8 @@ export type { StatsCardProps } from './StatsCard';
 
 export { default as DashboardLayout } from './DashboardLayout';
 
+export { ProtectedRoute } from './shared/ProtectedRoute';
+export { Button as OnboardingButton } from './shared/Button';
+export { InputField } from './shared/InputField';
+export { StageIndicator } from './shared/StageIndicator';
+
