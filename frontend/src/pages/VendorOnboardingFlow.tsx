@@ -88,10 +88,10 @@ const VendorOnboardingFlow: React.FC = () => {
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  // Redirect to login if not authenticated
+  // Redirect to auth if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/vendor/login');
+      navigate('/vendor/auth');
     }
   }, [user, loading, navigate]);
 

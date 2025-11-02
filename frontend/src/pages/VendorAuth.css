@@ -1,24 +1,23 @@
 /**
- * Vendor Login Page Styles
+ * Vendor Authentication Page Styles
  * 
- * This file contains all the styles for the vendor login form.
- * It provides a clean, professional login design with proper validation states.
+ * Combined login/register page with tab switching.
  */
 
-.vendor-login {
+.vendor-auth {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 2rem 0;
 }
 
-.login-container {
-  max-width: 502px;
+.auth-container {
+  max-width: 900px;
   margin: 0 auto;
   padding: 0 1rem;
 }
 
 /* Header */
-.login-header {
+.auth-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -63,18 +62,18 @@
 }
 
 /* Main Content */
-.login-content {
+.auth-content {
   display: flex;
   justify-content: center;
 }
 
-.login-card {
+.auth-card {
   background: white;
   border-radius: 1rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   padding: 3rem;
   width: 100%;
-  max-width: 450px;
+  max-width: 550px;
 }
 
 .card-header {
@@ -92,6 +91,49 @@
 .card-subtitle {
   color: #64748b;
   font-size: 1rem;
+}
+
+/* Mode Toggle (Register/Login) */
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background-color: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.mode-btn.active {
+  background-color: white;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Login Method Toggle */
@@ -194,7 +236,7 @@
 }
 
 /* Form Styles */
-.login-form {
+.auth-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -202,6 +244,12 @@
 
 .form-group {
   margin-bottom: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .form-label {
@@ -238,6 +286,12 @@
   color: #9ca3af;
 }
 
+.form-input:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
 /* Password Input */
 .password-input {
   position: relative;
@@ -266,26 +320,6 @@
 .password-toggle svg {
   width: 1.25rem;
   height: 1.25rem;
-}
-
-/* Forgot Password */
-.forgot-password {
-  text-align: right;
-  margin-top: -0.5rem;
-  margin-bottom: 1rem;
-}
-
-.forgot-password .link {
-  font-size: 0.875rem;
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.forgot-password .link:hover {
-  color: #2563eb;
-  text-decoration: underline;
 }
 
 /* Error Messages */
@@ -337,6 +371,22 @@
   cursor: not-allowed;
 }
 
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-lg {
+  font-size: 1.125rem;
+}
+
 .btn-icon {
   width: 1.25rem;
   height: 1.25rem;
@@ -355,24 +405,17 @@
   }
 }
 
-/* Register Link */
-.register-link {
-  text-align: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.register-link p {
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
+/* Links */
 .link {
   color: #3b82f6;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
 }
 
 .link:hover {
@@ -380,33 +423,46 @@
   text-decoration: underline;
 }
 
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
-  .vendor-login {
+  .vendor-auth {
     padding: 1rem 0;
   }
   
-  .login-container {
+  .auth-container {
     padding: 0 0.5rem;
   }
   
-  .login-header {
+  .auth-header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
   
-  .login-card {
+  .auth-card {
     padding: 2rem 1.5rem;
   }
   
   .card-title {
     font-size: 1.75rem;
   }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
 }
 
 @media (max-width: 480px) {
-  .login-card {
+  .auth-card {
     padding: 1.5rem 1rem;
   }
   
@@ -424,27 +480,8 @@
   }
 }
 
-/* Loading States */
-.form-input:disabled {
-  background-color: #f9fafb;
-  color: #6b7280;
-  cursor: not-allowed;
-}
-
-/* Focus States for Accessibility */
-.form-input:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-.password-toggle:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-  border-radius: 0.25rem;
-}
-
 /* Animation for form */
-.login-form {
+.auth-form {
   animation: fadeInUp 0.6s ease-out;
 }
 
@@ -464,3 +501,27 @@
 .form-group:nth-child(2) { animation-delay: 0.2s; }
 .form-group:nth-child(3) { animation-delay: 0.3s; }
 .form-group:nth-child(4) { animation-delay: 0.4s; }
+.form-group:nth-child(5) { animation-delay: 0.5s; }
+
+/* Loading States */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Focus States for Accessibility */
+.form-input:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+

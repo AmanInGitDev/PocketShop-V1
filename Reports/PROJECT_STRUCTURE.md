@@ -58,10 +58,9 @@ Reusable UI components that can be used across the application.
 
 ### `/frontend/src/pages/`
 Page-level components that represent full routes.
-- `VendorLogin.tsx` - Vendor login page
-- `VendorRegister.tsx` - Vendor registration page
 - `VendorDashboard.tsx` - Vendor dashboard
 - `VendorOnboarding.tsx` - Vendor onboarding landing page
+- `VendorOnboardingFlow.tsx` - Vendor onboarding multi-step form
 
 ### `/frontend/src/services/`
 API and external service integrations.

@@ -14,16 +14,16 @@ const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, signOut, loading } = useAuth();
 
-  // Redirect to login if not authenticated
+  // Redirect to auth if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/vendor/login');
+      navigate('/vendor/auth');
     }
   }, [user, loading, navigate]);
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/vendor/login');
+    navigate('/vendor/auth');
   };
 
   // Show loading while checking auth

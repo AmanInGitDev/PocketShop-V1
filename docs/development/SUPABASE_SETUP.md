@@ -192,25 +192,25 @@ CREATE TRIGGER set_updated_at
 ## ✅ Step 6: Testing All Three Methods
 
 ### Test Email/Password:
-1. Go to `/vendor/register`
-2. Fill in the form and register
+1. Go to `/vendor/onboarding`
+2. Fill in the registration form and register
 3. Check your email for verification (if enabled)
-4. Go to `/vendor/login` and sign in
+4. Complete the onboarding process
 
 ### Test Google OAuth:
-1. Go to `/vendor/login`
+1. Go to `/vendor/onboarding`
 2. Click "Sign in with Google"
 3. Select your Google account
-4. You should be redirected to `/vendor/dashboard`
+4. You should be redirected to the onboarding flow
 
 ### Test Phone OTP:
-1. Go to `/vendor/login`
+1. Go to `/vendor/onboarding`
 2. Click on "Phone OTP" tab
 3. Enter your phone number (format: +1234567890)
 4. Click "Send OTP"
 5. Enter the OTP code you receive via SMS
 6. Click "Verify OTP"
-7. You should be redirected to `/vendor/dashboard`
+7. You should be redirected to complete onboarding
 
 ---
 

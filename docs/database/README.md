@@ -9,7 +9,6 @@ This directory contains database-related documentation and SQL scripts for Pocke
 ## Related Documentation
 
 - [Database Schema](../../Database.md) - Complete database schema documentation
-- [Login Setup Guide](../development/LOGIN_SETUP.md) - Setup guide including RLS policies
 - [Supabase Setup Guide](../development/SUPABASE_SETUP.md) - Complete Supabase configuration
 
 ## Usage

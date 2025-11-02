@@ -23,9 +23,6 @@ const VendorOnboarding: React.FC = () => {
               </div>
               <span className="tagline">— business partner —</span>
             </div>
-            <Link to="/vendor/login" className="btn btn-secondary">
-              Login
-            </Link>
           </div>
         </div>
       </header>
@@ -45,7 +42,7 @@ const VendorOnboarding: React.FC = () => {
             </p>
 
             <div className="cta-section">
-              <Link to="/vendor/register" className="btn btn-primary btn-xl">
+              <Link to="/vendor/onboarding" className="btn btn-primary btn-xl">
                 Join PocketShop
                 <span className="btn-icon">→</span>
               </Link>

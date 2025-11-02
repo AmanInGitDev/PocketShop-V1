@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import VendorLogin from './pages/VendorLogin';
-import VendorRegister from './pages/VendorRegister';
-import VendorOnboarding from './pages/VendorOnboarding';
+import VendorAuth from './pages/VendorAuth';
 import VendorOnboardingFlow from './pages/VendorOnboardingFlow';
 import VendorDashboard from './pages/VendorDashboard';
 
@@ -244,24 +242,6 @@ function LandingPage() {
                 — business partner —
               </span>
             </div>
-            <Link 
-              to="/vendor/login" 
-              className="btn-secondary-hover" 
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: 'transparent',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                fontSize: '0.875rem',
-                textDecoration: 'none',
-                display: 'inline-block'
-              }}
-            >
-              Login
-            </Link>
           </div>
         </div>
       </header>
@@ -316,7 +296,7 @@ function LandingPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
             <Link 
-              to="/vendor/register"
+              to="/vendor/auth"
               className="btn-primary-hover" 
               style={{
                 padding: '1rem 2.5rem',
@@ -339,21 +319,6 @@ function LandingPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
-            </Link>
-            
-            <Link 
-              to="/vendor/login"
-              style={{
-                color: 'rgba(255, 255, 255, 0.8)',
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'}
-            >
-              Already have an account? Sign in
             </Link>
             
             <div className="fade-in" style={{ 
@@ -901,9 +866,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/vendor" element={<VendorOnboarding />} />
-          <Route path="/vendor/login" element={<VendorLogin />} />
-          <Route path="/vendor/register" element={<VendorRegister />} />
+          <Route path="/vendor/auth" element={<VendorAuth />} />
           <Route path="/vendor/onboarding" element={<VendorOnboardingFlow />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
