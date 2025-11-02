@@ -868,7 +868,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/vendor/auth" element={<VendorAuth />} />
           <Route path="/vendor/onboarding" element={<VendorOnboardingFlow />} />
-          <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor/dashboard/*" element={<VendorDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

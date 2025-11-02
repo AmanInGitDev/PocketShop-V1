@@ -220,6 +220,7 @@ const VendorAuth: React.FC = () => {
         registerFormData.password,
         {
           full_name: registerFormData.businessName,
+          mobile_number: registerFormData.mobileNumber,
           role: 'vendor'
         }
       );

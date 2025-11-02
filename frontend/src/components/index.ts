@@ -19,3 +19,5 @@ export type { InputProps } from './Input';
 export { default as StatsCard } from './StatsCard';
 export type { StatsCardProps } from './StatsCard';
 
+export { default as DashboardLayout } from './DashboardLayout';
+
