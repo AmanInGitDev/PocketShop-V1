@@ -79,8 +79,8 @@ export const getCurrentOnboardingStage = async (userId: string): Promise<number 
  * Check if route requires authentication
  */
 export const isAuthRoute = (pathname: string): boolean => {
-  return pathname.includes('/vendor/auth/login') || 
-         pathname.includes('/vendor/auth/register') ||
+  return pathname.includes('/login') || 
+         pathname.includes('/register') ||
          pathname.includes('/vendor/auth/verify-otp');
 };
 

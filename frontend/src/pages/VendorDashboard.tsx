@@ -27,7 +27,7 @@ const VendorDashboard: React.FC = () => {
   useEffect(() => {
     const checkAuthAndOnboarding = async () => {
       if (!loading && !user) {
-        navigate('/business');
+        navigate('/login');
         return;
       }
 
@@ -40,19 +40,32 @@ const VendorDashboard: React.FC = () => {
             .eq('user_id', user.id)
             .single();
 
-          if (error || !vendorProfile) {
-            // No profile or error - redirect to onboarding
+          if (error) {
+            console.error('Error fetching vendor profile:', error);
+            // If profile doesn't exist (PGRST116), redirect to onboarding where it can be created
+            // AuthContext should have created it, but if not, onboarding will handle it
+            if (error.code === 'PGRST116') {
+              console.log('Vendor profile not found, redirecting to onboarding');
+            }
+            navigate('/vendor/onboarding/stage-1');
+            return;
+          }
+
+          if (!vendorProfile) {
+            console.log('No vendor profile found, redirecting to onboarding');
             navigate('/vendor/onboarding/stage-1');
             return;
           }
 
           if (vendorProfile.onboarding_status !== 'completed') {
             // Onboarding incomplete - redirect to stage 1
+            console.log('Onboarding incomplete, redirecting to stage-1');
             navigate('/vendor/onboarding/stage-1');
             return;
           }
 
           // Onboarding complete - stay on dashboard
+          console.log('Onboarding complete, staying on dashboard');
           setCheckingOnboarding(false);
         } catch (err) {
           console.error('Error checking onboarding:', err);

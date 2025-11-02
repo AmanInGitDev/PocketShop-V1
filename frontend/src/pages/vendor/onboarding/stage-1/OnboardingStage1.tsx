@@ -121,7 +121,7 @@ const OnboardingStage1: React.FC = () => {
                 type="button"
                 variant="outline"
                 size="lg"
-                onClick={() => navigate('/vendor/auth/register')}
+                onClick={() => navigate('/register')}
                 className="flex-1"
               >
                 Back

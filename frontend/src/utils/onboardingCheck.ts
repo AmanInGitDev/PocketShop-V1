@@ -25,10 +25,14 @@ export const getOnboardingRedirectPath = async (userId: string): Promise<string>
 
         if (data) {
           const status = data.onboarding_status;
+          console.log('getOnboardingRedirectPath - Status:', status);
+          // Check if status is exactly 'completed' (case-sensitive)
           if (status === 'completed') {
+            console.log('Redirecting to dashboard - onboarding completed');
             return '/vendor/dashboard';
           } else {
             // Incomplete onboarding - redirect to stage 1
+            console.log('Redirecting to onboarding - status:', status);
             return '/vendor/onboarding/stage-1';
           }
         }

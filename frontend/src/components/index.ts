@@ -26,3 +26,7 @@ export { Button as OnboardingButton } from './shared/Button';
 export { InputField } from './shared/InputField';
 export { StageIndicator } from './shared/StageIndicator';
 
+export { default as LocationDetector } from './LocationDetector';
+export type { LocationDetectorRef } from './LocationDetector';
+export { default as PlacesAutocomplete } from './PlacesAutocomplete';
+

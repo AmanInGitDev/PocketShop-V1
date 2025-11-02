@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
  * 
  * @param requireAuth - If true, redirects to login if not authenticated
  * @param requireOnboarding - If true, redirects to onboarding if not completed
- * @param redirectTo - Custom redirect path (defaults to /vendor/auth/login for auth, /vendor/onboarding/stage-1 for onboarding)
+ * @param redirectTo - Custom redirect path (defaults to /login for auth, /vendor/onboarding/stage-1 for onboarding)
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
@@ -42,12 +42,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If auth is required but user is not authenticated
   if (requireAuth && !user) {
-    const redirectPath = redirectTo || '/vendor/auth/login';
+    const redirectPath = redirectTo || '/login';
     return <Navigate to={redirectPath} state={{ from: location }} replace />;
   }
 
   // If user is authenticated but trying to access auth pages, redirect to dashboard
-  if (!requireAuth && user && (location.pathname.includes('/vendor/auth/login') || location.pathname.includes('/vendor/auth/register'))) {
+  if (!requireAuth && user && (location.pathname.includes('/login') || location.pathname.includes('/register'))) {
     return <Navigate to="/vendor/dashboard" replace />;
   }
 

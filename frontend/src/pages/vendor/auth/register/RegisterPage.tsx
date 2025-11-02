@@ -120,7 +120,7 @@ const RegisterPage: React.FC = () => {
         <p className="text-center text-[#7E8C97] text-sm mt-6">
           Already have an account?{' '}
           <button
-            onClick={() => navigate('/vendor/auth/login')}
+            onClick={() => navigate('/login')}
             className="text-[#EF4F5F] font-medium hover:underline"
           >
             Login here

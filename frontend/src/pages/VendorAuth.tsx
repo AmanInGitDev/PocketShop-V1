@@ -76,10 +76,16 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
     }
   }, [mode]);
   
-  // Redirect based on onboarding status if already logged in
-  // Only redirect if user is fully authenticated (session exists and valid)
+  // Only redirect if user is already logged in and on auth page
+  // This prevents infinite loops - login handler will handle redirects after login
   useEffect(() => {
     let isMounted = true;
+    
+    // Only check if we're on an auth page and user is already logged in
+    const currentPath = window.location.pathname;
+    if (currentPath !== '/login' && currentPath !== '/register') {
+      return; // Not on auth page, don't redirect
+    }
     
     const checkAndRedirect = async () => {
       // Don't redirect if still loading
@@ -87,31 +93,24 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
         return;
       }
 
-      // Only redirect if user exists
+      // Only redirect if user exists and is on auth page
       if (!user) {
         return;
       }
 
       try {
-        // Check session directly from Supabase to verify email confirmation
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        );
-
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        // Check session
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (!isMounted) return;
         
         // If session exists and user has email, check if confirmed
         if (session?.user?.email && !session.user.email_confirmed_at) {
           // Email not confirmed - stay on auth page
-          // Don't redirect, let user see confirmation message
-          console.log('Email not confirmed, staying on auth page');
           return;
         }
         
-        // Email confirmed or OAuth/OTP user - proceed with redirect
+        // Email confirmed - proceed with redirect
         const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
         const redirectPath = await getOnboardingRedirectPath(user.id);
         
@@ -119,28 +118,25 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
         
         // Only navigate if path is different from current
         if (window.location.pathname !== redirectPath) {
-          console.log('Redirecting to:', redirectPath);
+          console.log('VendorAuth - Auto-redirecting logged-in user to:', redirectPath);
           navigate(redirectPath, { replace: true });
         }
       } catch (err) {
-        console.error('Error checking session/onboarding:', err);
-        // On error, default to onboarding (safer than dashboard)
-        if (isMounted && window.location.pathname !== '/vendor/onboarding/stage-1') {
-          navigate('/vendor/onboarding/stage-1', { replace: true });
-        }
+        console.error('Error in auto-redirect:', err);
+        // Don't redirect on error to prevent loops
       }
     };
 
-    // Add small delay to prevent race conditions
+    // Only run once when component mounts or user changes
     const timer = setTimeout(() => {
       checkAndRedirect();
-    }, 100);
+    }, 1000);
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [user, loading, navigate]);
+  }, [user, loading]); // Removed navigate from dependencies to prevent re-runs
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
 
   // Register form state
@@ -359,10 +355,40 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       if (error) {
         setErrors({ submit: error.message });
       } else if (data?.user) {
-        // Check onboarding status and redirect accordingly
-        const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
-        const redirectPath = await getOnboardingRedirectPath(data.user.id);
-        navigate(redirectPath);
+        // Check onboarding status directly to ensure accurate redirect
+        try {
+          const { data: vendorProfile, error: profileError } = await supabase
+            .from('vendor_profiles')
+            .select('onboarding_status')
+            .eq('user_id', data.user.id)
+            .single();
+
+          if (profileError || !vendorProfile) {
+            console.log('Profile not found or error, redirecting to onboarding');
+            navigate('/vendor/onboarding/stage-1');
+          } else {
+            const status = vendorProfile.onboarding_status;
+            console.log('Onboarding status on login:', status);
+            if (status === 'completed') {
+              console.log('Onboarding completed, redirecting to dashboard');
+              navigate('/vendor/dashboard');
+            } else {
+              console.log('Onboarding incomplete, redirecting to onboarding');
+              navigate('/vendor/onboarding/stage-1');
+            }
+          }
+        } catch (err) {
+          console.error('Error checking onboarding status:', err);
+          // On error, try to use the helper function as fallback
+          try {
+            const { getOnboardingRedirectPath } = await import('../utils/onboardingCheck');
+            const redirectPath = await getOnboardingRedirectPath(data.user.id);
+            navigate(redirectPath);
+          } catch (fallbackErr) {
+            console.error('Fallback redirect also failed:', fallbackErr);
+            navigate('/vendor/onboarding/stage-1');
+          }
+        }
       } else {
         // Fallback redirect
         navigate('/vendor/onboarding/stage-1');
@@ -440,23 +466,8 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
     }
   };
 
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div className="vendor-auth">
-        <div className="auth-container">
-          <div className="auth-content">
-            <div className="auth-card">
-              <div className="card-header">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-gray-600">Loading...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Don't show full screen loading - only show on button if submitting
+  // Allow user to see the form even while checking auth
 
   return (
     <div className="vendor-auth">
