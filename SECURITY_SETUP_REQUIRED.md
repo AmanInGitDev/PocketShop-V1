@@ -18,7 +18,7 @@ Without restrictions, your API key can be used by anyone who finds it, which can
 ### 2. Navigate to API Credentials
 1. Click on the hamburger menu (☰) in the top left
 2. Go to **"APIs & Services"** → **"Credentials"**
-3. Find your API key: `AIzaSyCYH9pmSWHxMh8yyEuzhf3y--KBmH-PIR4`
+3. Find your API key (looks like: `AIzaSy...` - do NOT share this publicly)
 
 ### 3. Click "Edit API Key" (Pencil Icon)
 
