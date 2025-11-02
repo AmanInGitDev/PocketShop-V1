@@ -27,7 +27,7 @@ const VendorDashboard: React.FC = () => {
   useEffect(() => {
     const checkAuthAndOnboarding = async () => {
       if (!loading && !user) {
-        navigate('/vendor/auth');
+        navigate('/business');
         return;
       }
 

@@ -83,7 +83,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/vendor/auth');
+    navigate('/business');
   };
 
   const isActiveRoute = (path: string): boolean => {
