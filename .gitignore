@@ -82,3 +82,7 @@ out
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation files (ignore .md files except root README.md to avoid counting as code lines)
+*.md
+!README.md
