@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { preloadNextOnboardingStage, preloadDashboard } from '@/utils/preloaders';
 import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
+import { ROUTES } from '@/constants/routes';
 
 interface PlanOption {
   id: 'free' | 'pro';
