@@ -28,6 +28,9 @@
   "author": "Aman",
   "license": "MIT",
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@react-google-maps/api": "^2.20.7",
     "@supabase/supabase-js": "^2.38.0",
     "@tanstack/react-query": "^5.90.7",

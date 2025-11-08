@@ -14,6 +14,7 @@ import { LoadingFallback } from '@/features/common/components';
 import { ROUTES } from '@/constants/routes';
 import { getOnboardingRedirectPath } from '@/features/common/utils/onboardingCheck';
 import { supabase } from '@/lib/supabaseClient';
+import { OrderProvider } from '@/context/OrderProvider';
 
 // Lazy load dashboard sub-routes for code splitting
 const DashboardOverview = lazy(() => import('./DashboardOverview'));
@@ -101,16 +102,18 @@ const VendorDashboard: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <Suspense fallback={<LoadingFallback variant="dashboard" />}>
-        <Routes>
-          <Route path="" element={<DashboardOverview />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="insights" element={<Insights />} />
-          <Route path="payouts" element={<Payouts />} />
-          <Route path="settings" element={<Settings />} />
-        </Routes>
-      </Suspense>
+      <OrderProvider vendorId={user?.id || 'vendor-demo'}>
+        <Suspense fallback={<LoadingFallback variant="dashboard" />}>
+          <Routes>
+            <Route path="" element={<DashboardOverview />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="insights" element={<Insights />} />
+            <Route path="payouts" element={<Payouts />} />
+            <Route path="settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
+      </OrderProvider>
     </DashboardLayout>
   );
 };

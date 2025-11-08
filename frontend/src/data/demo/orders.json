@@ -8,14 +8,15 @@
     "customerName":"Aman Momin",
     "orderNumber":"231",
     "items":[
-      {"itemId":"menu-1","name":"Maggi","quantity":2,"price":50},
-      {"itemId":"menu-2","name":"Chai","quantity":1,"price":20},
-      {"itemId":"menu-4","name":"Samosa","quantity":2,"price":15}
+      {"itemId":"menu-1","name":"Maggi","qty":2,"price":50},
+      {"itemId":"menu-2","name":"Chai","qty":1,"price":20},
+      {"itemId":"menu-4","name":"Samosa","qty":2,"price":15}
     ],
     "paymentMethod":"GOOGLE_PAY",
     "paymentStatus":"PAID",
     "orderType":"DINE_IN",
     "createdAt":"2025-01-10T13:42:00Z",
+    "updatedAt":"2025-01-10T13:42:00Z",
     "itemsCount":4
   },
   {
@@ -27,13 +28,14 @@
     "customerName":"Prathmesh",
     "orderNumber":"232",
     "items":[
-      {"itemId":"menu-2","name":"Chai","quantity":1,"price":20},
-      {"itemId":"menu-3","name":"Dosa","quantity":1,"price":60}
+      {"itemId":"menu-2","name":"Chai","qty":1,"price":20},
+      {"itemId":"menu-3","name":"Dosa","qty":1,"price":60}
     ],
     "paymentMethod":"PAYTM",
     "paymentStatus":"PENDING",
-    "orderType":"TAKE_AWAY",
+    "orderType":"TAKEAWAY",
     "createdAt":"2025-01-10T13:45:00Z",
+    "updatedAt":"2025-01-10T13:45:00Z",
     "itemsCount":2
   },
   {
@@ -45,14 +47,15 @@
     "customerName":"Pratik",
     "orderNumber":"233",
     "items":[
-      {"itemId":"menu-1","name":"Maggi","quantity":2,"price":50},
-      {"itemId":"menu-3","name":"Dosa","quantity":2,"price":60},
-      {"itemId":"menu-5","name":"Idli","quantity":1,"price":40}
+      {"itemId":"menu-1","name":"Maggi","qty":2,"price":50},
+      {"itemId":"menu-3","name":"Dosa","qty":2,"price":60},
+      {"itemId":"menu-5","name":"Idli","qty":1,"price":40}
     ],
     "paymentMethod":"CASH",
     "paymentStatus":"PAID",
     "orderType":"DINE_IN",
     "createdAt":"2025-01-10T13:43:00Z",
+    "updatedAt":"2025-01-10T13:43:00Z",
     "itemsCount":5
   }
 ]
