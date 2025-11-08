@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '@/features/vendor/context/OnboardingContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import { ROUTES } from '@/constants/routes';
+import { preloadNextOnboardingStage } from '@/utils/preloaders';
 import { InputField } from '@/features/common/components/shared/InputField';
 import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
 const OnboardingStage2: React.FC = () => {
-  const navigate = useNavigate();
-  const { data, updateData, nextStage, previousStage } = useOnboarding();
+  const { data, updateData, completeStage, nextStage, previousStage } = useOnboarding();
+  const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,6 +18,7 @@ const OnboardingStage2: React.FC = () => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
+    // Client-side validation
     if (!data.address) newErrors.address = 'Address is required';
     if (!data.city) newErrors.city = 'City is required';
     if (!data.state) newErrors.state = 'State is required';
@@ -26,10 +30,75 @@ const OnboardingStage2: React.FC = () => {
       return;
     }
 
+    if (!user) {
+      setErrors({ submit: 'User not authenticated. Please log in again.' });
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    nextStage();
-    navigate('/vendor/onboarding/stage-3');
+    setErrors({}); // Clear previous errors
+
+    try {
+      console.log('[OnboardingStage2] Starting stage 2 completion for user:', user.id);
+
+      // Step 1: Save stage 2 data to database
+      console.log('[OnboardingStage2] Saving data to database...');
+      const { error: updateError, data: updateData } = await (supabase
+        .from('vendor_profiles' as any)
+        .update({
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          postal_code: data.postalCode,
+          country: data.country || 'IN',
+          working_days: data.workingDays,
+          operational_hours: data.operationalHours,
+          onboarding_status: 'operational_details',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .select()) as any;
+
+      if (updateError) {
+        console.error('[OnboardingStage2] Database update error:', updateError);
+        setErrors({ submit: `Failed to save data: ${updateError.message}. Please try again.` });
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('[OnboardingStage2] Data saved successfully:', updateData);
+
+      // Step 2: Mark stage 2 as complete in context
+      console.log('[OnboardingStage2] Marking stage 2 as complete...');
+      try {
+        await completeStage(2);
+        console.log('[OnboardingStage2] Stage 2 marked as complete');
+      } catch (completeError: any) {
+        console.error('[OnboardingStage2] Error completing stage:', completeError);
+        setErrors({ submit: `Failed to update progress: ${completeError.message}. Please try again.` });
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Preload next stage for faster navigation
+      console.log('[OnboardingStage2] Preloading stage 3...');
+      preloadNextOnboardingStage(2).catch(console.error);
+
+      // Step 4: Wait a brief moment to ensure database update is committed
+      console.log('[OnboardingStage2] Waiting for database commit...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
+      // Step 5: Force a hard navigation to stage 3 (bypasses React Router state issues)
+      console.log('[OnboardingStage2] Navigating to stage 3...');
+      // Use window.location for reliable navigation that forces a fresh page load
+      window.location.href = ROUTES.VENDOR_ONBOARDING_STAGE_3;
+    } catch (err: any) {
+      console.error('[OnboardingStage2] Unexpected error:', err);
+      setErrors({ 
+        submit: err.message || 'An unexpected error occurred. Please try again or refresh the page.' 
+      });
+      setIsLoading(false);
+    }
   };
 
   const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -128,16 +197,20 @@ const OnboardingStage2: React.FC = () => {
               )}
             </div>
 
+            {/* Error message */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {errors.submit}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 size="lg"
-                onClick={() => {
-                  previousStage();
-                  navigate('/vendor/onboarding/stage-1');
-                }}
+                onClick={() => previousStage()}
                 className="flex-1"
               >
                 Back

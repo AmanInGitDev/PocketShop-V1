@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { ROUTES } from '@/constants/routes';
 
 /**
  * Check onboarding status for the current user
@@ -8,7 +9,7 @@ export const getOnboardingRedirectPath = async (userId: string): Promise<string>
   try {
     // Add timeout to prevent hanging
     const timeoutPromise = new Promise<string>((resolve) => 
-      setTimeout(() => resolve('/vendor/onboarding/stage-1'), 5000)
+      setTimeout(() => resolve(ROUTES.VENDOR_ONBOARDING_STAGE_1), 5000)
     );
 
     const queryPromise = supabase
@@ -20,7 +21,7 @@ export const getOnboardingRedirectPath = async (userId: string): Promise<string>
         if (error) {
           console.log('Profile query error:', error.code, error.message);
           // If profile doesn't exist, redirect to onboarding
-          return '/vendor/onboarding/stage-1';
+          return ROUTES.VENDOR_ONBOARDING_STAGE_1;
         }
 
         if (data) {
@@ -29,16 +30,16 @@ export const getOnboardingRedirectPath = async (userId: string): Promise<string>
           // Check if status is exactly 'completed' (case-sensitive)
           if (status === 'completed') {
             console.log('Redirecting to dashboard - onboarding completed');
-            return '/vendor/dashboard';
+            return ROUTES.VENDOR_DASHBOARD;
           } else {
             // Incomplete onboarding - redirect to stage 1
             console.log('Redirecting to onboarding - status:', status);
-            return '/vendor/onboarding/stage-1';
+            return ROUTES.VENDOR_ONBOARDING_STAGE_1;
           }
         }
 
         // Default to onboarding if no profile found
-        return '/vendor/onboarding/stage-1';
+        return ROUTES.VENDOR_ONBOARDING_STAGE_1;
       });
 
     // Race between query and timeout
@@ -46,7 +47,7 @@ export const getOnboardingRedirectPath = async (userId: string): Promise<string>
   } catch (err) {
     console.error('Error checking onboarding status:', err);
     // Always return a path, never hang
-    return '/vendor/onboarding/stage-1';
+    return ROUTES.VENDOR_ONBOARDING_STAGE_1;
   }
 };
 

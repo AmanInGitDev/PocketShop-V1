@@ -5,10 +5,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { signInWithGoogle, sendOTP, verifyOTP } from '@/features/auth/services/authService';
-import { supabase } from '@/lib/supabaseClient';
+import { RegisterConfirm } from '@/features/auth/components/RegisterConfirm';
 import { 
   ArrowLeft, 
   Eye, 
@@ -21,6 +21,8 @@ import {
   Phone,
   Smartphone
 } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
+import { preloadDashboard, preloadDashboardOverview, preloadOnboardingStage } from '@/utils/preloaders';
 import logoImage from '@/assets/images/logo.png';
 import '@/assets/styles/VendorAuth.css';
 
@@ -55,13 +57,18 @@ interface VendorAuthProps {
 
 const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
   const navigate = useNavigate();
-  const { signUp, signIn, loading, user } = useAuth();
+  const location = useLocation();
+  // CRITICAL: loading MUST be destructured from useAuth()
+  const { signUp, signIn, loading } = useAuth();
+  
+  // Defensive check: ensure loading is defined (safety fallback)
+  const safeLoading = typeof loading !== 'undefined' ? loading : false;
   
   // Determine initial mode from prop or URL
   const getInitialMode = (): Mode => {
     if (initialMode) return initialMode;
     const path = window.location.pathname;
-    if (path === '/register') return 'register';
+    if (path === ROUTES.REGISTER) return 'register';
     return 'login';
   };
   
@@ -70,74 +77,50 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
   // Sync mode with URL changes
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/register' && mode !== 'register') {
+    if (path === ROUTES.REGISTER && mode !== 'register') {
       setMode('register');
-    } else if (path === '/login' && mode !== 'login') {
+    } else if (path === ROUTES.LOGIN && mode !== 'login') {
       setMode('login');
     }
   }, [mode]);
-  
-  // Only redirect if user is already logged in and on auth page
-  // This prevents infinite loops - login handler will handle redirects after login
-  useEffect(() => {
-    let isMounted = true;
+
+  // Helper function to determine redirect path after login
+  const getRedirectPath = async (userId: string): Promise<string> => {
+    // Check if we have a "from" location in state (from ProtectedRoute redirect)
+    const from = (location.state as any)?.from?.pathname;
     
-    // Only check if we're on an auth page and user is already logged in
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/login' && currentPath !== '/register') {
-      return; // Not on auth page, don't redirect
+    // If "from" exists and is a valid protected route, use it
+    if (from && from !== ROUTES.LOGIN && from !== ROUTES.REGISTER) {
+      // Preload dashboard overview if redirecting to dashboard (lighter preload)
+      if (from.startsWith(ROUTES.VENDOR_DASHBOARD)) {
+        preloadDashboardOverview().catch(console.error);
+      }
+      return from;
     }
-    
-    const checkAndRedirect = async () => {
-      // Don't redirect if still loading
-      if (loading) {
-        return;
+
+    // Otherwise, check onboarding status and redirect accordingly
+    try {
+      const { getOnboardingRedirectPath } = await import('@/features/common/utils/onboardingCheck');
+      const redirectPath = await getOnboardingRedirectPath(userId);
+      
+      // Preload the target route based on redirect path
+      if (redirectPath.startsWith(ROUTES.VENDOR_DASHBOARD)) {
+        // Onboarding complete - preload only critical dashboard overview (lighter)
+        // Full dashboard will load on demand
+        preloadDashboardOverview().catch(console.error);
+      } else if (redirectPath.startsWith(ROUTES.VENDOR_ONBOARDING)) {
+        // Onboarding incomplete - preload onboarding stage 1
+        preloadOnboardingStage(1).catch(console.error);
       }
-
-      // Only redirect if user exists and is on auth page
-      if (!user) {
-        return;
-      }
-
-      try {
-        // Check session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-        
-        // If session exists and user has email, check if confirmed
-        if (session?.user?.email && !session.user.email_confirmed_at) {
-          // Email not confirmed - stay on auth page
-          return;
-        }
-        
-        // Email confirmed - proceed with redirect
-            const { getOnboardingRedirectPath } = await import('@/features/common/utils/onboardingCheck');
-        const redirectPath = await getOnboardingRedirectPath(user.id);
-        
-        if (!isMounted) return;
-        
-        // Only navigate if path is different from current
-        if (window.location.pathname !== redirectPath) {
-          console.log('VendorAuth - Auto-redirecting logged-in user to:', redirectPath);
-          navigate(redirectPath, { replace: true });
-        }
-      } catch (err) {
-        console.error('Error in auto-redirect:', err);
-        // Don't redirect on error to prevent loops
-      }
-    };
-
-    // Only run once when component mounts or user changes
-    const timer = setTimeout(() => {
-      checkAndRedirect();
-    }, 1000);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [user, loading]); // Removed navigate from dependencies to prevent re-runs
+      
+      return redirectPath;
+    } catch (err) {
+      console.error('Error getting redirect path:', err);
+      // Default to onboarding if error - preload stage 1
+      preloadOnboardingStage(1).catch(console.error);
+      return ROUTES.VENDOR_ONBOARDING_STAGE_1;
+    }
+  };
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
 
   // Register form state
@@ -166,6 +149,8 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string>('');
 
   const validateRegisterForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -194,7 +179,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
 
     if (!registerFormData.mobileNumber.trim()) {
       newErrors.mobileNumber = 'Mobile number is required';
-    } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(registerFormData.mobileNumber.replace(/\s/g, ''))) {
+    } else if (!/^\+?[1-9]\d{0,15}$/.test(registerFormData.mobileNumber.replace(/\s/g, ''))) {
       newErrors.mobileNumber = 'Please enter a valid mobile number';
     }
 
@@ -224,7 +209,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
 
     if (!phoneFormData.phone.trim()) {
       newErrors.phone = 'Mobile number is required';
-    } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(phoneFormData.phone.replace(/\s/g, ''))) {
+    } else if (!/^\+?[1-9]\d{0,15}$/.test(phoneFormData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Please enter a valid mobile number';
     }
 
@@ -292,8 +277,11 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
 
     setIsSubmitting(true);
     setErrors({});
+    setEmailSent(false);
 
     try {
+      console.log('[Register] Starting registration for:', registerFormData.email);
+      
       const { data, error } = await signUp(
         registerFormData.email,
         registerFormData.password,
@@ -305,16 +293,29 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       );
 
       if (error) {
+        console.error('[Register] Registration error:', error);
         setErrors({ submit: error.message });
-      } else if (data?.user) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Store registration data in localStorage for later use
+      if (registerFormData.businessName && registerFormData.mobileNumber) {
+        localStorage.setItem('pendingVendorProfile', JSON.stringify({
+          businessName: registerFormData.businessName,
+          mobileNumber: registerFormData.mobileNumber,
+          email: registerFormData.email,
+        }));
+      }
+
+      if (data?.user) {
+        console.log('[Register] User created:', data.user.id, 'Email confirmed:', data.user.email_confirmed_at);
+        
         // Check if email confirmation is required
-        // If user.email is null OR user is not confirmed, email confirmation needed
-        if (!data.user.email || !data.user.email_confirmed_at) {
-          // Don't redirect - stay on register page with confirmation message
-          setErrors({ 
-            submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
-            success: true
-          });
+        if (!data.user.email_confirmed_at) {
+          // Email confirmation required - show confirmation UI
+          setRegisteredEmail(registerFormData.email);
+          setEmailSent(true);
           // Clear form data
           setRegisterFormData({
             businessName: '',
@@ -323,18 +324,32 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
             confirmPassword: '',
             mobileNumber: ''
           });
+          setIsSubmitting(false);
+          return;
         } else {
-          // User is already confirmed, redirect to onboarding
-          navigate('/vendor/onboarding/stage-1');
+          // User is already confirmed, redirect using same logic as login
+          console.log('[Register] User already confirmed, redirecting...');
+          const redirectPath = await getRedirectPath(data.user.id);
+          console.log('[Register] Redirecting to:', redirectPath);
+          // Preload is already handled in getRedirectPath
+          navigate(redirectPath, { replace: true });
         }
       } else {
         // No user data but no error - usually means confirmation email sent
-        setErrors({ 
-          submit: 'Please confirm your email before continuing. Check your inbox (' + registerFormData.email + ') and click the confirmation link.',
-          success: true
+        console.log('[Register] No user data, assuming email sent');
+        setRegisteredEmail(registerFormData.email);
+        setEmailSent(true);
+        // Clear form data
+        setRegisterFormData({
+          businessName: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          mobileNumber: ''
         });
       }
     } catch (err: any) {
+      console.error('[Register] Unexpected error:', err);
       setErrors({ submit: err.message || 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
@@ -356,45 +371,18 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       if (error) {
         setErrors({ submit: error.message });
       } else if (data?.user) {
-        // Check onboarding status directly to ensure accurate redirect
-        try {
-          const { data: vendorProfile, error: profileError } = await supabase
-            .from('vendor_profiles')
-            .select('onboarding_status')
-            .eq('user_id', data.user.id)
-            .single();
-
-          if (profileError || !vendorProfile) {
-            console.log('Profile not found or error, redirecting to onboarding');
-            navigate('/vendor/onboarding/stage-1');
-          } else {
-            const status = vendorProfile.onboarding_status;
-            console.log('Onboarding status on login:', status);
-            if (status === 'completed') {
-              console.log('Onboarding completed, redirecting to dashboard');
-              navigate('/vendor/dashboard');
-            } else {
-              console.log('Onboarding incomplete, redirecting to onboarding');
-              navigate('/vendor/onboarding/stage-1');
-            }
-          }
-        } catch (err) {
-          console.error('Error checking onboarding status:', err);
-          // On error, try to use the helper function as fallback
-          try {
-            const { getOnboardingRedirectPath } = await import('@/features/common/utils/onboardingCheck');
-            const redirectPath = await getOnboardingRedirectPath(data.user.id);
-            navigate(redirectPath);
-          } catch (fallbackErr) {
-            console.error('Fallback redirect also failed:', fallbackErr);
-            navigate('/vendor/onboarding/stage-1');
-          }
-        }
+        // Get redirect path (checks location state first, then onboarding status)
+        // Preload is already handled in getRedirectPath
+        const redirectPath = await getRedirectPath(data.user.id);
+        console.log('Redirecting after login to:', redirectPath);
+        navigate(redirectPath, { replace: true });
       } else {
-        // Fallback redirect
-        navigate('/vendor/onboarding/stage-1');
+        // Fallback redirect - preload onboarding stage 1
+        preloadOnboardingStage(1).catch(console.error);
+        navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1, { replace: true });
       }
     } catch (err) {
+      console.error('Error during login:', err);
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
@@ -452,13 +440,15 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       if (error) {
         setErrors({ submit: error.message });
       } else if (data?.user) {
-        // Check onboarding status and redirect accordingly
-            const { getOnboardingRedirectPath } = await import('@/features/common/utils/onboardingCheck');
-        const redirectPath = await getOnboardingRedirectPath(data.user.id);
-        navigate(redirectPath);
+        // Get redirect path (checks location state first, then onboarding status)
+        // Preload is already handled in getRedirectPath
+        const redirectPath = await getRedirectPath(data.user.id);
+        console.log('Redirecting after OTP verification to:', redirectPath);
+        navigate(redirectPath, { replace: true });
       } else {
-        // Fallback redirect
-        navigate('/vendor/onboarding/stage-1');
+        // Fallback redirect - preload onboarding stage 1
+        preloadOnboardingStage(1).catch(console.error);
+        navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1, { replace: true });
       }
     } catch (err) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
@@ -469,6 +459,11 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
 
   // Don't show full screen loading - only show on button if submitting
   // Allow user to see the form even while checking auth
+
+  // Show registration confirmation UI if email was sent
+  if (mode === 'register' && emailSent && registeredEmail) {
+    return <RegisterConfirm email={registeredEmail} />;
+  }
 
   return (
     <div className="vendor-auth">
@@ -496,7 +491,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
                 className={`mode-btn ${mode === 'login' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('login');
-                  navigate('/login');
+                  navigate(ROUTES.LOGIN);
                   setErrors({});
                   setOtpSent(false);
                 }}
@@ -509,7 +504,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
                 className={`mode-btn ${mode === 'register' ? 'active' : ''}`}
                 onClick={() => {
                   setMode('register');
-                  navigate('/register');
+                  navigate(ROUTES.REGISTER);
                   setErrors({});
                   setOtpSent(false);
                 }}
@@ -824,9 +819,9 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
                     <button
                       type="submit"
                       className="btn btn-primary btn-lg submit-btn"
-                      disabled={isSubmitting || loading || googleLoading || otpLoading}
+                      disabled={isSubmitting || safeLoading || googleLoading || otpLoading}
                     >
-                      {isSubmitting || loading ? (
+                      {isSubmitting || safeLoading ? (
                         <>
                           <Loader2 className="btn-icon spinning" />
                           Signing In...
@@ -916,7 +911,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
                         type="button"
                         onClick={handleSendOTP}
                         className="btn btn-primary btn-lg submit-btn"
-                        disabled={otpLoading || isSubmitting || googleLoading || loading}
+                        disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
                       >
                         {otpLoading ? (
                           <>
@@ -934,7 +929,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
                       <button
                         type="submit"
                         className="btn btn-primary btn-lg submit-btn"
-                        disabled={otpLoading || isSubmitting || googleLoading || loading}
+                        disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
                       >
                         {otpLoading ? (
                           <>

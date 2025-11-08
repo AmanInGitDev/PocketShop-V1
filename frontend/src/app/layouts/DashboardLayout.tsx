@@ -5,7 +5,7 @@
  * Provides responsive sidebar with dynamic route handling.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -19,6 +19,15 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ROUTES } from '@/constants/routes';
+import { 
+  preloadInsights, 
+  preloadInsightsOnIdle,
+  preloadOrders, 
+  preloadInventory, 
+  preloadPayouts, 
+  preloadSettings 
+} from '@/utils/preloaders';
 import logoImage from '@/assets/images/logo.png';
 
 interface DashboardLayoutProps {
@@ -43,37 +52,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
-      path: '/vendor/dashboard',
+      path: ROUTES.VENDOR_DASHBOARD_OVERVIEW,
     },
     {
       id: 'orders',
       label: 'Orders',
       icon: <ShoppingBag className="w-5 h-5" />,
-      path: '/vendor/dashboard/orders',
+      path: ROUTES.VENDOR_DASHBOARD_ORDERS,
     },
     {
       id: 'inventory',
       label: 'Inventory',
       icon: <Package className="w-5 h-5" />,
-      path: '/vendor/dashboard/inventory',
+      path: ROUTES.VENDOR_DASHBOARD_INVENTORY,
     },
     {
       id: 'insights',
       label: 'Insights',
       icon: <BarChart3 className="w-5 h-5" />,
-      path: '/vendor/dashboard/insights',
+      path: ROUTES.VENDOR_DASHBOARD_INSIGHTS,
     },
     {
       id: 'payouts',
       label: 'Payouts',
       icon: <DollarSign className="w-5 h-5" />,
-      path: '/vendor/dashboard/payouts',
+      path: ROUTES.VENDOR_DASHBOARD_PAYOUTS,
     },
     {
       id: 'settings',
       label: 'Settings',
       icon: <Settings className="w-5 h-5" />,
-      path: '/vendor/dashboard/settings',
+      path: ROUTES.VENDOR_DASHBOARD_SETTINGS,
     },
   ];
 
@@ -81,9 +90,34 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     navigate(path);
   };
 
+  // Preload route on hover for faster navigation
+  // Uses immediate preload for lightweight routes, idle preload for heavy ones
+  const handleNavItemHover = (path: string) => {
+    if (path === ROUTES.VENDOR_DASHBOARD_INSIGHTS) {
+      // Heavy chunk - use immediate preload on hover (user likely to click)
+      preloadInsights().catch(console.error);
+    } else if (path === ROUTES.VENDOR_DASHBOARD_ORDERS) {
+      preloadOrders().catch(console.error);
+    } else if (path === ROUTES.VENDOR_DASHBOARD_INVENTORY) {
+      preloadInventory().catch(console.error);
+    } else if (path === ROUTES.VENDOR_DASHBOARD_PAYOUTS) {
+      preloadPayouts().catch(console.error);
+    } else if (path === ROUTES.VENDOR_DASHBOARD_SETTINGS) {
+      preloadSettings().catch(console.error);
+    }
+  };
+  
+  // Preload insights on idle for users already in dashboard (background prefetch)
+  useEffect(() => {
+    // Only preload insights on idle if user is on dashboard (not already on insights)
+    if (location.pathname.startsWith(ROUTES.VENDOR_DASHBOARD) && !location.pathname.includes(ROUTES.VENDOR_DASHBOARD_INSIGHTS)) {
+      preloadInsightsOnIdle();
+    }
+  }, [location.pathname]);
+
   const handleLogout = async () => {
     await signOut();
-    navigate('/business');
+    navigate(ROUTES.BUSINESS);
   };
 
   const isActiveRoute = (path: string): boolean => {
@@ -143,6 +177,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavigation(item.path)}
+                  onMouseEnter={() => handleNavItemHover(item.path)}
                   className={`
                     w-full flex items-center gap-3 px-4 py-3
                     rounded-lg transition-all duration-200

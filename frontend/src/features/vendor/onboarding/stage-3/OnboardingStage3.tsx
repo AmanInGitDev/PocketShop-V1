@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '@/features/vendor/context/OnboardingContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import { preloadNextOnboardingStage, preloadDashboard } from '@/utils/preloaders';
 import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
@@ -47,18 +49,148 @@ const PLANS: PlanOption[] = [
 ];
 
 const OnboardingStage3: React.FC = () => {
-  const navigate = useNavigate();
-  const { data, updateData, nextStage, previousStage } = useOnboarding();
+  const { data, updateData, completeStage, nextStage, previousStage } = useOnboarding();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const handleSelectPlan = async (planId: 'free' | 'pro') => {
-    if (planId === 'pro') return; // Pro plan not available yet
+    if (planId === 'pro') {
+      setError('Pro plan is coming soon. Please select the Free Plan to continue.');
+      return;
+    }
 
+    if (!user) {
+      setError('User not authenticated. Please log in again.');
+      return;
+    }
+
+    // Update local state first
     updateData({ selectedPlan: planId });
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    nextStage();
-    navigate('/vendor/onboarding/completion');
+    setError('');
+
+    try {
+      console.log('[OnboardingStage3] Starting stage 3 completion for user:', user.id);
+      console.log('[OnboardingStage3] Selected plan:', planId);
+
+      // Get current metadata first to preserve existing data
+      console.log('[OnboardingStage3] Fetching current profile...');
+      const { data: currentProfile, error: fetchError } = await (supabase
+        .from('vendor_profiles' as any)
+        .select('metadata, onboarding_status')
+        .eq('user_id', user.id)
+        .single()) as any;
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('[OnboardingStage3] Error fetching profile:', fetchError);
+        setError(`Failed to load profile: ${fetchError.message}. Please refresh and try again.`);
+        setIsLoading(false);
+        return;
+      }
+
+      const currentMetadata = currentProfile?.metadata || {};
+      
+      // Save stage 3 data to database
+      console.log('[OnboardingStage3] Saving plan selection to database...');
+      console.log('[OnboardingStage3] Update payload:', {
+        metadata: {
+          ...currentMetadata,
+          business_category: data.businessCategory,
+          selected_plan: planId,
+        },
+        onboarding_status: 'planning_selected',
+      });
+      
+      const { error: updateError, data: updateResponse } = await (supabase
+        .from('vendor_profiles' as any)
+        .update({
+          metadata: {
+            ...currentMetadata,
+            business_category: data.businessCategory,
+            selected_plan: planId,
+          },
+          onboarding_status: 'planning_selected', // This marks stage 3 as complete
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .select()) as any;
+
+      if (updateError) {
+        console.error('[OnboardingStage3] ❌ Database update error:', updateError);
+        console.error('[OnboardingStage3] Error code:', updateError.code);
+        console.error('[OnboardingStage3] Error message:', updateError.message);
+        setError(`Failed to save plan selection: ${updateError.message}. Please try again.`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!updateResponse || updateResponse.length === 0) {
+        console.error('[OnboardingStage3] ❌ No data returned from update!');
+        setError('Update succeeded but no data returned. Please refresh and try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('[OnboardingStage3] ✅ Plan selection saved successfully:', updateResponse);
+      
+      // Verify the update worked
+      const savedStatus = updateResponse[0]?.onboarding_status;
+      console.log('[OnboardingStage3] Saved status:', savedStatus);
+      if (savedStatus !== 'planning_selected') {
+        console.error('[OnboardingStage3] ⚠️ Status mismatch! Expected planning_selected, got:', savedStatus);
+        setError(`Status update may have failed. Expected 'planning_selected', got '${savedStatus}'. Please try again.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify database update by re-querying
+      console.log('[OnboardingStage3] Verifying database update...');
+      const { data: verifyData, error: verifyError } = await (supabase
+        .from('vendor_profiles' as any)
+        .select('onboarding_status, metadata')
+        .eq('user_id', user.id)
+        .single()) as any;
+
+      if (verifyError) {
+        console.error('[OnboardingStage3] Verification query error:', verifyError);
+        setError(`Failed to verify update: ${verifyError.message}. Please refresh and try again.`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (verifyData) {
+        console.log('[OnboardingStage3] Verification result - Status:', verifyData.onboarding_status);
+        console.log('[OnboardingStage3] Verification result - Selected plan:', verifyData.metadata?.selected_plan);
+        if (verifyData.onboarding_status === 'planning_selected' && verifyData.metadata?.selected_plan === planId) {
+          console.log('[OnboardingStage3] ✅ Status and plan verified! Stage 3 is complete.');
+        } else {
+          console.error('[OnboardingStage3] ❌ Verification failed!');
+          setError(`Verification failed. Status: ${verifyData.onboarding_status}, Plan: ${verifyData.metadata?.selected_plan}. Please try again.`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Preload completion page and dashboard for faster navigation
+      console.log('[OnboardingStage3] Preloading completion page and dashboard...');
+      preloadNextOnboardingStage(3).catch(console.error);
+      preloadDashboard().catch(console.error);
+
+      // Wait for database commit to propagate
+      console.log('[OnboardingStage3] Waiting for database commit propagation...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+
+      // Navigate to completion page (terms & conditions)
+      console.log('[OnboardingStage3] ✅ All checks passed! Navigating to completion page...');
+      // Use window.location for reliable navigation
+      window.location.href = ROUTES.VENDOR_ONBOARDING_COMPLETION;
+      
+    } catch (err: any) {
+      console.error('[OnboardingStage3] Unexpected error:', err);
+      setError(err.message || 'An unexpected error occurred. Please try again or refresh the page.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -135,16 +267,20 @@ const OnboardingStage3: React.FC = () => {
             ))}
           </div>
 
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              {error}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-4">
             <Button
               type="button"
               variant="outline"
               size="lg"
-              onClick={() => {
-                previousStage();
-                navigate('/vendor/onboarding/stage-2');
-              }}
+              onClick={() => previousStage()}
               className="flex-1"
             >
               Back

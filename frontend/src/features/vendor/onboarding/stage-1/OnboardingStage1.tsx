@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '@/features/vendor/context/OnboardingContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import { ROUTES } from '@/constants/routes';
+import { preloadNextOnboardingStage } from '@/utils/preloaders';
 import { InputField } from '@/features/common/components/shared/InputField';
 import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
 const OnboardingStage1: React.FC = () => {
-  const navigate = useNavigate();
-  const { data, updateData, nextStage } = useOnboarding();
+  const { data, updateData, completeStage, nextStage } = useOnboarding();
+  const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,6 +18,7 @@ const OnboardingStage1: React.FC = () => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
+    // Client-side validation
     if (!data.restaurantName) newErrors.restaurantName = 'Restaurant name is required';
     if (!data.ownerName) newErrors.ownerName = 'Owner name is required';
     if (!data.restaurantType) newErrors.restaurantType = 'Restaurant type is required';
@@ -25,11 +29,188 @@ const OnboardingStage1: React.FC = () => {
       return;
     }
 
+    if (!user) {
+      setErrors({ submit: 'User not authenticated. Please log in again.' });
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    nextStage();
-    navigate('/vendor/onboarding/stage-2');
+    setErrors({}); // Clear previous errors
+
+    try {
+      console.log('[OnboardingStage1] Starting stage 1 completion for user:', user.id);
+      console.log('[OnboardingStage1] Form data:', {
+        restaurantName: data.restaurantName,
+        ownerName: data.ownerName,
+        restaurantType: data.restaurantType,
+        businessCategory: data.businessCategory,
+      });
+
+      // Step 0: Check if vendor profile exists
+      console.log('[OnboardingStage1] Checking if vendor profile exists...');
+      const { data: existingProfile, error: checkError } = await (supabase
+        .from('vendor_profiles' as any)
+        .select('id, onboarding_status')
+        .eq('user_id', user.id)
+        .single()) as any;
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 means "not found" which is OK, we'll create/update
+        console.error('[OnboardingStage1] Error checking profile:', checkError);
+        setErrors({ submit: `Error checking profile: ${checkError.message}. Please refresh and try again.` });
+        setIsLoading(false);
+        return;
+      }
+
+      let updateResponse: any = null;
+      
+      if (!existingProfile) {
+        console.log('[OnboardingStage1] No profile found, creating new profile...');
+        // Profile doesn't exist, create it
+        const { error: createError, data: createResponse } = await (supabase
+          .from('vendor_profiles' as any)
+          .insert({
+            user_id: user.id,
+            business_name: data.restaurantName,
+            owner_name: data.ownerName,
+            business_type: data.restaurantType,
+            email: user.email || '',
+            mobile_number: '', // Will be set later or from auth metadata
+            metadata: {
+              business_category: data.businessCategory,
+            },
+            onboarding_status: 'basic_info',
+            is_active: false,
+          })
+          .select()) as any;
+
+        if (createError) {
+          console.error('[OnboardingStage1] ❌ Error creating profile:', createError);
+          console.error('[OnboardingStage1] Error code:', createError.code);
+          console.error('[OnboardingStage1] Error message:', createError.message);
+          console.error('[OnboardingStage1] Error details:', createError.details);
+          setErrors({ submit: `Failed to create profile: ${createError.message} (Code: ${createError.code}). Please check if you have permission to create a profile.` });
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('[OnboardingStage1] ✅ Profile created successfully:', createResponse);
+        updateResponse = createResponse;
+      } else {
+        console.log('[OnboardingStage1] Profile exists, updating...');
+        console.log('[OnboardingStage1] Current status:', existingProfile.onboarding_status);
+
+        // Step 1: Save stage 1 data AND update onboarding status in one operation
+        console.log('[OnboardingStage1] Saving data to database with status update...');
+        console.log('[OnboardingStage1] User ID:', user.id);
+        console.log('[OnboardingStage1] Update payload:', {
+          business_name: data.restaurantName,
+          owner_name: data.ownerName,
+          business_type: data.restaurantType,
+          metadata: {
+            business_category: data.businessCategory,
+          },
+          onboarding_status: 'basic_info',
+        });
+        
+        const { error: updateError, data: updateData } = await (supabase
+          .from('vendor_profiles' as any)
+          .update({
+            business_name: data.restaurantName,
+            owner_name: data.ownerName,
+            business_type: data.restaurantType,
+            metadata: {
+              business_category: data.businessCategory,
+            },
+            onboarding_status: 'basic_info', // This marks stage 1 as complete
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+          .select()) as any;
+        
+        console.log('[OnboardingStage1] Update response - Error:', updateError);
+        console.log('[OnboardingStage1] Update response - Data:', updateData);
+
+        if (updateError) {
+          console.error('[OnboardingStage1] ❌ Database update error:', updateError);
+          console.error('[OnboardingStage1] Error code:', updateError.code);
+          console.error('[OnboardingStage1] Error message:', updateError.message);
+          console.error('[OnboardingStage1] Error details:', updateError.details);
+          setErrors({ submit: `Failed to save data: ${updateError.message} (Code: ${updateError.code}). Please check if you have permission to update your profile.` });
+          setIsLoading(false);
+          return;
+        }
+
+        if (!updateData || updateData.length === 0) {
+          console.error('[OnboardingStage1] ❌ No data returned from update!');
+          setErrors({ submit: 'Update succeeded but no data returned. Please refresh and try again.' });
+          setIsLoading(false);
+          return;
+        }
+
+        updateResponse = updateData;
+      }
+
+      console.log('[OnboardingStage1] ✅ Data saved successfully:', updateResponse);
+      
+      // Verify the update actually worked by checking the returned data
+      const savedStatus = updateResponse[0]?.onboarding_status;
+      console.log('[OnboardingStage1] Saved status from response:', savedStatus);
+      if (savedStatus !== 'basic_info') {
+        console.error('[OnboardingStage1] ⚠️ WARNING: Status mismatch! Expected basic_info, got:', savedStatus);
+        setErrors({ submit: `Status update may have failed. Expected 'basic_info', got '${savedStatus}'. Please try again.` });
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Verify database update by re-querying (double-check)
+      console.log('[OnboardingStage1] Verifying database update...');
+      const { data: verifyData, error: verifyError } = await (supabase
+        .from('vendor_profiles' as any)
+        .select('onboarding_status, business_name')
+        .eq('user_id', user.id)
+        .single()) as any;
+
+      if (verifyError) {
+        console.error('[OnboardingStage1] Verification query error:', verifyError);
+        setErrors({ submit: `Failed to verify update: ${verifyError.message}. Please refresh and try again.` });
+        setIsLoading(false);
+        return;
+      }
+
+      if (verifyData) {
+        console.log('[OnboardingStage1] Verification result - Status:', verifyData.onboarding_status);
+        if (verifyData.onboarding_status === 'basic_info') {
+          console.log('[OnboardingStage1] ✅ Status verified! Stage 1 is complete.');
+        } else {
+          console.error('[OnboardingStage1] ❌ Status verification failed! Status is:', verifyData.onboarding_status);
+          setErrors({ submit: `Status update failed. Current status: ${verifyData.onboarding_status}. Please try again.` });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Step 3: Preload next stage for faster navigation
+      console.log('[OnboardingStage1] Preloading stage 2...');
+      preloadNextOnboardingStage(1).catch(console.error);
+
+      // Step 4: Wait a moment to ensure database commit is fully propagated
+      console.log('[OnboardingStage1] Waiting for database commit propagation...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Increased to 1s for reliability
+
+      // Step 5: Force a hard navigation to stage 2 (bypasses React Router state issues)
+      console.log('[OnboardingStage1] ✅ All checks passed! Navigating to stage 2...');
+      // Use window.location for reliable navigation that forces a fresh page load
+      // This ensures OnboardingProtectedRoute re-checks the database with fresh data
+      window.location.href = ROUTES.VENDOR_ONBOARDING_STAGE_2;
+      
+    } catch (err: any) {
+      console.error('[OnboardingStage1] Unexpected error:', err);
+      setErrors({ 
+        submit: err.message || 'An unexpected error occurred. Please try again or refresh the page.' 
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -115,17 +296,15 @@ const OnboardingStage1: React.FC = () => {
               </div>
             </div>
 
+            {/* Error message */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {errors.submit}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={() => navigate('/register')}
-                className="flex-1"
-              >
-                Back
-              </Button>
               <Button
                 type="submit"
                 variant="primary"
