@@ -16,11 +16,6 @@ export type { BadgeProps } from './Badge';
 export { default as Input } from './Input';
 export type { InputProps } from './Input';
 
-export { default as StatsCard } from './StatsCard';
-export type { StatsCardProps } from './StatsCard';
-
-export { default as DashboardLayout } from './DashboardLayout';
-
 export { ProtectedRoute } from './shared/ProtectedRoute';
 export { OnboardingProtectedRoute } from './shared/OnboardingProtectedRoute';
 export { AuthRouteGuard } from './shared/AuthRouteGuard';
