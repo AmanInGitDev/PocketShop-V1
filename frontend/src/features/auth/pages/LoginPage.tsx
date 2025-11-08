@@ -470,15 +470,15 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       <div className="auth-container">
         {/* Header */}
         <header className="auth-header">
-          <Link to="/" className="back-link">
-            <ArrowLeft className="back-icon" />
-            Back to Home
-          </Link>
-          
           <div className="header-logo">
             <img src={logoImage} alt="PocketShop Logo" className="logo-icon" />
             <span className="logo-text">PocketShop</span>
           </div>
+          
+          <Link to={ROUTES.BUSINESS} className="back-link">
+            <ArrowLeft className="back-icon" />
+            Back
+          </Link>
         </header>
 
         {/* Main Content */}

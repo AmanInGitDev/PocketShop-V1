@@ -1,246 +1,257 @@
 /**
- * Orders Page Component
+ * Vendor Orders Kanban Page
  * 
- * Displays all orders with filtering and sorting capabilities.
+ * Kanban-style order management interface with three columns:
+ * - New Orders
+ * - In Progress
+ * - Ready
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Search, 
-  Filter, 
-  Download,
-  MoreVertical,
-  Eye,
-  Package,
-  Truck,
-  CheckCircle
+  getOrders, 
+  getOrdersByStatus,
+  type DemoOrder 
+} from '@/features/vendor/services/demoOrderRepository';
+import { 
+  UtensilsCrossed, 
+  ShoppingBag, 
+  Info,
+  Clock,
+  Inbox
 } from 'lucide-react';
 
 const Orders: React.FC = () => {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
 
-  const orders = [
-    {
-      id: '#ORD-001',
-      customer: 'John Doe',
-      email: 'john@example.com',
-      items: 3,
-      amount: '$45.99',
-      status: 'completed',
-      date: '2025-01-10',
-      time: '10:30 AM',
-    },
-    {
-      id: '#ORD-002',
-      customer: 'Jane Smith',
-      email: 'jane@example.com',
-      items: 2,
-      amount: '$89.50',
-      status: 'pending',
-      date: '2025-01-10',
-      time: '08:15 AM',
-    },
-    {
-      id: '#ORD-003',
-      customer: 'Mike Johnson',
-      email: 'mike@example.com',
-      items: 1,
-      amount: '$34.00',
-      status: 'processing',
-      date: '2025-01-10',
-      time: '06:45 AM',
-    },
-    {
-      id: '#ORD-004',
-      customer: 'Sarah Williams',
-      email: 'sarah@example.com',
-      items: 5,
-      amount: '$123.75',
-      status: 'completed',
-      date: '2025-01-09',
-      time: '03:20 PM',
-    },
-    {
-      id: '#ORD-005',
-      customer: 'David Brown',
-      email: 'david@example.com',
-      items: 2,
-      amount: '$67.25',
-      status: 'shipped',
-      date: '2025-01-09',
-      time: '11:10 AM',
-    },
-  ];
+  // Load demo orders
+  const allOrders = useMemo(() => getOrders(), []);
+  
+  // Filter orders by status
+  const newOrders = useMemo(() => getOrdersByStatus('NEW'), []);
+  const inProgressOrders = useMemo(() => getOrdersByStatus('IN_PROGRESS'), []);
+  const readyOrders = useMemo(() => getOrdersByStatus('READY'), []);
 
-  const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return { label: 'Completed', class: 'bg-green-100 text-green-800', icon: CheckCircle };
-      case 'pending':
-        return { label: 'Pending', class: 'bg-yellow-100 text-yellow-800', icon: Package };
-      case 'processing':
-        return { label: 'Processing', class: 'bg-blue-100 text-blue-800', icon: Package };
-      case 'shipped':
-        return { label: 'Shipped', class: 'bg-purple-100 text-purple-800', icon: Truck };
+  const filteredNewOrders = newOrders;
+  const filteredInProgressOrders = inProgressOrders;
+  const filteredReadyOrders = readyOrders;
+
+  // Calculate time ago
+  const getTimeAgo = (dateString: string): string => {
+    const now = new Date();
+    const orderDate = new Date(dateString);
+    const diffMs = now.getTime() - orderDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins === 1) return '1 min ago';
+    return `${diffMins} min ago`;
+  };
+
+  // Format time (HH.MM format)
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}.${minutes}`;
+  };
+
+  // Get payment method icon/name
+  const getPaymentMethodDisplay = (method: DemoOrder['paymentMethod']) => {
+    switch (method) {
+      case 'GOOGLE_PAY':
+        return { name: 'Google Pay', color: 'text-blue-600' };
+      case 'PAYTM':
+        return { name: 'Paytm', color: 'text-blue-600' };
+      case 'PHONEPE':
+        return { name: 'PhonePe', color: 'text-blue-600' };
+      case 'CASH':
+        return { name: 'Cash', color: 'text-green-600' };
+      case 'CARD':
+        return { name: 'Card', color: 'text-blue-600' };
       default:
-        return { label: status, class: 'bg-gray-100 text-gray-800', icon: Package };
+        return { name: method, color: 'text-gray-600' };
     }
   };
 
-  const filteredOrders = statusFilter === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === statusFilter);
+  // Get order type icon
+  const getOrderTypeIcon = (type: DemoOrder['orderType']) => {
+    if (type === 'DINE_IN') {
+      return (
+        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <UtensilsCrossed className="w-4 h-4 text-red-600" />
+        </div>
+      );
+    } else if (type === 'TAKE_AWAY') {
+      return (
+        <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
+          <ShoppingBag className="w-4 h-4 text-white" />
+        </div>
+      );
+    } else {
+      return (
+        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Info className="w-4 h-4 text-blue-600" />
+        </div>
+      );
+    }
+  };
 
-  const stats = [
-    { label: 'Total Orders', value: '1,234', color: 'blue' },
-    { label: 'Pending', value: '45', color: 'yellow' },
-    { label: 'Processing', value: '78', color: 'blue' },
-    { label: 'Completed', value: '1,111', color: 'green' },
-  ];
+  // Order Card Component
+  const OrderCard: React.FC<{ order: DemoOrder; statusColor: string }> = ({ order, statusColor }) => {
+    const paymentMethod = getPaymentMethodDisplay(order.paymentMethod);
+    const timeAgo = getTimeAgo(order.createdAt);
+    const time = formatTime(order.createdAt);
+
+    return (
+      <article className={`bg-white rounded-md shadow-md border-l-4 ${statusColor} p-4 mb-4 hover:shadow-lg transition-shadow`}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start gap-3 flex-1">
+            {getOrderTypeIcon(order.orderType)}
+            <div className="flex-1 min-w-0">
+              <div className="text-base font-bold text-gray-900 mb-1">
+                {order.orderNumber} - {order.customerName}
+              </div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span>{order.itemsCount} items</span>
+                  <span>•</span>
+                  <span className={paymentMethod.color}>Payment: {paymentMethod.name}</span>
+                </div>
+                {order.paymentStatus === 'PAID' && (
+                  <div className="flex items-center gap-1 text-green-600 font-medium">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    Paid
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="text-right ml-4">
+            <div className="text-lg font-bold text-gray-900">
+              ₹{order.total}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Clock className="w-3 h-3" />
+            <span>{time} • {timeAgo}</span>
+          </div>
+          <button 
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-3 py-1.5 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            View More
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  // Kanban Column Component
+  const KanbanColumn: React.FC<{
+    title: string;
+    count: number;
+    orders: DemoOrder[];
+    borderColor: string;
+    titleColor: string;
+  }> = ({ title, count, orders, borderColor, titleColor }) => {
+    return (
+      <section className="bg-gray-100 rounded-lg p-4 min-h-[500px]">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300">
+          <h3 className={`text-sm font-bold ${titleColor}`}>{title}</h3>
+          <span className="bg-gray-200 text-gray-700 rounded-full text-xs font-semibold px-2.5 py-0.5">
+            {count}
+          </span>
+        </div>
+        <div className="space-y-0">
+          {orders.length > 0 ? (
+            orders.map((order) => (
+              <OrderCard key={order.id} order={order} statusColor={borderColor} />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Inbox className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-500 font-medium">No {title.toLowerCase()}</p>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div>
+      {/* Page Title */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Vendor Orders</h1>
+      </div>
+
+      {/* Main Content */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-        <p className="text-gray-600 mt-1">
-          Manage and track all your customer orders
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search orders by ID, customer, or email..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <Download className="w-4 h-4" />
-              <span>Export</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex gap-2 mt-4">
-          {['all', 'pending', 'processing', 'shipped', 'completed'].map((status) => {
-            const info = getStatusInfo(status);
-            return (
+          {/* Tabs */}
+          <div className="mb-6">
+            <div className="flex items-end gap-6 border-b border-gray-300 pb-3">
               <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  statusFilter === status
-                    ? info.class
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                onClick={() => setActiveTab('live')}
+                className={`text-sm font-semibold pb-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-t ${
+                  activeTab === 'live'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                Live Orders
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Order ID</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Customer</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Items</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Amount</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Status</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Date & Time</th>
-                <th className="text-left py-3 px-6 text-sm font-semibold text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredOrders.map((order) => {
-                const statusInfo = getStatusInfo(order.status);
-                const StatusIcon = statusInfo.icon;
-                return (
-                  <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-6">
-                      <span className="text-sm font-medium text-blue-600">{order.id}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{order.customer}</p>
-                        <p className="text-xs text-gray-500">{order.email}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-sm text-gray-700">{order.items} items</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-sm font-semibold text-gray-900">{order.amount}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.class}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {statusInfo.label}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="text-sm text-gray-900">{order.date}</p>
-                        <p className="text-xs text-gray-500">{order.time}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreVertical className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
-            <span className="font-medium">{filteredOrders.length}</span> orders
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`text-sm font-semibold pb-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-t ${
+                  activeTab === 'history'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Orders History
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Previous
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Next
-            </button>
-          </div>
+
+          {/* Kanban Board */}
+          {activeTab === 'live' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <KanbanColumn
+                title="New Orders"
+                count={filteredNewOrders.length}
+                orders={filteredNewOrders}
+                borderColor="border-orange-400"
+                titleColor="text-orange-600"
+              />
+              <KanbanColumn
+                title="In Progress"
+                count={filteredInProgressOrders.length}
+                orders={filteredInProgressOrders}
+                borderColor="border-blue-400"
+                titleColor="text-blue-600"
+              />
+              <KanbanColumn
+                title="Ready"
+                count={filteredReadyOrders.length}
+                orders={filteredReadyOrders}
+                borderColor="border-green-400"
+                titleColor="text-green-600"
+              />
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="bg-white rounded-lg p-8 text-center border border-gray-200 shadow-sm">
+              <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium">Orders history will be displayed here</p>
+            </div>
+          )}
         </div>
-      </div>
     </div>
   );
 };
 
 export default Orders;
-
