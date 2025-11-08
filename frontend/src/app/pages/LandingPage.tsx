@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useLoadScript } from '@react-google-maps/api';
 import Logo from '@/features/common/components/Logo';
 import LocationDetector, { LocationDetectorRef } from '@/features/common/components/LocationDetector';
@@ -182,12 +182,29 @@ const LandingPage: React.FC = () => {
         </svg>
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-purple-900/10 backdrop-blur-[12px] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Logo size="md" />
+      {/* Header - Magicpin Style: Clean and Simple */}
+      <header className="fixed top-0 w-full z-50 bg-purple-900/20 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          {/* Top Bar - Logo and Sign In (Mobile First) */}
+          <div className="flex items-center justify-between h-14 md:h-20 py-2">
+            {/* Left Side - Logo */}
+            <div className="flex items-center gap-2">
+              <Logo size="md" />
+              {/* Mobile Hamburger Menu - Only show on mobile, next to logo */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden text-white/90 hover:text-white p-1.5"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
 
             {/* Desktop Navigation Menu */}
             <nav className="hidden md:flex items-center gap-8">
@@ -213,89 +230,50 @@ const LandingPage: React.FC = () => {
               </Link>
             </nav>
 
-            {/* Mobile Hamburger Menu Button */}
+            {/* Right Side - Sign In Button (Magicpin Style: Simple Pink Button) */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden text-white p-2"
-              aria-label="Toggle menu"
+              onClick={handleLoginClick}
+              disabled
+              title="Coming Soon!"
+              className="bg-pink-500 hover:bg-pink-600 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
+              Sign In
             </button>
-
-            {/* Right Side - App Install & Login */}
-            <div className="flex items-center gap-4">
-              {/* PWA Install Button */}
-              <div className="hidden lg:flex items-center">
-                <button
-                  onClick={handleInstallApp}
-                  className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>Install App</span>
-                </button>
-              </div>
-
-              {/* Login Button */}
-              <button
-                onClick={handleLoginClick}
-                disabled
-                title="Coming Soon!"
-                className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Lock className="w-4 h-4" />
-                <span>Sign In</span>
-              </button>
-            </div>
           </div>
 
-          {/* Mobile Navigation Menu */}
+          {/* Mobile Navigation Menu - Slide Down */}
           {mobileMenuOpen && (
-            <nav className="md:hidden mt-4 pb-4 border-t border-white/10">
-              <div className="flex flex-col gap-4 pt-4">
+            <nav className="md:hidden border-t border-white/10 animate-in slide-in-from-top duration-200">
+              <div className="flex flex-col py-3 space-y-1">
                 <a
                   href="/about-us"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/90 hover:text-white text-sm font-medium transition-colors py-2"
+                  className="text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg"
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   About us
                 </a>
                 <a
                   href="#"
-                  className="text-white/90 hover:text-white text-sm font-medium transition-colors py-2"
+                  className="text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg"
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   Around you
                 </a>
                 <Link
                   to="/business"
-                  className="text-white/90 hover:text-white text-sm font-medium transition-colors py-2"
+                  className="text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   For Business
                 </Link>
-                {/* Mobile Install App Button */}
                 <button
                   onClick={handleInstallApp}
-                  className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium transition-colors py-2 text-left"
+                  className="flex items-center gap-2 text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg text-left"
                 >
-                  <Download className="w-5 h-5" />
+                  <Download className="w-4 h-4" />
                   <span>Install App</span>
-                </button>
-                {/* Mobile Login Button */}
-                <button
-                  onClick={handleLoginClick}
-                  disabled
-                  title="Coming Soon!"
-                  className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 w-fit"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Sign In</span>
                 </button>
               </div>
             </nav>
@@ -303,18 +281,21 @@ const LandingPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative z-10 pt-28 pb-16 lg:pt-32 lg:pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white text-center mb-20">
-            India's <span className="text-pink-500">1st</span> Offline Commerce
-            <br />
-            Platform for Going Out
-          </h1>
+      {/* Hero Section - Magicpin Style: Prominent Search */}
+      <section className="relative z-10 pt-20 md:pt-24 pb-12 md:pb-16 lg:pt-28 lg:pb-24">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          {/* Main Headline - Better Mobile Spacing */}
+          <div className="text-center mb-8 md:mb-12 lg:mb-16">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-3 md:mb-4 leading-tight">
+              India's <span className="text-pink-500">1st</span> Offline Commerce
+            </h1>
+            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white/90">
+              Platform for Going Out
+            </p>
+          </div>
 
-          {/* Unified Search Bar - Magicpin Style */}
-          <div className="max-w-4xl mx-auto mt-16 mb-12">
+          {/* Unified Search Bar - Magicpin Style: Large and Prominent */}
+          <div className="max-w-4xl mx-auto mb-8 md:mb-12">
             {/* Desktop Search Bar */}
             <div className="hidden md:flex bg-white rounded-2xl p-1.5 shadow-2xl items-center">
               {/* Location Section - Interactive with LocationDetector */}
@@ -381,11 +362,11 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Mobile Search Bar - Stacked */}
-            <div className="md:hidden bg-white rounded-2xl p-3 shadow-2xl">
-              {/* Location Section - Interactive */}
+            {/* Mobile Search Bar - Magicpin Style: Large, Clean, Prominent */}
+            <div className="md:hidden bg-white rounded-xl p-4 shadow-2xl border border-gray-100">
+              {/* Location Section - Top Row */}
               <div 
-                className="flex items-center gap-3 px-3 py-2 mb-3 border-b border-gray-200 cursor-pointer"
+                className="flex items-center gap-2.5 px-2 py-2.5 mb-3 border-b border-gray-200 cursor-pointer hover:bg-gray-50 rounded-t-lg transition-colors"
                 onClick={() => mobileLocationBtnRef.current?.triggerDetection()}
               >
                 <svg
@@ -407,12 +388,15 @@ const LandingPage: React.FC = () => {
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <div className="flex flex-col flex-1">
-                  <span className="text-xs text-gray-500">Location</span>
-                  <span className="text-sm font-medium text-gray-700">
-                    {searchLocation || 'Detect Location'}
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-xs text-gray-500 font-medium">Location</span>
+                  <span className="text-sm font-semibold text-gray-800 truncate">
+                    {searchLocation || 'Select Location'}
                   </span>
                 </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
               
               {/* Hidden LocationDetector for Mobile */}
@@ -423,8 +407,8 @@ const LandingPage: React.FC = () => {
                 />
               </div>
               
-              {/* Main Search Input - Autocomplete */}
-              <div className="flex items-center gap-3 px-3">
+              {/* Main Search Input - Autocomplete - Large and Prominent */}
+              <div className="flex items-center gap-3 px-2">
                 <svg
                   className="w-5 h-5 text-gray-400 flex-shrink-0"
                   fill="none"
@@ -441,17 +425,17 @@ const LandingPage: React.FC = () => {
                 <PlacesAutocomplete
                   onPlaceSelected={handlePlaceSelected}
                   initialLocation={userLocation || undefined}
-                  className="flex-1"
-                  placeholder="Search for places, cuisines..."
+                  className="flex-1 text-base"
+                  placeholder="Search for places, cuisines, and more..."
                   isLoaded={isMapsLoaded}
                 />
               </div>
             </div>
           </div>
 
-          {/* Category Cards - Rich Illustrations */}
+          {/* Category Cards - Magicpin Style: Better Mobile Spacing */}
           {/* Mobile: 2 columns, Desktop: 3 columns, Large: 6 columns */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 w-full max-w-7xl mx-auto mb-16 px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5 lg:gap-6 w-full max-w-7xl mx-auto mb-12 md:mb-16 px-3 sm:px-4 lg:px-8">
             {/* Fashion - Rich Magicpin-Style Illustration */}
             <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
               <div className="text-center mb-4">

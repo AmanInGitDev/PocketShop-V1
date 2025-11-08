@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
-import StatsCard from '@/features/vendor/components/StatsCard';
 import { 
   DollarSign, 
   ShoppingBag, 
   TrendingUp, 
+  TrendingDown,
   Users,
   Activity,
   AlertCircle
@@ -110,16 +110,39 @@ const DashboardOverview: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <StatsCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-            color={stat.color}
-          />
-        ))}
+        {stats.map((stat, index) => {
+          const iconColors = {
+            success: 'bg-green-50 text-green-600',
+            primary: 'bg-blue-50 text-blue-600',
+            warning: 'bg-orange-50 text-orange-600',
+            error: 'bg-red-50 text-red-600',
+          };
+          return (
+            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-gray-500">{stat.title}</p>
+                <div className={`p-2 rounded-lg ${iconColors[stat.color]}`}>
+                  {stat.icon}
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                {stat.change && (
+                  <div className={`flex items-center text-sm font-semibold ${
+                    stat.change.type === 'increase' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {stat.change.type === 'increase' ? (
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 mr-1" />
+                    )}
+                    {stat.change.value}%
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Charts and Recent Activity */}
@@ -143,17 +166,17 @@ const DashboardOverview: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors">
+            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
               <ShoppingBag className="w-5 h-5" />
-              <span className="font-medium">Add New Product</span>
+              <span>Add New Product</span>
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors">
+            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
               <TrendingUp className="w-5 h-5" />
-              <span className="font-medium">View Analytics</span>
+              <span>View Analytics</span>
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors">
+            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
               <Users className="w-5 h-5" />
-              <span className="font-medium">Manage Customers</span>
+              <span>Manage Customers</span>
             </button>
           </div>
         </div>

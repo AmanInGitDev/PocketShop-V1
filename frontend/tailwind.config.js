@@ -7,6 +7,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        // PocketShop dark theme tokens
+        ps: {
+          bg: '#0f1720',        // page background
+          panel: '#0b1220',     // column panels
+          card: '#0f1a23',      // cards
+          subtle: '#9aa6b2',    // muted text
+          accent: '#ff7a18',    // action orange
+          success: '#22c55e',   // green
+          paid: '#60a5fa',      // payment blue
+        },
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -85,5 +95,6 @@ export default {
       },
     },
   },
+  darkMode: 'class',
   plugins: [],
 }

@@ -21,6 +21,19 @@ const BusinessLandingPage: React.FC = () => {
     company: false,
   });
   
+  // Scroll to top when component mounts (fixes issue where page shows content from previous scroll position)
+  useEffect(() => {
+    // Scroll to top immediately when page loads
+    // Use multiple methods for maximum browser compatibility
+    window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
   // Redirect based on onboarding status if already logged in
   useEffect(() => {
     let isMounted = true;
@@ -98,20 +111,20 @@ const BusinessLandingPage: React.FC = () => {
       {/* Header */}
       <header className="bg-transparent backdrop-blur-md border-b border-white/10 fixed top-0 w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-16 md:h-20">
             <Link to="/">
               <Logo size="md" />
             </Link>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={handleSignInClick}
-                className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-lg font-medium transition-colors border border-white/30"
+                className="bg-white/10 hover:bg-white/20 text-white px-3 md:px-6 py-1.5 md:py-2.5 rounded-lg text-xs md:text-sm font-medium transition-colors border border-white/30"
               >
                 Sign In
               </button>
               <button
                 onClick={handleGetStarted}
-                className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+                className="bg-pink-500 hover:bg-pink-600 text-white px-3 md:px-6 py-1.5 md:py-2.5 rounded-lg text-xs md:text-sm font-medium transition-colors"
               >
                 Get Started
               </button>
@@ -121,7 +134,7 @@ const BusinessLandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-28 py-20 lg:pt-32 lg:py-32">
+      <section className="pt-24 py-20 md:pt-28 lg:pt-32 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6">

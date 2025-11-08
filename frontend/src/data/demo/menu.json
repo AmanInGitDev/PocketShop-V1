@@ -1,0 +1,8 @@
+[
+  {"id":"menu-1","vendorId":"vendor-demo","name":"Maggi","price":50,"status":"ACTIVE"},
+  {"id":"menu-2","vendorId":"vendor-demo","name":"Chai","price":20,"status":"ACTIVE"},
+  {"id":"menu-3","vendorId":"vendor-demo","name":"Dosa","price":60,"status":"ACTIVE"},
+  {"id":"menu-4","vendorId":"vendor-demo","name":"Samosa","price":15,"status":"ACTIVE"},
+  {"id":"menu-5","vendorId":"vendor-demo","name":"Idli","price":40,"status":"ACTIVE"}
+]
+
