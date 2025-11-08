@@ -2,21 +2,26 @@
  * Vendor Dashboard Page
  * 
  * Main dashboard route that handles sub-routes for different sections.
+ * Sub-routes are lazy loaded for better performance and code splitting.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import DashboardLayout from '@/app/layouts/DashboardLayout';
-import DashboardOverview from './DashboardOverview';
-import Orders from './Orders';
-import Inventory from './Inventory';
-import Insights from '@/features/analytics/pages/InsightsPage';
-import Payouts from './Payouts';
-import Settings from './Settings';
+import { LoadingFallback } from '@/features/common/components';
+import { ROUTES } from '@/constants/routes';
 import { getOnboardingRedirectPath } from '@/features/common/utils/onboardingCheck';
 import { supabase } from '@/lib/supabaseClient';
+
+// Lazy load dashboard sub-routes for code splitting
+const DashboardOverview = lazy(() => import('./DashboardOverview'));
+const Orders = lazy(() => import('./Orders'));
+const Inventory = lazy(() => import('./Inventory'));
+const Insights = lazy(() => import('@/features/analytics/pages/InsightsPage'));
+const Payouts = lazy(() => import('./Payouts'));
+const Settings = lazy(() => import('./Settings'));
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +32,7 @@ const VendorDashboard: React.FC = () => {
   useEffect(() => {
     const checkAuthAndOnboarding = async () => {
       if (!loading && !user) {
-        navigate('/login');
+        navigate(ROUTES.LOGIN);
         return;
       }
 
@@ -47,20 +52,20 @@ const VendorDashboard: React.FC = () => {
             if (error.code === 'PGRST116') {
               console.log('Vendor profile not found, redirecting to onboarding');
             }
-            navigate('/vendor/onboarding/stage-1');
+            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
             return;
           }
 
           if (!vendorProfile) {
             console.log('No vendor profile found, redirecting to onboarding');
-            navigate('/vendor/onboarding/stage-1');
+            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
             return;
           }
 
           if (vendorProfile.onboarding_status !== 'completed') {
             // Onboarding incomplete - redirect to stage 1
             console.log('Onboarding incomplete, redirecting to stage-1');
-            navigate('/vendor/onboarding/stage-1');
+            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
             return;
           }
 
@@ -69,7 +74,7 @@ const VendorDashboard: React.FC = () => {
           setCheckingOnboarding(false);
         } catch (err) {
           console.error('Error checking onboarding:', err);
-          navigate('/vendor/onboarding/stage-1');
+          navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
         }
       }
     };
@@ -96,14 +101,16 @@ const VendorDashboard: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <Routes>
-        <Route path="" element={<DashboardOverview />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="insights" element={<Insights />} />
-        <Route path="payouts" element={<Payouts />} />
-        <Route path="settings" element={<Settings />} />
-      </Routes>
+      <Suspense fallback={<LoadingFallback variant="dashboard" />}>
+        <Routes>
+          <Route path="" element={<DashboardOverview />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="insights" element={<Insights />} />
+          <Route path="payouts" element={<Payouts />} />
+          <Route path="settings" element={<Settings />} />
+        </Routes>
+      </Suspense>
     </DashboardLayout>
   );
 };
