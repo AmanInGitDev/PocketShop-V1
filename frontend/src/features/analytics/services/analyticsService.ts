@@ -4,8 +4,6 @@
  * Handles all analytics-related operations
  */
 
-import { supabase } from '@/lib/supabaseClient';
-
 // Placeholder for analytics service
 // Will be implemented as needed
 

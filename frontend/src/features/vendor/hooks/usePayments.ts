@@ -16,7 +16,14 @@ export const usePayments = () => {
         .select('id')
         .eq('vendor_id', vendor.id);
 
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        // If table doesn't exist, return empty array instead of throwing
+        if (ordersError.code === '42P01' || ordersError.message?.includes('does not exist')) {
+          console.error('orders table does not exist. Please run database setup SQL files.');
+          return [];
+        }
+        throw ordersError;
+      }
 
       const orderIds = orders?.map(o => o.id) || [];
 
@@ -37,10 +44,18 @@ export const usePayments = () => {
         .in('order_id', orderIds)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        // If table doesn't exist, return empty array instead of throwing
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.error('payments table does not exist. Please run database setup SQL files.');
+          return [];
+        }
+        throw error;
+      }
+      return data || [];
     },
     enabled: !!vendor?.id,
+    retry: false, // Don't retry on error
   });
 };
 
@@ -57,17 +72,28 @@ export const usePaymentStats = () => {
         .select('amount, payment_status, created_at, orders!inner(vendor_id)')
         .eq('orders.vendor_id', vendor.id);
 
-      if (error) throw error;
+      if (error) {
+        // If table doesn't exist, return empty stats instead of throwing
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.error('payments table does not exist. Please run database setup SQL files.');
+          return {
+            totalRevenue: 0,
+            pendingPayouts: 0,
+            thisMonth: 0,
+          };
+        }
+        throw error;
+      }
 
-      const totalRevenue = payments
+      const totalRevenue = (payments || [])
         .filter(p => p.payment_status === 'completed')
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
-      const pendingPayouts = payments
+      const pendingPayouts = (payments || [])
         .filter(p => p.payment_status === 'pending')
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
-      const thisMonth = payments
+      const thisMonth = (payments || [])
         .filter(p => {
           const date = new Date(p.created_at);
           const now = new Date();
@@ -84,5 +110,6 @@ export const usePaymentStats = () => {
       };
     },
     enabled: !!vendor?.id,
+    retry: false, // Don't retry on error
   });
 };

@@ -4,7 +4,27 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="663a9c46-58b3-4d63-ab4c-d587ca51f858" name="Changes" comment="" />
+    <list default="true" id="663a9c46-58b3-4d63-ab4c-d587ca51f858" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/layouts/DashboardLayout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/layouts/DashboardLayout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/styles/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/assets/styles/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/StatusToggle.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/StatusToggle.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/common/TopNavbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/common/TopNavbar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/kanban/VendorOrdersKanban.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/kanban/VendorOrdersKanban.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/analytics/services/analyticsService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/analytics/services/analyticsService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/common/types/database.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/common/types/database.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/vendor/hooks/usePayments.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/vendor/hooks/usePayments.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/vendor/hooks/useProducts.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/vendor/hooks/useProducts.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/vendor/pages/VendorDashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/vendor/pages/VendorDashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/routes/publicRoutes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/routes/publicRoutes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tailwind.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,21 +33,21 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "AmanInGitDev"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;AmanInGitDev&quot;
   }
-}]]></component>
+}</component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
-    "url": "https://github.com/AmanInGitDev/PocketShop-V2.git",
-    "accountId": "a82b1e69-c252-4f07-8a69-9c2c2aaa5aa9"
+    "url": "https://github.com/AmanInGitDev/PocketShop-V1.git",
+    "accountId": "7a927565-e1d2-457d-9717-0a963f94bafc"
   }
 }]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 2
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="30wcnlKuUnxWx43ay21UZg7FB1s" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -38,6 +58,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/aman/PocketShop-V1",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -62,6 +83,7 @@
       <option name="presentableId" value="Default" />
       <updated>1754542244738</updated>
       <workItem from="1754542245853" duration="431000" />
+      <workItem from="1762773972270" duration="67000" />
     </task>
     <servers />
   </component>

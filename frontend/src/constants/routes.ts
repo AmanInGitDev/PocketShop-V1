@@ -29,8 +29,12 @@ export const ROUTES = {
   VENDOR_DASHBOARD_ORDERS: '/vendor/dashboard/orders',
   VENDOR_DASHBOARD_INVENTORY: '/vendor/dashboard/inventory',
   VENDOR_DASHBOARD_INSIGHTS: '/vendor/dashboard/insights',
+  VENDOR_DASHBOARD_STOREFRONT: '/vendor/dashboard/storefront',
   VENDOR_DASHBOARD_PAYOUTS: '/vendor/dashboard/payouts',
   VENDOR_DASHBOARD_SETTINGS: '/vendor/dashboard/settings',
+  
+  // Public storefront route
+  PUBLIC_STOREFRONT: '/storefront/:vendorId',
   
   // PWA routes
   OFFLINE: '/offline',

@@ -17,12 +17,15 @@ import { supabase } from '@/lib/supabaseClient';
 import { OrderProvider } from '@/context/OrderProvider';
 
 // Lazy load dashboard sub-routes for code splitting
-const DashboardOverview = lazy(() => import('./DashboardOverview'));
-const Orders = lazy(() => import('./Orders'));
-const Inventory = lazy(() => import('./Inventory'));
-const Insights = lazy(() => import('@/features/analytics/pages/InsightsPage'));
-const Payouts = lazy(() => import('./Payouts'));
-const Settings = lazy(() => import('./Settings'));
+const DashboardOverview = lazy(() => import('./DashboardNew'));
+const Orders = lazy(() => import('./OrdersNew'));
+const Inventory = lazy(() => import('./InventoryNew'));
+const AddProduct = lazy(() => import('./AddProductNew'));
+const EditProduct = lazy(() => import('./EditProductNew'));
+const Insights = lazy(() => import('./AnalyticsNew'));
+const Storefront = lazy(() => import('./StorefrontNew'));
+const Payouts = lazy(() => import('./PaymentsNew'));
+const Settings = lazy(() => import('./SettingsNew'));
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -108,7 +111,10 @@ const VendorDashboard: React.FC = () => {
             <Route path="" element={<DashboardOverview />} />
             <Route path="orders" element={<Orders />} />
             <Route path="inventory" element={<Inventory />} />
+            <Route path="inventory/add" element={<AddProduct />} />
+            <Route path="inventory/edit/:id" element={<EditProduct />} />
             <Route path="insights" element={<Insights />} />
+            <Route path="storefront" element={<Storefront />} />
             <Route path="payouts" element={<Payouts />} />
             <Route path="settings" element={<Settings />} />
           </Routes>

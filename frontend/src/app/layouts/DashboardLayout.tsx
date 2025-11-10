@@ -13,8 +13,7 @@ import {
   BarChart3, 
   DollarSign, 
   Settings, 
-  Menu,
-  X,
+  Store,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
@@ -69,6 +68,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       label: 'Insights',
       icon: <BarChart3 className="w-5 h-5" />,
       path: ROUTES.VENDOR_DASHBOARD_INSIGHTS,
+    },
+    {
+      id: 'storefront',
+      label: 'Storefront',
+      icon: <Store className="w-5 h-5" />,
+      path: ROUTES.VENDOR_DASHBOARD_STOREFRONT,
     },
     {
       id: 'payouts',

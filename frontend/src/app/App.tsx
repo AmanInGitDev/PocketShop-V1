@@ -6,12 +6,25 @@
  */
 
 import { BrowserRouter as Router } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
 import { LoadingScreen } from '@/features/common/components/LoadingScreen';
 import { ErrorBoundary } from '@/features/common/components';
 import { AppRoutes } from './routes/AppRoutes';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { usePWA } from '@/hooks/usePWA';
+
+// Create a QueryClient instance for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 // Inner component that has access to auth context
 const AppContent = () => {
@@ -30,17 +43,21 @@ function App() {
   // Initialize PWA hook (non-blocking, detects installability)
   // Currently not used but available for future install prompt UI
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { isInstalled, isInstallable } = usePWA();
+  const { isInstalled: _isInstalled, isInstallable: _isInstallable } = usePWA();
 
   return (
     <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
+            <CartProvider>
           {/* Offline indicator - shows when network is unavailable */}
           <OfflineIndicator />
           <AppContent />
+            </CartProvider>
         </AuthProvider>
       </Router>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

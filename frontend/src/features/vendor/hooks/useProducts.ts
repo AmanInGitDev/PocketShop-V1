@@ -17,10 +17,18 @@ export const useProducts = () => {
         .eq('vendor_id', vendor.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        // If table doesn't exist, return empty array instead of throwing
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.error('products table does not exist. Please run database setup SQL files.');
+          return [];
+        }
+        throw error;
+      }
+      return data || [];
     },
     enabled: !!vendor?.id,
+    retry: false, // Don't retry on error
   });
 
   // Set up realtime subscription for products
@@ -49,4 +57,34 @@ export const useProducts = () => {
   }, [vendor?.id, query]);
 
   return query;
+};
+
+export const useProduct = (productId: string | undefined) => {
+  const { data: vendor } = useVendor();
+
+  return useQuery({
+    queryKey: ['product', productId, vendor?.id],
+    queryFn: async () => {
+      if (!vendor?.id || !productId) throw new Error('No vendor ID or product ID');
+
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .eq('vendor_id', vendor.id)
+        .single();
+
+      if (error) {
+        // If table doesn't exist, return null instead of throwing
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.error('products table does not exist. Please run database setup SQL files.');
+          return null;
+        }
+        throw error;
+      }
+      return data;
+    },
+    enabled: !!vendor?.id && !!productId,
+    retry: false, // Don't retry on error
+  });
 };

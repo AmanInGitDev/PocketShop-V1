@@ -86,3 +86,7 @@ out
 # Documentation files (ignore .md files except root README.md to avoid counting as code lines)
 *.md
 !README.md
+!DOCS_INDEX.md
+
+# Archived reference repository
+.archive/dawn-of-app-craft/

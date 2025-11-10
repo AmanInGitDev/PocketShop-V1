@@ -27,5 +27,6 @@
     }
   },
   "include": ["src", "src/vite-env.d.ts"],
+  "exclude": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

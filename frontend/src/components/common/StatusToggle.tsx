@@ -5,8 +5,6 @@
  * Replaces duplicate status indicators with one unified component.
  */
 
-import React from 'react';
-
 interface StatusToggleProps {
   online: boolean;
   onToggle: () => void;

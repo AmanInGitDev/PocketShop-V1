@@ -4,6 +4,7 @@
  * Routes that are accessible without authentication.
  */
 
+import { lazy } from 'react';
 import { ROUTES } from '@/constants/routes';
 import type { RouteConfig } from './types';
 
@@ -14,6 +15,10 @@ import AboutUs from '@/app/pages/AboutUs';
 import NotFound from '@/app/pages/NotFound';
 import Offline from '@/app/pages/Offline';
 import LoginPage from '@/features/auth/pages/LoginPage';
+
+// Lazy loaded components
+const PublicStorefront = lazy(() => import('@/features/storefront/pages/PublicStorefront'));
+const OrderConfirmation = lazy(() => import('@/app/pages/OrderConfirmation'));
 
 export const publicRoutes: RouteConfig[] = [
   {
@@ -66,6 +71,22 @@ export const publicRoutes: RouteConfig[] = [
     title: 'Redirect to Login',
     accessLevel: 'public',
     replace: true,
+  },
+  {
+    path: '/storefront/:vendorId',
+    component: PublicStorefront,
+    title: 'Storefront - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'full',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Storefront' }],
+  },
+  {
+    path: '/order-confirmation',
+    component: OrderConfirmation,
+    title: 'Order Confirmation - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'full',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Order Confirmation' }],
   },
   {
     path: ROUTES.OFFLINE,

@@ -159,7 +159,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 /**
  * Main VendorOrdersKanban Component
  */
-export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId }) => {
+export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId: _vendorId }) => {
   const { orders, loading, error, changeOrderStatus, openOrder } = useOrderContext();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
@@ -259,7 +259,7 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
   };
 
   // Handle drag over (for visual feedback)
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragOver = (_event: DragOverEvent) => {
     // Visual feedback is handled by CSS classes
   };
 

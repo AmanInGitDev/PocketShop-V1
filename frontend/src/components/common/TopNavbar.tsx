@@ -18,7 +18,7 @@ interface TopNavbarProps {
   isMenuOpen?: boolean;
 }
 
-const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuToggle, isMenuOpen }) => {
+const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuToggle, isMenuOpen: _isMenuOpen }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
