@@ -21,7 +21,7 @@ const DashboardOverview = lazy(() => import('./DashboardOverview'));
 const Orders = lazy(() => import('./Orders'));
 const Inventory = lazy(() => import('./Inventory'));
 const Insights = lazy(() => import('@/features/analytics/pages/InsightsPage'));
-const Payouts = lazy(() => import('./Payouts'));
+const Payouts = lazy(() => import('./PayoutPage'));
 const Settings = lazy(() => import('./Settings'));
 
 const VendorDashboard: React.FC = () => {
