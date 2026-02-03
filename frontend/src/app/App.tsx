@@ -11,7 +11,7 @@ import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { LoadingScreen } from '@/features/common/components/LoadingScreen';
 import { ErrorBoundary } from '@/features/common/components';
-import { AppRoutes } from './routes/AppRoutes';
+import { AppRoutes } from '@/routes/AppRoutes';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { usePWA } from '@/hooks/usePWA';
 
