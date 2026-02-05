@@ -1,8 +1,8 @@
 # PocketShop
 
-Transform QR codes into powerful, app-free virtual storefronts for local businesses.
+> Transform QR codes into powerful, app-free virtual storefronts for local businesses.
 
-## 🚀 Overview
+## Overview
 
 PocketShop is a Progressive Web Application (PWA) platform that enables local businesses to create digital storefronts accessible via QR codes. Customers can browse menus, place orders, and make payments—all without downloading any apps.
 
@@ -15,26 +15,26 @@ PocketShop is a Progressive Web Application (PWA) platform that enables local bu
 - **AI-Powered Analytics**: Business insights and sales trends (coming soon)
 - **Multi-Business Support**: Restaurants, cafes, salons, retail stores, and more
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 PocketShop-V1/
 ├── frontend/          # React + TypeScript frontend application
 ├── backend/           # Backend services (Supabase)
-├── customer-files/    # Customer-facing components
-├── vendor-files/      # Vendor dashboard components
-└── docs/              # All project documentation
+├── docs/              # All project documentation
+└── scripts/           # Utility scripts
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Authentication, Storage)
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Authentication, Storage, Real-time)
 - **Maps**: Google Maps API, Places Autocomplete
 - **State Management**: React Context API
-- **Styling**: Tailwind CSS
+- **Routing**: React Router v6
+- **Icons**: Lucide React
 
-## 📦 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -52,7 +52,8 @@ PocketShop-V1/
 
 2. **Install dependencies**
    ```bash
-   npm run install:all
+   cd frontend
+   npm install
    ```
 
 3. **Set up environment variables**
@@ -68,63 +69,106 @@ PocketShop-V1/
    ```bash
    npm run dev
    ```
+   
+   The application will be available at `http://localhost:5173`
 
-   The application will be available at `http://localhost:3000`
+### Quick Setup Guides
 
-### Quick Setup Guide
+For detailed setup instructions, see the [documentation](docs/):
 
-For detailed setup instructions, see:
-- [Quick Start Guide](docs/setup/QUICK_START.md)
-- [Supabase Setup](docs/setup/SUPABASE_SETUP.md)
-- [Google Maps Setup](docs/setup/GOOGLE_MAPS_SETUP.md)
+- **[Authentication Setup](docs/setup/AUTH_SETUP.md)** - Complete authentication setup checklist
+- **[Google OAuth Setup](docs/setup/GOOGLE_OAUTH_SETUP.md)** - Google OAuth configuration guide
+- **[Configuration Summary](docs/setup/PROJECT_CONFIG_SUMMARY.md)** - Complete configuration reference
 
-## 📚 Documentation
+## Documentation
 
 All documentation is organized in the [`docs/`](docs/) directory:
 
-- **Setup & Configuration**: Installation and configuration guides
-- **API Documentation**: API testing and endpoints
-- **Database**: Schema, RLS policies, and setup scripts
-- **Features**: Feature implementation guides
-- **Development**: Development workflows and guidelines
-- **Testing**: Testing guides and checklists
+- **Setup & Configuration** - Installation and configuration guides (`docs/setup/`)
+- **Troubleshooting** - Debugging guides and fix instructions (`docs/troubleshooting/`)
+- **Guides** - Process flows and how-tos (`docs/guides/`)
+- **Database** - Schema, RLS policies, and setup scripts (`docs/database/`)
+- **API Testing** - Postman collection (`docs/postman/`)
+- **Reports** - Project reports and checklists (`docs/reports/`)
 
 See [docs/README.md](docs/README.md) for the complete documentation index.
 
-## 🎯 Current Status
+## Current Status
 
 ### ✅ Completed
+
 - Project setup and configuration
 - Database schema and RLS policies
-- Authentication system (vendor registration/login)
+- Authentication system (vendor registration/login with OAuth)
 - Location detection and places autocomplete
-- Basic vendor dashboard
+- Vendor dashboard with order management
 - Customer storefront interface
+- Vendor onboarding flow (3 stages)
 
 ### 🚧 In Progress
-- Order management system
+
+- Order management system enhancements
 - Payment integration
 - Real-time order updates
 
 ### 📋 Planned
+
 - AI-powered analytics dashboard
 - Advanced reporting features
 - Multi-language support
 - Mobile app (optional)
 
-## 🤝 Contributing
+## Development
+
+### Available Scripts
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run linter
+npm run lint
+```
+
+### Code Standards
+
+- **TypeScript**: Strict mode enabled for type safety
+- **ESLint**: Configured with React and TypeScript rules
+- **Prettier**: Code formatting
+- **Comments**: All functions and complex logic documented
+- **Structure**: Organized by feature, not file type
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **OAuth/Authentication Issues**: See [OAuth Troubleshooting Guide](docs/troubleshooting/oauth/STEP_BY_STEP_FIX.md)
+2. **Setup Problems**: Check [Setup Documentation](docs/setup/)
+3. **Application Flow**: Review [End-to-End Flow Guide](docs/guides/END_TO_END_FLOW.md)
+
+For complete troubleshooting resources, see [docs/troubleshooting/README.md](docs/troubleshooting/README.md).
+
+## Contributing
 
 This is a private project. For questions or issues, please contact the project maintainer.
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details
 
-## 👤 Author
+## Author
 
 **Aman**
 
 ---
 
 For more information, visit the [documentation](docs/) directory.
-

@@ -4,103 +4,89 @@ This folder contains all project documentation organized by category.
 
 ## 📁 Folder Structure
 
-### `/setup/` - Setup & Configuration
-- `QUICK_START.md` - Quick start guide
-- `SETUP_COMPLETE.md` - Setup completion checklist
-- `SUPABASE_SETUP.md` - Supabase setup instructions
-- `SUPABASE_CONFIGURATION_GUIDE.md` - Complete Supabase configuration guide
-- `GOOGLE_MAPS_SETUP.md` - Google Maps API setup guide
+### `/setup/` - Setup & Configuration Guides
+**Purpose:** Step-by-step setup instructions and configuration references
+
+- `AUTH_SETUP.md` - Complete authentication setup checklist
+- `GOOGLE_OAUTH_SETUP.md` - Google OAuth setup verification guide
+- `PROJECT_CONFIG_SUMMARY.md` - Complete configuration summary (ports, auth, Supabase, Google Cloud)
+- `PORT_CONFIG.md` - Port configuration reference (use port 5173)
+
+### `/troubleshooting/` - Troubleshooting Guides
+**Purpose:** Debugging guides and fix instructions
+
+- `/oauth/` - OAuth-specific troubleshooting
+  - `OAUTH_TROUBLESHOOTING.md` - Comprehensive OAuth troubleshooting checklist
+  - `OAUTH_FIX.md` - Fix for "Unable to exchange external code" error
+  - `OAUTH_DEEP_TROUBLESHOOTING.md` - Advanced OAuth debugging (when basic fixes don't work)
+  - `VERIFY_REDIRECT_URIS.md` - Guide to verify Google Cloud Console redirect URIs
+  - `STEP_BY_STEP_FIX.md` - Step-by-step OAuth fix guide (follow in order)
+
+See [troubleshooting/README.md](troubleshooting/README.md) for detailed troubleshooting index.
+
+### `/guides/` - Process & Flow Guides
+**Purpose:** Application flow documentation and process guides
+
+- `END_TO_END_FLOW.md` - Complete application flow mapping (for bug hunting and QA)
+- `INDEX.md` - Quick reference index for all documentation files
 
 ### `/database/` - Database Documentation
-- `Database.md` - Complete database schema guide
-- `DATABASE_SETUP_COMPLETE.sql` - Complete database setup SQL
+**Purpose:** Database schema, SQL scripts, and RLS policies
+
 - `README.md` - Database documentation index
+- `DATABASE_SETUP_COMPLETE.sql` - Complete database setup SQL
+- `schema.sql` - Database schema
+- `triggers.sql` - Database triggers
 - `RLS_POLICIES.sql` - Row Level Security policies
-
-### `/api/` - API Documentation
-- `API_TESTING.md` - API testing documentation
-- `postman/` - Postman collection for API testing
-
-### `/design/` - Design Documentation
-- `COMPONENT_LIBRARY.md` - UI component library
-- `DESIGN_SYSTEM.md` - Design system and style guide
-- `WIREFRAMES.md` - Wireframe documentation
-- `RESPONSIVE_LAYOUTS.md` - Responsive design guidelines
-
-### `/features/` - Feature Documentation
-- `location/` - Location features implementation
-  - `LOCATION_FEATURES_IMPLEMENTATION.md` - Technical implementation details
-  - `LOCATION_FEATURES_SUMMARY.md` - Feature summary
-
-### `/onboarding/` - Onboarding Documentation
-- `ONBOARDING_REQUIREMENTS.md` - Onboarding requirements and specifications
-- `ONBOARDING_IMPLEMENTATION.md` - Implementation guide and status
-
-### `/routes/` - Routing Documentation
-- `APPLICATION_ROUTES.md` - Complete list of all application routes
-- `ROUTES_AND_FIXES.md` - Route-related fixes and issues
-
-### `/fixes/` - Bug Fixes & Issues
-- `CRITICAL_FIXES_SUMMARY.md` - Summary of critical fixes
-- `FIX_SUMMARY.md` - Location features input issue fix
-- `FIX_VERIFICATION.md` - Fix verification checklist
-- `REGISTRATION_FIXES.md` - Registration and OAuth fixes
-- `LOADING_FIX.md` - Loading screen timeout fixes
-- `DEBUG_LOADING.md` - Debugging loading issues
-- `LOGIN_DIAGNOSTIC.md` - Login diagnostic information
-- `USER_ROLES_FIX.md` - User roles fix documentation
-
-### `/security/` - Security Documentation
-- `SECURITY_NOTICE.md` - Security notices and warnings
-- `SECURITY_SETUP_REQUIRED.md` - Security setup requirements
-
-### `/testing/` - Testing Documentation
-- `TESTING_GUIDE.md` - Testing guide and instructions
-
-### `/summaries/` - Project Summaries
-- `IMPLEMENTATION_COMPLETE.md` - Implementation completion summary
-- `PHASE1_COMPLETION.md` - Phase 1 completion report
-- `PHASE2_COMPLETION.md` - Phase 2 completion report
-- `CLEANUP_SUMMARY.md` - Cleanup summary
+- `rls_policies_full.sql` - Complete RLS policies
+- Various migration and fix SQL files
 
 ### `/reports/` - Reports & Checklists
-- `checklists/` - Testing and verification checklists
-  - `RLS_TESTING_CHECKLIST.md` - RLS testing checklist
-  - `SCHEMA_VERIFICATION.md` - Schema verification checklist
-  - `TRIGGER_TEST_PLAN.md` - Trigger test plan
-- `guides/` - Setup and implementation guides
-  - `PROJECT_STRUCTURE.md` - Project structure guide
-  - `README.md` - Reports index
-  - `supabase_storage_setup.md` - Supabase storage setup
-  - `vendor_onboarding_sql.md` - Vendor onboarding SQL guide
-- `sql/` - SQL scripts and files
-  - `pocketshop_rls_policies.sql` - RLS policies SQL
-  - `pocketshop_schema.sql` - Database schema SQL
-  - `pocketshop_triggers.sql` - Database triggers SQL
-  - `vendor_onboarding_updates.sql` - Vendor onboarding updates SQL
-- `logs/` - Daily, weekly, and monthly logs
-  - `Daily/` - Daily logs
-  - `Weekly/` - Weekly logs
-  - `Monthly/` - Monthly logs
+**Purpose:** Project reports, checklists, and guides
 
-### `/development/` - Development Documentation
-- `SUPABASE_SETUP.md` - Supabase development setup
+- `README.md` - Reports index
+- `/guides/` - Setup and implementation guides
+  - `README.md` - Guides index
+- `/sql/` - SQL scripts (duplicates from database/ for reporting)
+
+### `/postman/` - API Testing
+**Purpose:** Postman collection for API testing
+
+- `PocketShop_API.postman_collection.json` - Postman API collection
 
 ### `/archive/` - Archived Files
-- Old component files and deprecated code
+**Purpose:** Old component files and deprecated code
 
-## 📄 Root Documentation Files
-
-- `PRD.md` - Product Requirements Document
-- `BRANCHING_STRATEGY.md` - Git branching strategy
+- Old component files (VendorOnboarding, etc.)
 
 ## 🔍 Quick Links
 
-- **Getting Started**: [Setup Guide](setup/QUICK_START.md)
+### Getting Started
+- **Auth Setup**: [Setup Guide](setup/AUTH_SETUP.md)
+- **Google OAuth**: [OAuth Setup](setup/GOOGLE_OAUTH_SETUP.md)
+- **Configuration**: [Config Summary](setup/PROJECT_CONFIG_SUMMARY.md)
+
+### Troubleshooting
+- **OAuth Issues**: [OAuth Troubleshooting](troubleshooting/oauth/STEP_BY_STEP_FIX.md)
+- **Complete Troubleshooting Index**: [Troubleshooting README](troubleshooting/README.md)
+
+### Understanding the App
+- **Application Flow**: [End-to-End Flow](guides/END_TO_END_FLOW.md)
+
+### Database
 - **Database Setup**: [Database Documentation](database/README.md)
-- **API Testing**: [API Testing Guide](api/API_TESTING.md)
-- **Design System**: [Design System](design/DESIGN_SYSTEM.md)
-- **Product Requirements**: [PRD](PRD.md)
+
+## 📄 Documentation Categories
+
+| Category | Purpose | Location |
+|----------|---------|----------|
+| **Setup** | Initial setup and configuration | `/setup/` |
+| **Troubleshooting** | Debugging and fixing issues | `/troubleshooting/` |
+| **Guides** | Process flows and how-tos | `/guides/` |
+| **Database** | Schema, SQL, RLS policies | `/database/` |
+| **Reports** | Project reports and checklists | `/reports/` |
+| **API** | API testing collections | `/postman/` |
+| **Archive** | Deprecated code | `/archive/` |
 
 ---
 
