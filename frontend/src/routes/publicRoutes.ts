@@ -15,6 +15,7 @@ import AboutUs from '@/app/pages/AboutUs';
 import NotFound from '@/app/pages/NotFound';
 import Offline from '@/app/pages/Offline';
 import LoginPage from '@/features/auth/pages/LoginPage';
+import AuthCallbackPage from '@/features/auth/pages/AuthCallbackPage';
 
 // Lazy loaded components
 const PublicStorefront = lazy(() => import('@/features/storefront/pages/PublicStorefront'));
@@ -64,6 +65,14 @@ export const publicRoutes: RouteConfig[] = [
     eager: true,
     props: { mode: 'register' },
     breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Register' }],
+  },
+  {
+    path: ROUTES.AUTH_CALLBACK,
+    component: AuthCallbackPage,
+    title: 'Signing in - PocketShop',
+    accessLevel: 'public',
+    eager: true,
+    breadcrumbs: [{ label: 'Signing in' }],
   },
   {
     path: ROUTES.VENDOR_AUTH,

@@ -1,8 +1,9 @@
 /**
- * Add Product Page (New - Adapted from reference repo)
- * 
- * Page for adding new products to inventory.
- * Adapted to use frontend's structure.
+ * Add Product Page (Vendor)
+ *
+ * Adapted from Migration_Data/src/pages/AddProduct.tsx.
+ * Uses the current vendor product mutations and shared ProductForm
+ * component to create a new product inside the vendor dashboard.
  */
 
 import React from 'react';

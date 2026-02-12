@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
+import { ROUTES } from '@/constants/routes';
 import { Loader2 } from 'lucide-react';
 import Logo from '@/features/common/components/Logo';
 
@@ -73,8 +74,9 @@ const BusinessLandingPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Error checking session/onboarding:', err);
-        if (isMounted && window.location.pathname !== '/vendor/onboarding/stage-1') {
-          navigate('/vendor/onboarding/stage-1', { replace: true });
+        // Do not send to onboarding on error – user may not be logged in. Stay on page or go to login.
+        if (isMounted && window.location.pathname === ROUTES.BUSINESS) {
+          // Stay on business page so they can click Sign In or Get Started
         }
       }
     };
@@ -90,11 +92,11 @@ const BusinessLandingPage: React.FC = () => {
   }, [user, loading, navigate]);
 
   const handleGetStarted = () => {
-    navigate('/register');
+    navigate(ROUTES.REGISTER);
   };
 
   const handleSignInClick = () => {
-    navigate('/login');
+    navigate(ROUTES.LOGIN);
   };
 
   // Show loading while checking auth

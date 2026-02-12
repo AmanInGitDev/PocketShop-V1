@@ -11,7 +11,8 @@
  */
 export const preloadDashboardOverview = () => {
   // Only preload the overview page, not the entire dashboard
-  return import('../features/vendor/pages/DashboardOverview');
+  // Use the new rich dashboard implementation (DashboardNew)
+  return import('../features/vendor/pages/DashboardNew');
 };
 
 /**
@@ -34,7 +35,8 @@ export const preloadOrders = () => {
  * Preloads the inventory page.
  */
 export const preloadInventory = () => {
-  return import('../features/vendor/pages/Inventory');
+  // Use the new inventory implementation inside the vendor dashboard
+  return import('../features/vendor/pages/InventoryNew');
 };
 
 /**

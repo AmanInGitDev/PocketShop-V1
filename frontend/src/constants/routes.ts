@@ -14,6 +14,7 @@ export const ROUTES = {
   // Authentication routes
   LOGIN: '/login',
   REGISTER: '/register',
+  AUTH_CALLBACK: '/auth/callback', // OAuth return (Google, etc.) – waits for session then redirects
   VENDOR_AUTH: '/vendor/auth', // Legacy route, redirects to LOGIN
   
   // Onboarding routes

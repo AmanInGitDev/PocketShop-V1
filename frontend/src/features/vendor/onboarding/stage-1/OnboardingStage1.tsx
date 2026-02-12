@@ -10,7 +10,7 @@ import { StageIndicator } from '@/features/common/components/shared/StageIndicat
 
 const OnboardingStage1: React.FC = () => {
   const { data, updateData, completeStage, nextStage } = useOnboarding();
-  const { user } = useAuth();
+  const { user, setOnboardingStatus } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -182,6 +182,7 @@ const OnboardingStage1: React.FC = () => {
         console.log('[OnboardingStage1] Verification result - Status:', verifyData.onboarding_status);
         if (verifyData.onboarding_status === 'basic_info') {
           console.log('[OnboardingStage1] ✅ Status verified! Stage 1 is complete.');
+          setOnboardingStatus('basic_info'); // cache so next page doesn't refetch
         } else {
           console.error('[OnboardingStage1] ❌ Status verification failed! Status is:', verifyData.onboarding_status);
           setErrors({ submit: `Status update failed. Current status: ${verifyData.onboarding_status}. Please try again.` });

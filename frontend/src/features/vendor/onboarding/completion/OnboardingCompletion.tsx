@@ -9,7 +9,7 @@ import { Button } from '@/features/common/components/shared/Button';
 const OnboardingCompletion: React.FC = () => {
   const navigate = useNavigate();
   const { data, resetOnboarding, updateData } = useOnboarding();
-  const { user } = useAuth();
+  const { user, setOnboardingStatus } = useAuth();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -214,6 +214,7 @@ const OnboardingCompletion: React.FC = () => {
       }
 
       console.log('[OnboardingCompletion] ✅ Status verified! Onboarding is complete.');
+      setOnboardingStatus('completed'); // cache so dashboard doesn't refetch
 
       // Wait a moment for database to commit
       await new Promise(resolve => setTimeout(resolve, 500));

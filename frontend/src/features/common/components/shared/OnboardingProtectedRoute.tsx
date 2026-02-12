@@ -79,7 +79,7 @@ export const OnboardingProtectedRoute: React.FC<OnboardingProtectedRouteProps> =
   requireCompletedOnboarding = false,
   stage,
 }) => {
-  const { user, loading: authLoading, session } = useAuth();
+  const { user, loading: authLoading, session, onboardingStatus: cachedStatus, setOnboardingStatus: setCachedStatus } = useAuth();
   const location = useLocation();
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>({
     status: 'loading',
@@ -158,90 +158,60 @@ export const OnboardingProtectedRoute: React.FC<OnboardingProtectedRouteProps> =
     return false;
   };
 
-  // Check onboarding status when user is authenticated
+  // Use cached onboarding status from auth when available (set once after login); only fetch when missing
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setOnboardingStatus({
+        status: 'incomplete',
+        stage1Completed: false,
+        stage2Completed: false,
+        stage3Completed: false,
+      });
+      setOnboardingLoading(false);
+      return;
+    }
+
+    // Cached status from auth (loaded once after login) – no DB call
+    if (cachedStatus !== null) {
+      const isCompleted = cachedStatus === 'completed';
+      const stageCompletion = mapStatusToStages(cachedStatus);
+      setOnboardingStatus({
+        status: isCompleted ? 'completed' : 'incomplete',
+        ...stageCompletion,
+      });
+      setOnboardingLoading(false);
+      return;
+    }
+
+    // No cache: fetch once (e.g. first navigation before profile loaded)
     let mounted = true;
+    setOnboardingLoading(true);
+    setOnboardingStatus(prev => ({ ...prev, status: 'loading' }));
 
-    const checkOnboardingStatus = async () => {
-      // Don't check if still loading auth
-      if (authLoading) {
-        return;
-      }
-
-      // If no user, set status and stop loading
-      if (!user) {
-        if (mounted) {
-          setOnboardingStatus({
-            status: 'incomplete',
-            stage1Completed: false,
-            stage2Completed: false,
-            stage3Completed: false,
-          });
-          setOnboardingLoading(false);
-        }
-        return;
-      }
-
+    const runFetch = async () => {
       try {
-        setOnboardingLoading(true);
-        setOnboardingStatus(prev => ({ ...prev, status: 'loading' }));
-
-        console.log('[OnboardingGuard] Checking onboarding status for user:', user.id);
-        console.log('[OnboardingGuard] Current route:', location.pathname);
-
-        // Query vendor profile with timeout (increased to 10s for slow connections)
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 10000)
         );
-
         const queryPromise = (supabase
           .from('vendor_profiles' as any)
           .select('onboarding_status')
           .eq('user_id', user.id)
           .single()) as any;
 
-        const { data, error } = await Promise.race([
-          queryPromise,
-          timeoutPromise,
-        ]) as any;
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
         if (!mounted) return;
 
-        if (error) {
-          // Profile doesn't exist or error - treat as incomplete
-          console.log('[OnboardingGuard] Status check error:', error.code, error.message);
-          setOnboardingStatus({
-            status: 'incomplete',
-            stage1Completed: false,
-            stage2Completed: false,
-            stage3Completed: false,
-          });
-        } else if (data) {
-          const status = data.onboarding_status || 'incomplete';
-          const isCompleted = status === 'completed';
-          const stageCompletion = mapStatusToStages(status);
-          
-          console.log('[OnboardingGuard] Status from DB:', status);
-          console.log('[OnboardingGuard] Stage completion:', stageCompletion);
-          console.log('[OnboardingGuard] Requested stage:', stage);
-          
-          setOnboardingStatus({
-            status: isCompleted ? 'completed' : 'incomplete',
-            ...stageCompletion,
-          });
-        } else {
-          console.log('[OnboardingGuard] No data returned, treating as incomplete');
-          setOnboardingStatus({
-            status: 'incomplete',
-            stage1Completed: false,
-            stage2Completed: false,
-            stage3Completed: false,
-          });
-        }
+        const status = (error || !data) ? 'incomplete' : (data.onboarding_status || 'incomplete');
+        const isCompleted = status === 'completed';
+        const stageCompletion = mapStatusToStages(status);
+
+        setOnboardingStatus({ status: isCompleted ? 'completed' : 'incomplete', ...stageCompletion });
+        setCachedStatus(status as any); // cache for future navigations
       } catch (err) {
-        console.error('[OnboardingGuard] Error checking onboarding status:', err);
         if (mounted) {
-          // On error, assume incomplete to be safe
           setOnboardingStatus({
             status: 'incomplete',
             stage1Completed: false,
@@ -250,19 +220,13 @@ export const OnboardingProtectedRoute: React.FC<OnboardingProtectedRouteProps> =
           });
         }
       } finally {
-        // MUST run regardless of success/error to prevent stuck loading state
-        if (mounted) {
-          setOnboardingLoading(false);
-        }
+        if (mounted) setOnboardingLoading(false);
       }
     };
 
-    checkOnboardingStatus();
-
-    return () => {
-      mounted = false;
-    };
-  }, [user, authLoading]);
+    runFetch();
+    return () => { mounted = false; };
+  }, [user, authLoading, cachedStatus, setCachedStatus]);
 
   // Debug logging
   useEffect(() => {
@@ -284,6 +248,18 @@ export const OnboardingProtectedRoute: React.FC<OnboardingProtectedRouteProps> =
       <Navigate 
         to={ROUTES.LOGIN} 
         state={{ from: location }} 
+        replace 
+      />
+    );
+  }
+
+  // If email not confirmed, require confirmation before onboarding (systematic validation)
+  const emailConfirmed = Boolean(session?.user?.email_confirmed_at);
+  if (session?.user?.email && !emailConfirmed) {
+    return (
+      <Navigate 
+        to={ROUTES.LOGIN} 
+        state={{ from: location, message: 'confirm_email' }} 
         replace 
       />
     );

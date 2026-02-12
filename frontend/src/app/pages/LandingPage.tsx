@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Download } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
 import { useLoadScript } from '@react-google-maps/api';
 import Logo from '@/features/common/components/Logo';
 import LocationDetector, { LocationDetectorRef } from '@/features/common/components/LocationDetector';
@@ -75,13 +76,13 @@ const LandingPage: React.FC = () => {
   };
 
   const handleBusinessClick = () => {
-    navigate('/business');
+    // Take users to register so they sign up first; no redirect to onboarding without account
+    navigate(ROUTES.REGISTER);
   };
 
   const handleLoginClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Login button is not linked yet as per requirements
-    // This will be connected when user side is ready
+    navigate(ROUTES.LOGIN);
   };
 
   // Handle location detection
@@ -233,9 +234,7 @@ const LandingPage: React.FC = () => {
             {/* Right Side - Sign In Button (Magicpin Style: Simple Pink Button) */}
             <button
               onClick={handleLoginClick}
-              disabled
-              title="Coming Soon!"
-              className="bg-pink-500 hover:bg-pink-600 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
+              className="bg-pink-500 hover:bg-pink-600 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
             >
               Sign In
             </button>

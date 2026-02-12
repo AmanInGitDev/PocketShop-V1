@@ -1,9 +1,20 @@
 import { supabase } from '@/lib/supabaseClient';
 import { ROUTES } from '@/constants/routes';
 
+export type OnboardingStatusValue = 'incomplete' | 'basic_info' | 'operational_details' | 'planning_selected' | 'completed';
+
 /**
- * Check onboarding status for the current user
- * Returns the redirect path based on onboarding status
+ * Get redirect path from a known onboarding status (no DB call).
+ * Use when status was already loaded (e.g. after login).
+ */
+export const getRedirectPathFromStatus = (status: OnboardingStatusValue | null): string => {
+  if (status === 'completed') return ROUTES.VENDOR_DASHBOARD;
+  return ROUTES.VENDOR_ONBOARDING_STAGE_1;
+};
+
+/**
+ * Check onboarding status for the current user (hits DB).
+ * Use only when cached status is not available.
  */
 export const getOnboardingRedirectPath = async (userId: string): Promise<string> => {
   try {

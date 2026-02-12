@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, CheckCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { ROUTES } from '@/constants/routes';
 import logoImage from '@/assets/images/logo.png';
 
 interface RegisterConfirmProps {
@@ -55,7 +56,7 @@ export const RegisterConfirm: React.FC<RegisterConfirmProps> = ({
   };
 
   const handleContinueToLogin = () => {
-    navigate('/login', { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   const handleCheckEmail = () => {

@@ -90,3 +90,6 @@ out
 
 # Archived reference repository
 .archive/dawn-of-app-craft/
+
+# Migration reference source (do not include in final app)
+Migration_Data/

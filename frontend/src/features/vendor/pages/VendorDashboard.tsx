@@ -12,13 +12,12 @@ import { Loader2 } from 'lucide-react';
 import DashboardLayout from '@/app/layouts/DashboardLayout';
 import { LoadingFallback } from '@/features/common/components';
 import { ROUTES } from '@/constants/routes';
-import { getOnboardingRedirectPath } from '@/features/common/utils/onboardingCheck';
 import { supabase } from '@/lib/supabaseClient';
 import { OrderProvider } from '@/context/OrderProvider';
 
 // Lazy load dashboard sub-routes for code splitting
 const DashboardOverview = lazy(() => import('./DashboardNew'));
-const Orders = lazy(() => import('./OrdersNew'));
+const Orders = lazy(() => import('./Orders'));
 const Inventory = lazy(() => import('./InventoryNew'));
 const AddProduct = lazy(() => import('./AddProductNew'));
 const EditProduct = lazy(() => import('./EditProductNew'));
@@ -29,62 +28,48 @@ const Settings = lazy(() => import('./SettingsNew'));
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, onboardingStatus } = useAuth();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  // Redirect to auth if not authenticated, or to onboarding if incomplete
+  // Redirect to auth if not authenticated, or to onboarding if incomplete. Use cached onboarding status when available.
   useEffect(() => {
-    const checkAuthAndOnboarding = async () => {
-      if (!loading && !user) {
-        navigate(ROUTES.LOGIN);
-        return;
-      }
+    if (loading) return;
+    if (!user) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
 
-      if (!loading && user) {
-        // Check onboarding status
-        try {
-          const { data: vendorProfile, error } = await supabase
-            .from('vendor_profiles')
-            .select('onboarding_status')
-            .eq('user_id', user.id)
-            .single();
+    // Use cached status from auth (set once after login) – no DB call
+    if (onboardingStatus === 'completed') {
+      setCheckingOnboarding(false);
+      return;
+    }
+    if (onboardingStatus !== null) {
+      // Cached status exists but not completed – redirect to onboarding
+      navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
+      return;
+    }
 
-          if (error) {
-            console.error('Error fetching vendor profile:', error);
-            // If profile doesn't exist (PGRST116), redirect to onboarding where it can be created
-            // AuthContext should have created it, but if not, onboarding will handle it
-            if (error.code === 'PGRST116') {
-              console.log('Vendor profile not found, redirecting to onboarding');
-            }
-            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
-            return;
-          }
-
-          if (!vendorProfile) {
-            console.log('No vendor profile found, redirecting to onboarding');
-            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
-            return;
-          }
-
-          if (vendorProfile.onboarding_status !== 'completed') {
-            // Onboarding incomplete - redirect to stage 1
-            console.log('Onboarding incomplete, redirecting to stage-1');
-            navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
-            return;
-          }
-
-          // Onboarding complete - stay on dashboard
-          console.log('Onboarding complete, staying on dashboard');
-          setCheckingOnboarding(false);
-        } catch (err) {
-          console.error('Error checking onboarding:', err);
+    // No cache: fetch once (e.g. first load before profile loaded)
+    let mounted = true;
+    supabase
+      .from('vendor_profiles')
+      .select('onboarding_status')
+      .eq('user_id', user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        if (error || !data || data.onboarding_status !== 'completed') {
           navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
+        } else {
+          setCheckingOnboarding(false);
         }
-      }
-    };
-
-    checkAuthAndOnboarding();
-  }, [user, loading, navigate]);
+      })
+      .catch(() => {
+        if (mounted) navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1);
+      });
+    return () => { mounted = false; };
+  }, [user, loading, onboardingStatus, navigate]);
 
   // Show loading while checking auth or onboarding
   if (loading || checkingOnboarding) {

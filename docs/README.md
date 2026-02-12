@@ -2,6 +2,10 @@
 
 This folder contains all project documentation organized by category.
 
+## 📋 Project inventory
+
+**[PROJECT_INVENTORY.md](PROJECT_INVENTORY.md)** – Full list of everything in the project (routes, features, components, docs, scripts) for checking things one by one.
+
 ## 📁 Folder Structure
 
 ### `/setup/` - Setup & Configuration Guides

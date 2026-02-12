@@ -14,6 +14,9 @@ import { ErrorBoundary } from '@/features/common/components';
 import { AppRoutes } from '@/routes/AppRoutes';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { usePWA } from '@/hooks/usePWA';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
 // Create a QueryClient instance for React Query
 const queryClient = new QueryClient({
@@ -48,15 +51,20 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AuthProvider>
             <CartProvider>
-          {/* Offline indicator - shows when network is unavailable */}
-          <OfflineIndicator />
-          <AppContent />
+              <TooltipProvider>
+                {/* Global toasts */}
+                <ShadcnToaster />
+                <SonnerToaster />
+                {/* Offline indicator - shows when network is unavailable */}
+                <OfflineIndicator />
+                <AppContent />
+              </TooltipProvider>
             </CartProvider>
-        </AuthProvider>
-      </Router>
+          </AuthProvider>
+        </Router>
       </QueryClientProvider>
     </ErrorBoundary>
   );

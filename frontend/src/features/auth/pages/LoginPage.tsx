@@ -525,6 +525,12 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
               </p>
             </div>
 
+            {(location.state as any)?.message === 'confirm_email' && (
+              <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                Please confirm your email before continuing. Check your inbox and click the confirmation link.
+              </div>
+            )}
+
             {/* Google OAuth Button - Only show on Login, not Register */}
             {mode === 'login' && (
             <button

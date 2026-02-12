@@ -1,8 +1,9 @@
 /**
- * Edit Product Page (New - Adapted from reference repo)
- * 
- * Page for editing existing products.
- * Adapted to use frontend's structure.
+ * Edit Product Page (Vendor)
+ *
+ * Adapted from Migration_Data/src/pages/EditProduct.tsx.
+ * Uses the current vendor product hooks and shared ProductForm component
+ * to edit an existing product inside the vendor dashboard.
  */
 
 import React from 'react';

@@ -95,28 +95,34 @@ See [docs/README.md](docs/README.md) for the complete documentation index.
 
 ## Current Status
 
+*Status below is derived from the codebase (not assumptions).*
+
 ### ✅ Completed
 
-- Project setup and configuration
-- Database schema and RLS policies
-- Authentication system (vendor registration/login with OAuth)
-- Location detection and places autocomplete
-- Vendor dashboard with order management
-- Customer storefront interface
-- Vendor onboarding flow (3 stages)
+- **Project & config** – Setup, DB schema, RLS policies, triggers (see `docs/database/`).
+- **Auth** – Email/password sign up & sign in, sign out, Google OAuth, OAuth callback page (`/auth/callback`), phone OTP (send/verify), `AuthContext`, login/register pages, `RegisterConfirm`.
+- **Routing** – Centralized config (`publicRoutes`, `protectedRoutes`, `onboardingRoutes`), `AppRoutes`, route constants; guards: `AuthRouteGuard`, `OnboardingProtectedRoute`, `ProtectedRoute` (wired via `routeHelpers`).
+- **Vendor onboarding** – 3 stages + completion (`OnboardingLayout`, Stage 1/2/3, `OnboardingCompletion`).
+- **Vendor dashboard** – Overview, Orders, Inventory (list/add/edit), Insights, Storefront, Payouts/Payments, Settings; all lazy-loaded and sub-routed in `VendorDashboard`.
+- **Customer storefront** – `PublicStorefront`, cart, `CheckoutForm`, order creation via `orderService.createOrderDirect`; payment methods: cash, UPI, wallet, card (card uses Edge Function when deployed).
+- **Order management** – Orders list with status tabs (`OrdersNew`, `useOrders`), order detail (`OrderDetailNew`), order cards, status/payment UI; `orderService` with `payment_method` / `payment_status`; DB-backed.
+- **Payments (vendor)** – Payments page (`PaymentsNew`), `usePayments` / `usePaymentStats`, payments table, real-time updates via Supabase channel; `PaymentStatusButton` on order detail.
+- **Real-time** – Orders (`useOrders`, `useOrder`), payments (channel in Payments page), products (`useProducts`), notifications (`useNotifications`), order messages (`useOrderMessages`), storefront `ActiveOrdersWidget`.
+- **Analytics/Insights** – `useAnalytics` (revenue, daily sales, peak hours, top products, weekly comparison from orders); Insights page (`AnalyticsNew`) with charts (Recharts).
+- **Location** – `LocationDetector`, `PlacesAutocomplete`.
+- **PWA** – `usePWA`, `OfflineIndicator`, Offline page.
 
-### 🚧 In Progress
+### 🚧 In Progress / Partial
 
-- Order management system enhancements
-- Payment integration
-- Real-time order updates
+- **Card payment** – Frontend calls Supabase Edge Function `create-checkout-session` (e.g. Stripe); no Edge Functions in this repo, so card payment requires deploying the function to Supabase.
+- **AI insights** – `useAIInsights` calls Edge Function `generate-insights`; optional and may not be deployed yet.
 
 ### 📋 Planned
 
-- AI-powered analytics dashboard
-- Advanced reporting features
-- Multi-language support
-- Mobile app (optional)
+- AI-powered insights backend (Edge Function not in repo).
+- Advanced reporting features.
+- Multi-language support.
+- Mobile app (optional).
 
 ## Development
 

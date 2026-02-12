@@ -10,11 +10,17 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User, AuthState } from '@/features/common/types';
 import type { Session } from '@supabase/supabase-js';
 
+export type OnboardingStatusValue = 'incomplete' | 'basic_info' | 'operational_details' | 'planning_selected' | 'completed';
+
 interface AuthContextType extends AuthState {
   signUp: (email: string, password: string, userData: { full_name: string; mobile_number?: string; role: 'vendor' | 'customer' }) => Promise<{ data: any; error: any }>;
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<{ error: any }>;
   session: Session | null;
+  /** Cached onboarding status (set after login from vendor profile). Use this to avoid checking on every navigation. */
+  onboardingStatus: OnboardingStatusValue | null;
+  /** Update cached onboarding status (e.g. after completing a stage). */
+  setOnboardingStatus: (status: OnboardingStatusValue | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatusValue | null>(null);
 
   // Helper function to load vendor profile (non-blocking)
   const loadVendorProfile = async (userId: string, sessionUser: any) => {
@@ -118,20 +125,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Timeout: if getSession() hangs (e.g. Supabase paused/slow), show app so user can reach login
+    const AUTH_INIT_TIMEOUT_MS = 10_000;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const clearLoadingIfMounted = () => {
+      if (mounted) {
+        setLoading(false);
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.warn('[Auth] Initial session check timed out – showing app. You can try logging in.');
+        setLoading(false);
+      }
+    }, AUTH_INIT_TIMEOUT_MS);
+
     // Check for active session on mount
     const initializeAuth = async () => {
       try {
         // Check if Supabase is properly configured
         if (!supabase) {
           console.warn('Supabase client not initialized');
-          if (mounted) {
-            setLoading(false);
-          }
+          clearLoadingIfMounted();
           return;
         }
 
         // Get initial session from Supabase (uses localStorage automatically)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (timeoutId != null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
 
         if (sessionError) {
           console.error('Error getting session:', sessionError);
@@ -153,12 +180,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(basicUser);
             setLoading(false);
 
-            // Load vendor profile in background (non-blocking)
+            // Load vendor profile in background (non-blocking); cache onboarding status once after login
             loadVendorProfile(session.user.id, session.user).then((vendorProfile) => {
-              if (mounted && vendorProfile) {
-                const fullUser = mapSessionToUser(session, vendorProfile);
-                if (fullUser) {
-                  setUser(fullUser);
+              if (mounted) {
+                if (vendorProfile) {
+                  const fullUser = mapSessionToUser(session, vendorProfile);
+                  if (fullUser) setUser(fullUser);
+                  setOnboardingStatus((vendorProfile as any).onboarding_status ?? 'incomplete');
+                } else {
+                  setOnboardingStatus('incomplete');
                 }
               }
             });
@@ -169,6 +199,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (err) {
+        if (timeoutId != null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         console.error('Unexpected error during auth initialization:', err);
         if (mounted) {
           setError('An unexpected error occurred during authentication');
@@ -201,9 +235,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (event === 'SIGNED_OUT' || !session?.user) {
           setSession(null);
           setUser(null);
+          setOnboardingStatus(null);
           setError(null);
           setLoading(false);
-          // Clear any stored auth data
           return;
         }
 
@@ -224,12 +258,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const basicUser = mapSessionToUser(session);
           setUser(basicUser);
 
-          // Load vendor profile in background
+          // Load vendor profile in background; cache onboarding status once after login
           loadVendorProfile(session.user.id, session.user).then((vendorProfile) => {
-            if (mounted && vendorProfile) {
-              const fullUser = mapSessionToUser(session, vendorProfile);
-              if (fullUser) {
-                setUser(fullUser);
+            if (mounted) {
+              if (vendorProfile) {
+                const fullUser = mapSessionToUser(session, vendorProfile);
+                if (fullUser) setUser(fullUser);
+                setOnboardingStatus((vendorProfile as any).onboarding_status ?? 'incomplete');
+              } else {
+                setOnboardingStatus('incomplete');
               }
             }
           });
@@ -239,6 +276,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => {
       mounted = false;
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+      }
       subscription.unsubscribe();
     };
   }, []);
@@ -320,7 +360,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear local state
       setSession(null);
       setUser(null);
-      
+      setOnboardingStatus(null);
+
       // Clear any additional localStorage items if needed
       // (Supabase automatically handles its own session storage)
       
@@ -344,6 +385,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     loading,
     error,
+    onboardingStatus,
+    setOnboardingStatus,
     signUp,
     signIn,
     signOut,

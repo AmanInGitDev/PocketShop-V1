@@ -51,7 +51,7 @@ const PLANS: PlanOption[] = [
 
 const OnboardingStage3: React.FC = () => {
   const { data, updateData, completeStage, nextStage, previousStage } = useOnboarding();
-  const { user } = useAuth();
+  const { user, setOnboardingStatus } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -165,6 +165,7 @@ const OnboardingStage3: React.FC = () => {
         console.log('[OnboardingStage3] Verification result - Selected plan:', verifyData.metadata?.selected_plan);
         if (verifyData.onboarding_status === 'planning_selected' && verifyData.metadata?.selected_plan === planId) {
           console.log('[OnboardingStage3] ✅ Status and plan verified! Stage 3 is complete.');
+          setOnboardingStatus('planning_selected'); // cache so next page doesn't refetch
         } else {
           console.error('[OnboardingStage3] ❌ Verification failed!');
           setError(`Verification failed. Status: ${verifyData.onboarding_status}, Plan: ${verifyData.metadata?.selected_plan}. Please try again.`);

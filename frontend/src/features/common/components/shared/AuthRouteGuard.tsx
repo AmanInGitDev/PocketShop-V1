@@ -1,8 +1,11 @@
 /**
  * Auth Route Guard Component
- * 
+ *
  * Redirects authenticated users away from auth pages (login/register).
- * Prevents authenticated users from accessing login/register pages.
+ * Uses a strict validation order so redirect is never based on stale cache:
+ *   1. Not logged in → show login/register.
+ *   2. Logged in but email not confirmed → show login/register (do not send to onboarding/dashboard).
+ *   3. Logged in and email confirmed → get redirect path from DB (always validate, no cache) → redirect.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -16,36 +19,36 @@ interface AuthRouteGuardProps {
   children: React.ReactNode;
 }
 
-/**
- * AuthRouteGuard - Redirects authenticated users away from auth pages
- * 
- * Usage:
- * <Route path="/login" element={
- *   <AuthRouteGuard>
- *     <LoginPage />
- *   </AuthRouteGuard>
- * } />
- */
+/** Supabase user can have email_confirmed_at (optional). OAuth users are treated as confirmed. */
+function isEmailConfirmed(session: {
+  user?: {
+    email?: string | null;
+    email_confirmed_at?: string | null;
+    identities?: Array<{ provider?: string }>;
+  };
+} | null): boolean {
+  if (!session?.user?.email) return false;
+  if (Boolean(session.user.email_confirmed_at)) return true;
+  // OAuth (e.g. Google) users are considered confirmed; Supabase may not set email_confirmed_at for them
+  const hasOAuthIdentity = session.user.identities?.some(
+    (i) => i.provider === 'google' || i.provider === 'apple' || i.provider === 'github'
+  );
+  return Boolean(hasOAuthIdentity);
+}
+
 export const AuthRouteGuard: React.FC<AuthRouteGuardProps> = ({ children }) => {
-  // CRITICAL: loading MUST be destructured from useAuth()
   const { user, loading, session } = useAuth();
   const location = useLocation();
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(false);
 
-  // Defensive check: ensure loading is defined
   const safeLoading = typeof loading !== 'undefined' ? loading : true;
 
   useEffect(() => {
     let mounted = true;
 
     const checkAndRedirect = async () => {
-      // Don't redirect if still loading auth
-      if (safeLoading) {
-        return;
-      }
-
-      // Reset redirect path if user is not authenticated
+      if (safeLoading) return;
       if (!user || !session) {
         if (mounted) {
           setRedirectPath(null);
@@ -54,26 +57,25 @@ export const AuthRouteGuard: React.FC<AuthRouteGuardProps> = ({ children }) => {
         return;
       }
 
-      // If user is authenticated, determine where to redirect
-      setCheckingOnboarding(true);
-
-      try {
-        // Get the appropriate redirect path based on onboarding status
-        const path = await getOnboardingRedirectPath(user.id);
-        
+      // Step 2: Email not confirmed → do not redirect; let them see login/register (e.g. "confirm your email")
+      if (!isEmailConfirmed(session)) {
         if (mounted) {
-          setRedirectPath(path);
-        }
-      } catch (err) {
-        console.error('[AuthRouteGuard] Error determining redirect path:', err);
-        // Default to dashboard on error
-        if (mounted) {
-          setRedirectPath(ROUTES.VENDOR_DASHBOARD);
-        }
-      } finally {
-        if (mounted) {
+          setRedirectPath(null);
           setCheckingOnboarding(false);
         }
+        return;
+      }
+
+      // Step 3: Email confirmed → always validate from DB (no cache) so redirect is correct
+      setCheckingOnboarding(true);
+      try {
+        const path = await getOnboardingRedirectPath(user.id);
+        if (mounted) setRedirectPath(path);
+      } catch (err) {
+        console.error('[AuthRouteGuard] Error determining redirect path:', err);
+        if (mounted) setRedirectPath(ROUTES.VENDOR_DASHBOARD);
+      } finally {
+        if (mounted) setCheckingOnboarding(false);
       }
     };
 
@@ -84,12 +86,10 @@ export const AuthRouteGuard: React.FC<AuthRouteGuardProps> = ({ children }) => {
     };
   }, [user, session, safeLoading]);
 
-  // Show loading during auth check
   if (safeLoading) {
     return <LoadingScreen message="Checking authentication..." />;
   }
 
-  // Show loading while checking onboarding status for authenticated users
   if (user && session && checkingOnboarding) {
     return <LoadingScreen message="Redirecting..." />;
   }

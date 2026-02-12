@@ -10,7 +10,7 @@ import { StageIndicator } from '@/features/common/components/shared/StageIndicat
 
 const OnboardingStage2: React.FC = () => {
   const { data, updateData, completeStage, nextStage, previousStage } = useOnboarding();
-  const { user } = useAuth();
+  const { user, setOnboardingStatus } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -67,6 +67,7 @@ const OnboardingStage2: React.FC = () => {
       }
 
       console.log('[OnboardingStage2] Data saved successfully:', updateData);
+      setOnboardingStatus('operational_details'); // cache so next page doesn't refetch
 
       // Step 2: Mark stage 2 as complete in context
       console.log('[OnboardingStage2] Marking stage 2 as complete...');
