@@ -93,3 +93,7 @@ out
 
 # Migration reference source (do not include in final app)
 Migration_Data/
+
+# Migration status docs (internal)
+docs/MIGRATION_STATUS.md
+docs/LAST_FINAL_MIGRATION.md

@@ -36,10 +36,26 @@ export const ROUTES = {
   
   // Public storefront route
   PUBLIC_STOREFRONT: '/storefront/:vendorId',
-  
+
+  // Payment result routes (Stripe return URLs)
+  PAYMENT_SUCCESS: '/payment-success',
+  PAYMENT_CANCEL: '/payment-cancel',
+
+  // Order confirmation (after checkout)
+  ORDER_CONFIRMATION: '/order-confirmation',
+
+  // Customer order & feedback
+  ORDER_TRACKING: '/order-tracking/:orderId',
+  ORDER_FEEDBACK: '/order-feedback/:orderId',
+
+  // Customer app routes
+  CUSTOMER_AUTH: '/customer-auth',
+  CUSTOMER_HOME: '/customer-home',
+  CUSTOMER_PROFILE: '/customer-profile',
+
   // PWA routes
   OFFLINE: '/offline',
-  
+
   // 404 - catch-all
   NOT_FOUND: '*',
 } as const;

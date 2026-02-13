@@ -20,6 +20,13 @@ import AuthCallbackPage from '@/features/auth/pages/AuthCallbackPage';
 // Lazy loaded components
 const PublicStorefront = lazy(() => import('@/features/storefront/pages/PublicStorefront'));
 const OrderConfirmation = lazy(() => import('@/app/pages/OrderConfirmation'));
+const PaymentSuccess = lazy(() => import('@/app/pages/PaymentSuccess'));
+const PaymentCancel = lazy(() => import('@/app/pages/PaymentCancel'));
+const OrderTracking = lazy(() => import('@/app/pages/OrderTracking'));
+const OrderFeedback = lazy(() => import('@/app/pages/OrderFeedback'));
+const CustomerAuth = lazy(() => import('@/features/customer/pages/CustomerAuth'));
+const CustomerHome = lazy(() => import('@/features/customer/pages/CustomerHome'));
+const CustomerProfile = lazy(() => import('@/features/customer/pages/CustomerProfile'));
 
 export const publicRoutes: RouteConfig[] = [
   {
@@ -90,12 +97,68 @@ export const publicRoutes: RouteConfig[] = [
     breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Storefront' }],
   },
   {
-    path: '/order-confirmation',
+    path: ROUTES.ORDER_CONFIRMATION,
     component: OrderConfirmation,
     title: 'Order Confirmation - PocketShop',
     accessLevel: 'public',
     loadingVariant: 'full',
     breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Order Confirmation' }],
+  },
+  {
+    path: ROUTES.PAYMENT_SUCCESS,
+    component: PaymentSuccess,
+    title: 'Payment successful - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Payment success' }],
+  },
+  {
+    path: ROUTES.PAYMENT_CANCEL,
+    component: PaymentCancel,
+    title: 'Payment cancelled - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Payment cancelled' }],
+  },
+  {
+    path: ROUTES.ORDER_TRACKING,
+    component: OrderTracking,
+    title: 'Order tracking - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Order tracking' }],
+  },
+  {
+    path: ROUTES.ORDER_FEEDBACK,
+    component: OrderFeedback,
+    title: 'Order feedback - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Order feedback' }],
+  },
+  {
+    path: ROUTES.CUSTOMER_AUTH,
+    component: CustomerAuth,
+    title: 'Customer sign in - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Customer sign in' }],
+  },
+  {
+    path: ROUTES.CUSTOMER_HOME,
+    component: CustomerHome,
+    title: 'Customer home - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Customer home' }],
+  },
+  {
+    path: ROUTES.CUSTOMER_PROFILE,
+    component: CustomerProfile,
+    title: 'Customer profile - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Customer profile' }],
   },
   {
     path: ROUTES.OFFLINE,

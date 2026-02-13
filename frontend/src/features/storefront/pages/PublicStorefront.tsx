@@ -71,6 +71,20 @@ export default function PublicStorefront() {
     }
   };
 
+  // Listen for showCart event from CustomerBottomNav (mobile)
+  useEffect(() => {
+    const handleShowCart = () => {
+      const total = getTotalItems();
+      if (total > 0) {
+        setShowCheckout(true);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('showCart', handleShowCart);
+    return () => window.removeEventListener('showCart', handleShowCart);
+  }, []);
+
   // Fetch vendor data
   const { data: vendor, isLoading: vendorLoading } = useQuery({
     queryKey: ['public-vendor', vendorId],

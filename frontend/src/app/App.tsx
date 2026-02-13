@@ -13,6 +13,7 @@ import { LoadingScreen } from '@/features/common/components/LoadingScreen';
 import { ErrorBoundary } from '@/features/common/components';
 import { AppRoutes } from '@/routes/AppRoutes';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import { CustomerBottomNav } from '@/components/layout/CustomerBottomNav';
 import { usePWA } from '@/hooks/usePWA';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -61,6 +62,8 @@ function App() {
                 {/* Offline indicator - shows when network is unavailable */}
                 <OfflineIndicator />
                 <AppContent />
+                {/* Customer bottom nav - shows on storefront, customer-home, customer-profile, order-tracking (mobile) */}
+                <CustomerBottomNav />
               </TooltipProvider>
             </CartProvider>
           </AuthProvider>

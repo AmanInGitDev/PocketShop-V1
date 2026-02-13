@@ -4,11 +4,23 @@ import { useCart } from '@/contexts/CartContext';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 
+/** Only show bottom nav on these customer-facing routes (mobile). */
+function isCustomerRoute(pathname: string): boolean {
+  if (pathname === '/customer-home' || pathname === '/customer-profile') return true;
+  if (pathname.startsWith('/storefront/') || pathname.startsWith('/order-tracking/')) return true;
+  return false;
+}
+
 export function CustomerBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { getTotalItems } = useCart();
   const cartItemCount = getTotalItems();
+
+  // Only show on customer-facing routes (storefront, customer home/profile, order tracking)
+  if (!isCustomerRoute(location.pathname)) {
+    return null;
+  }
 
   // Don't show on checkout, order confirmation, or auth pages
   if (
