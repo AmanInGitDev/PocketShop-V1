@@ -6,15 +6,6 @@ This folder contains all project documentation organized by category.
 
 **[PROJECT_INVENTORY.md](PROJECT_INVENTORY.md)** – Full list of everything in the project (routes, features, components, docs, scripts) for checking things one by one.
 
-## 🚀 Migration Status (Aman ↔ Prathmesh Supabase)
-
-**Start here when resuming migration work or switching chats:**
-
-- **[MIGRATION_STATUS_INDEX.md](MIGRATION_STATUS_INDEX.md)** – Quick orientation, doc map, next actions
-- **[SUPABASE_MIGRATION_STATUS_REPORT.md](SUPABASE_MIGRATION_STATUS_REPORT.md)** – Full checklist, what's done vs remaining
-- [AMAN_MIGRATION_STEPS.md](AMAN_MIGRATION_STEPS.md) – Step-by-step commands
-- [SUPABASE_MATCH_CHECKLIST.md](SUPABASE_MATCH_CHECKLIST.md) – Prathmesh vs Aman comparison
-
 ## 📁 Folder Structure
 
 ### `/setup/` - Setup & Configuration Guides
@@ -52,7 +43,7 @@ See [troubleshooting/README.md](troubleshooting/README.md) for detailed troubles
 - `triggers.sql` - Database triggers
 - `RLS_POLICIES.sql` - Row Level Security policies
 - `rls_policies_full.sql` - Complete RLS policies
-- Various migration and fix SQL files
+- `reference/` - Internal reference docs (for database setup when errors occur)
 
 ### `/reports/` - Reports & Checklists
 **Purpose:** Project reports, checklists, and guides
@@ -73,10 +64,6 @@ See [troubleshooting/README.md](troubleshooting/README.md) for detailed troubles
 - Old component files (VendorOnboarding, etc.)
 
 ## 🔍 Quick Links
-
-### Migration (Aman ↔ Prathmesh)
-- **Migration status**: [MIGRATION_STATUS_INDEX.md](MIGRATION_STATUS_INDEX.md) (start here)
-- **Full checklist**: [SUPABASE_MIGRATION_STATUS_REPORT.md](SUPABASE_MIGRATION_STATUS_REPORT.md)
 
 ### Getting Started
 - **Auth Setup**: [Setup Guide](setup/AUTH_SETUP.md)

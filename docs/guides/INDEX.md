@@ -45,7 +45,7 @@ Quick reference index for all Markdown documentation files in the PocketShop pro
 - `triggers.sql` - Database triggers
 - `RLS_POLICIES.sql` - Row Level Security policies
 - `rls_policies_full.sql` - Complete RLS policies
-- Various migration and fix SQL files
+- `reference/` - Internal reference docs (database setup when needed)
 
 ### `/docs/reports/` - Reports & Checklists
 **Purpose:** Project reports, checklists, and guides

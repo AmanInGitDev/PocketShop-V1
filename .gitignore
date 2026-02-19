@@ -69,11 +69,11 @@ Thumbs.db
 .cache
 .parcel-cache
 
-# Next.js (if migrating)
+# Next.js
 .next
 out
 
-# Nuxt.js (if migrating)
+# Nuxt.js
 .nuxt
 
 # Vercel
@@ -83,17 +83,22 @@ out
 *.tmp
 *.temp
 
-# Documentation files (ignore .md files except root README.md to avoid counting as code lines)
+# Documentation - only root README.md; keep key docs for setup/troubleshooting
 *.md
 !README.md
-!DOCS_INDEX.md
+!docs/README.md
+!docs/PROJECT_INVENTORY.md
+!docs/DEPLOYMENT.md
+!docs/setup/*.md
+!docs/troubleshooting/*.md
+!docs/troubleshooting/**/*.md
+!docs/guides/*.md
+!docs/database/*.md
+!docs/database/reference/*.md
 
 # Archived reference repository
 .archive/dawn-of-app-craft/
 
-# Migration reference source (do not include in final app)
+# Reference source (do not include in final app)
 Migration_Data/
 
-# Migration status docs (internal)
-docs/MIGRATION_STATUS.md
-docs/LAST_FINAL_MIGRATION.md
