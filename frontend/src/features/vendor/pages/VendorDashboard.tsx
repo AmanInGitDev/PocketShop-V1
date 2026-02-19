@@ -5,15 +5,17 @@
  * Sub-routes are lazy loaded for better performance and code splitting.
  */
 
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { useVendor } from '@/features/vendor/hooks/useVendor';
 import { Loader2 } from 'lucide-react';
 import DashboardLayout from '@/app/layouts/DashboardLayout';
 import { LoadingFallback } from '@/features/common/components';
 import { ROUTES } from '@/constants/routes';
 import { supabase } from '@/lib/supabaseClient';
 import { OrderProvider } from '@/context/OrderProvider';
+import { SupabaseOrderRepository } from '@/features/vendor/services/supabaseOrderRepository';
 
 // Lazy load dashboard sub-routes for code splitting
 const DashboardOverview = lazy(() => import('./DashboardNew'));
@@ -25,11 +27,15 @@ const Insights = lazy(() => import('./AnalyticsNew'));
 const Storefront = lazy(() => import('./StorefrontNew'));
 const Payouts = lazy(() => import('./PaymentsNew'));
 const Settings = lazy(() => import('./SettingsNew'));
+const Kitchen = lazy(() => import('./Kitchen'));
+const OrderDetail = lazy(() => import('./OrderDetailNew'));
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading, onboardingStatus } = useAuth();
+  const { data: vendor } = useVendor();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const orderRepo = useMemo(() => new SupabaseOrderRepository(), []);
 
   // Redirect to auth if not authenticated, or to onboarding if incomplete. Use cached onboarding status when available.
   useEffect(() => {
@@ -88,19 +94,24 @@ const VendorDashboard: React.FC = () => {
     return null;
   }
 
+  // Orders are stored by vendor_profiles.id (not auth user id). Use Supabase repo for real orders.
+  const vendorId = vendor?.id ?? 'vendor-demo';
+
   return (
     <DashboardLayout>
-      <OrderProvider vendorId={user?.id || 'vendor-demo'}>
+      <OrderProvider vendorId={vendorId} repo={orderRepo}>
         <Suspense fallback={<LoadingFallback variant="dashboard" />}>
           <Routes>
             <Route path="" element={<DashboardOverview />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="orders/:id" element={<OrderDetail />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/add" element={<AddProduct />} />
             <Route path="inventory/edit/:id" element={<EditProduct />} />
             <Route path="insights" element={<Insights />} />
             <Route path="storefront" element={<Storefront />} />
             <Route path="payouts" element={<Payouts />} />
+            <Route path="kitchen" element={<Kitchen />} />
             <Route path="settings" element={<Settings />} />
           </Routes>
         </Suspense>

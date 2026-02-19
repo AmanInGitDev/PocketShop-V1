@@ -250,6 +250,43 @@ export async function createOrderDirect(payload: CreateOrderPayload): Promise<Cr
 
     console.log('Order created successfully:', order.id);
 
+    // Ensure payment record exists for non-card orders (fallback if DB trigger not run)
+    // UPI/wallet = instant payment → 'completed' so revenue shows immediately
+    // Cash = COD → 'pending' until vendor marks as paid
+    const method = paymentMethod || 'cash';
+    if (method !== 'card') {
+      try {
+        const { data: existing } = await supabase
+          .from('payments')
+          .select('id, payment_status')
+          .eq('order_id', order.id)
+          .maybeSingle();
+
+        const instantPayment = method === 'upi' || method === 'wallet';
+
+        if (!existing) {
+          const { error: payErr } = await supabase.from('payments').insert({
+            order_id: order.id,
+            amount: totalAmount,
+            payment_method: method,
+            payment_status: instantPayment ? 'completed' : 'pending',
+          });
+
+          if (payErr) {
+            console.warn('Failed to create payment record (non-critical):', payErr);
+          }
+        } else if (instantPayment && existing.payment_status !== 'completed') {
+          // Trigger created payment as 'pending' - upgrade UPI/wallet to completed
+          await supabase
+            .from('payments')
+            .update({ payment_status: 'completed' })
+            .eq('order_id', order.id);
+        }
+      } catch (payEx: any) {
+        console.warn('Error ensuring payment record (non-critical):', payEx);
+      }
+    }
+
     // Optionally update stock (can be disabled for development)
     // In production, this should be handled by Edge Functions with proper locking
     try {

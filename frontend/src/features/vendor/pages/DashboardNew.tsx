@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   DollarSign,
   ShoppingCart,
@@ -57,6 +57,7 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
 const CHART_COLORS = {
@@ -471,7 +472,7 @@ export default function DashboardNew() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-2 pt-4 border-t">
+                <div className="space-y-2 pt-4 border-t border-border">
                   {statusData.map((status, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -479,9 +480,9 @@ export default function DashboardNew() {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: status.color }}
                         />
-                        <span className="text-sm">{status.name}</span>
+                        <span className="text-sm text-foreground">{status.name}</span>
                       </div>
-                      <span className="text-sm font-semibold">{status.value}</span>
+                      <span className="text-sm font-semibold text-foreground">{status.value}</span>
                     </div>
                   ))}
                 </div>
@@ -683,10 +684,10 @@ export default function DashboardNew() {
                     ORDER_STATUS_CONFIG.pending;
                   const StatusIcon = statusConfig.icon;
                   return (
-                    <div
+                    <Link
                       key={order.id}
+                      to={`${ROUTES.VENDOR_DASHBOARD_ORDERS}/${order.id}`}
                       className="group flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all cursor-pointer hover:shadow-md hover:border-primary/20 relative overflow-hidden"
-                      onClick={() => navigate(`/vendor/dashboard/orders/${order.id}`)}
                     >
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 translate-x-2 group-hover:translate-x-0">
                         <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -723,7 +724,7 @@ export default function DashboardNew() {
                           {formatCurrency(Number(order.total_amount))}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

@@ -6,18 +6,24 @@
  * but wired to the shared OrderProvider + VendorOrdersKanban.
  */
 
-import React, { useMemo } from 'react';
-import { Clock, Package, TrendingUp, DollarSign } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Clock, Package, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
 import VendorOrdersKanban from '@/components/kanban/VendorOrdersKanban';
+import { POSMode } from '@/components/orders/POSMode';
 import OrderDetailPanel from '@/components/kanban/OrderDetailPanel';
 import { useOrderContext } from '@/context/OrderProvider';
 import type { Order, OrderStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 const Orders: React.FC = () => {
+  const [posMode, setPosMode] = useState(false);
   const { orders, selectedOrder, openOrder, changeOrderStatus } = useOrderContext();
 
   const stats = useMemo(() => {
@@ -76,9 +82,10 @@ const Orders: React.FC = () => {
     const itemsCount = order.itemsCount ?? order.items.length;
 
     return (
-      <div
+      <Link
         key={order.id}
-        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+        to={`${ROUTES.VENDOR_DASHBOARD_ORDERS}/${order.id}`}
+        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors block"
       >
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2">
@@ -107,9 +114,35 @@ const Orders: React.FC = () => {
             {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
           </p>
         </div>
-      </div>
+      </Link>
     );
   };
+
+  if (posMode) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Canteen POS Mode
+            </h2>
+            <p className="text-muted-foreground mt-1">Fast-tap interface for quick cash sales</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="gap-1.5 py-1 px-3">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              POS Active
+            </Badge>
+            <div className="flex items-center gap-2 rounded-lg border-2 border-primary/20 bg-card px-4 py-2">
+              <Label htmlFor="pos-toggle" className="text-sm font-medium cursor-pointer">POS Mode</Label>
+              <Switch id="pos-toggle" checked={posMode} onCheckedChange={setPosMode} />
+            </div>
+          </div>
+        </div>
+        <POSMode />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -122,6 +155,10 @@ const Orders: React.FC = () => {
           <p className="text-muted-foreground mt-1">
             Drag and drop orders to update their status
           </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border-2 border-primary/20 bg-card px-4 py-2">
+          <Label htmlFor="pos-toggle" className="text-sm font-medium cursor-pointer">POS Mode</Label>
+          <Switch id="pos-toggle" checked={posMode} onCheckedChange={setPosMode} />
         </div>
       </div>
 

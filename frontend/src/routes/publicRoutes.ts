@@ -27,6 +27,7 @@ const OrderFeedback = lazy(() => import('@/app/pages/OrderFeedback'));
 const CustomerAuth = lazy(() => import('@/features/customer/pages/CustomerAuth'));
 const CustomerHome = lazy(() => import('@/features/customer/pages/CustomerHome'));
 const CustomerProfile = lazy(() => import('@/features/customer/pages/CustomerProfile'));
+const PickupMonitor = lazy(() => import('@/app/pages/PickupMonitor'));
 
 export const publicRoutes: RouteConfig[] = [
   {
@@ -159,6 +160,14 @@ export const publicRoutes: RouteConfig[] = [
     accessLevel: 'public',
     loadingVariant: 'default',
     breadcrumbs: [{ label: 'Home', path: ROUTES.HOME }, { label: 'Customer profile' }],
+  },
+  {
+    path: ROUTES.PICKUP_MONITOR,
+    component: PickupMonitor,
+    title: 'Pickup Monitor - PocketShop',
+    accessLevel: 'public',
+    loadingVariant: 'default',
+    breadcrumbs: [{ label: 'Pickup Monitor' }],
   },
   {
     path: ROUTES.OFFLINE,

@@ -9,6 +9,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LoadingScreen } from '@/features/common/components/LoadingScreen';
 import { ErrorBoundary } from '@/features/common/components';
 import { AppRoutes } from '@/routes/AppRoutes';
@@ -54,8 +55,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
-            <CartProvider>
-              <TooltipProvider>
+            <ThemeProvider>
+              <CartProvider>
+                <TooltipProvider>
                 {/* Global toasts */}
                 <ShadcnToaster />
                 <SonnerToaster />
@@ -64,8 +66,9 @@ function App() {
                 <AppContent />
                 {/* Customer bottom nav - shows on storefront, customer-home, customer-profile, order-tracking (mobile) */}
                 <CustomerBottomNav />
-              </TooltipProvider>
-            </CartProvider>
+                </TooltipProvider>
+              </CartProvider>
+            </ThemeProvider>
           </AuthProvider>
         </Router>
       </QueryClientProvider>

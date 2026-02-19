@@ -26,6 +26,66 @@ import { useVendor } from "@/features/vendor/hooks/useVendor";
 import { useOrder } from "@/features/vendor/hooks/useOrder";
 import { useToast } from "@/hooks/use-toast";
 import { ROUTES } from "@/constants/routes";
+import { useMutation } from "@tanstack/react-query";
+import { DollarSign, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+function RecordPaymentFallback({
+  orderId,
+  amount,
+  paymentMethod,
+  onSuccess,
+}: {
+  orderId: string;
+  amount: number;
+  paymentMethod: string | null;
+  onSuccess: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const recordMutation = useMutation({
+    mutationFn: async () => {
+      const method = (paymentMethod === 'upi' || paymentMethod === 'wallet' || paymentMethod === 'card')
+        ? paymentMethod
+        : 'cash';
+      const { error } = await supabase.from('payments').insert({
+        order_id: orderId,
+        amount,
+        payment_method: method,
+        payment_status: 'completed',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Payment recorded', { description: `₹${amount.toLocaleString()} has been recorded` });
+      onSuccess();
+    },
+    onError: (e: any) => {
+      toast.error(e.message || 'Failed to record payment');
+    },
+  });
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">No payment record found for this order.</p>
+      <p className="text-sm font-medium">Amount: ₹{amount.toLocaleString()}</p>
+      <Button
+        onClick={() => recordMutation.mutate()}
+        disabled={recordMutation.isPending}
+      >
+        {recordMutation.isPending ? (
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : (
+          <DollarSign className="h-4 w-4 mr-2" />
+        )}
+        Mark as Paid
+      </Button>
+    </div>
+  );
+}
 
 export default function OrderDetailNew() {
   const { id } = useParams();
@@ -218,16 +278,43 @@ export default function OrderDetailNew() {
         </CardContent>
       </Card>
 
-      {payment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PaymentStatusButton orderId={order.id} payment={payment} />
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payment ? (
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Method</p>
+                <p className="font-medium capitalize">{payment.payment_method}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Amount</p>
+                <p className="font-medium text-lg">₹{Number(payment.amount).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge variant={payment.payment_status === 'completed' ? 'default' : 'secondary'}>
+                  {payment.payment_status}
+                </Badge>
+              </div>
+              <PaymentStatusButton
+                orderId={order.id}
+                paymentStatus={payment.payment_status}
+                amount={Number(payment.amount)}
+              />
+            </div>
+          ) : (
+            <RecordPaymentFallback
+              orderId={order.id}
+              amount={Number(order.total_amount)}
+              paymentMethod={order.payment_method}
+              onSuccess={() => queryClient.invalidateQueries({ queryKey: ['payment', id] })}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -275,9 +275,9 @@ export default function InventoryNew() {
       ) : filteredProducts && filteredProducts.length > 0 ? (
         <div
           className={cn(
-            "gap-6",
+            "gap-4",
             viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               : "grid grid-cols-1"
           )}
         >

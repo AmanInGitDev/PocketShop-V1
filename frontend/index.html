@@ -28,6 +28,14 @@
     <title>PocketShop - Smart QR Storefronts for Local Businesses</title>
   </head>
   <body>
+    <script>
+      (function() {
+        var theme = localStorage.getItem('ps-dashboard-theme');
+        if (theme === 'dark' || theme === 'light') {
+          document.documentElement.classList.add(theme);
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>

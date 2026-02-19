@@ -19,12 +19,12 @@ export default function StatusToggle({ online, onToggle, disabled = false }: Sta
       aria-pressed={online}
       className={`
         flex items-center gap-2 text-sm px-3 py-1.5 rounded-md font-medium
-        transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500
+        transition-colors focus:outline-none focus:ring-2 focus:ring-ring
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         ${
           online
-            ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
-            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+            ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/30 hover:bg-green-500/20'
+            : 'bg-muted text-muted-foreground border border-border hover:bg-muted/80'
         }
       `}
       title={online ? 'Click to go offline' : 'Click to go online'}

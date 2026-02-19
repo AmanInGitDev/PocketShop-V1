@@ -29,6 +29,7 @@ export const useProducts = () => {
     },
     enabled: !!vendor?.id,
     retry: false, // Don't retry on error
+    refetchOnWindowFocus: true, // Refetch when returning to tab so stock stays in sync
   });
 
   // Set up realtime subscription for products

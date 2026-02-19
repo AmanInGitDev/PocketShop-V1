@@ -67,7 +67,16 @@ export default function EditProductNew() {
         <CardContent>
           <ProductForm 
             onSubmit={handleSubmit} 
-            initialValues={product}
+            defaultValues={{
+              name: product.name,
+              description: product.description ?? "",
+              price: Number(product.price),
+              stock_quantity: product.stock_quantity ?? 0,
+              low_stock_threshold: product.low_stock_threshold ?? 10,
+              category: product.category ?? "",
+              is_available: product.is_available ?? true,
+              image_url: product.image_url,
+            }}
             isLoading={updateProduct.isPending} 
           />
         </CardContent>

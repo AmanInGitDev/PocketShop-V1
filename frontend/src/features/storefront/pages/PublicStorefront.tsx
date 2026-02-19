@@ -156,9 +156,23 @@ export default function PublicStorefront() {
     paymentMethod: 'card' | 'upi' | 'wallet' | 'cash'
   ) => {
     try {
-      // Get authenticated user if any
+      if (!vendorId) {
+        throw new Error('Storefront not found. Please refresh and try again.');
+      }
+
+      // Get authenticated user if any, then resolve customer_profiles.id
+      // orders.customer_id must reference customer_profiles(id), NOT auth.users(id)
+      let customerProfileId: string | null = null;
       const { data: { session } } = await supabase.auth.getSession();
-      
+      if (session?.user?.id) {
+        const { data: profile } = await supabase
+          .from('customer_profiles')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        customerProfileId = profile?.id ?? null;
+      }
+
       // Validate cart items
       const items = Object.entries(cart).map(([productId, quantity]) => ({
         productId,
@@ -169,7 +183,7 @@ export default function PublicStorefront() {
 
       // Create order (tries Edge Function first, falls back to direct DB insertion)
       const { createOrder } = await import('@/services/orderService');
-      
+
       const orderData = await createOrder({
             vendorId,
             items,
@@ -178,7 +192,7 @@ export default function PublicStorefront() {
             customerEmail: customerData.email || null,
             paymentMethod: paymentMethod !== 'card' ? paymentMethod : null,
             notes: customerData.notes || null,
-            customerId: session?.user?.id || null,
+            customerId: customerProfileId,
       }, {
         useEdgeFunction: true, // Try Edge Function first, fallback to direct DB
       });

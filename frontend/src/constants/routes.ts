@@ -33,6 +33,10 @@ export const ROUTES = {
   VENDOR_DASHBOARD_STOREFRONT: '/vendor/dashboard/storefront',
   VENDOR_DASHBOARD_PAYOUTS: '/vendor/dashboard/payouts',
   VENDOR_DASHBOARD_SETTINGS: '/vendor/dashboard/settings',
+  VENDOR_DASHBOARD_KITCHEN: '/vendor/dashboard/kitchen',
+
+  // Pickup Monitor - public wall display for customers (no auth)
+  PICKUP_MONITOR: '/pickup-monitor',
   
   // Public storefront route
   PUBLIC_STOREFRONT: '/storefront/:vendorId',
