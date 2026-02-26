@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   price DECIMAL(10,2) NOT NULL,
   category TEXT,
   image_url TEXT,
+  diet_type TEXT CHECK (diet_type IN ('veg', 'non_veg')),
   
   -- Availability Status
   is_available BOOLEAN DEFAULT TRUE,

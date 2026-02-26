@@ -107,14 +107,63 @@ export const useAnalytics = (days: number = 30) => {
       const thisWeekRevenue = thisWeekOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
       const lastWeekRevenue = lastWeekOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
+      // Build engagement heatmap: 7 days x 24 hours
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const heatmap = daysOfWeek.map((label, dayIndex) => ({
+        dayIndex,
+        label,
+        hours: Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          orders: 0,
+          revenue: 0,
+        })),
+      }));
+
+      orders?.forEach((order) => {
+        const date = new Date(order.created_at);
+        const dIndex = date.getDay();
+        const hour = date.getHours();
+        const bucket = heatmap[dIndex]?.hours[hour];
+        if (bucket) {
+          bucket.orders += 1;
+          bucket.revenue += Number(order.total_amount) || 0;
+        }
+      });
+
+      // Simple conversion funnel (orders placed -> completed)
+      const totalOrders = orders?.length || 0;
+      const completedOrders = orders?.filter((o) => o.status === 'completed').length || 0;
+      const conversionFunnel =
+        totalOrders === 0
+          ? [
+              { stage: 'Orders placed', value: 1 },
+              { stage: 'Completed', value: 0 },
+            ]
+          : [
+              { stage: 'Orders placed', value: totalOrders },
+              { stage: 'Completed', value: completedOrders },
+            ];
+
+      // Simple performance score: blend completion rate + recent growth (0-100)
+      const completionRate = totalOrders > 0 ? completedOrders / totalOrders : 0;
+      const revenueGrowthPct =
+        lastWeekRevenue > 0 ? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 : 0;
+      const growthScore = Math.max(Math.min(revenueGrowthPct / 2, 40), 0); // cap contribution
+      const completionScore = completionRate * 60;
+      const performanceScore = Math.max(
+        0,
+        Math.min(100, Math.round(completionScore + growthScore)),
+      );
+
       return {
         totalRevenue: orders?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0,
-        totalOrders: orders?.length || 0,
+        totalOrders,
         averageOrderValue: orders?.length 
           ? (orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length)
           : 0,
         salesByDay: Object.entries(salesByDay || {}).map(([date, amount]) => ({
           date,
+          label: date,
           amount,
         })),
         peakHours: Object.entries(ordersByHour || {})
@@ -148,6 +197,9 @@ export const useAnalytics = (days: number = 30) => {
             ? ((thisWeekOrders.length - lastWeekOrders.length) / lastWeekOrders.length) * 100
             : 0,
         },
+        heatmap,
+        conversionFunnel,
+        performanceScore,
       };
     },
     enabled: !!vendor?.id,
@@ -171,6 +223,9 @@ function getEmptyAnalytics() {
       revenueGrowth: 0,
       orderGrowth: 0,
     },
+    heatmap: [],
+    conversionFunnel: [],
+    performanceScore: 0,
   };
 }
 

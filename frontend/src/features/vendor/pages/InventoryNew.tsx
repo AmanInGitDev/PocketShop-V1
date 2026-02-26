@@ -183,10 +183,10 @@ export default function InventoryNew() {
 
         {/* Category filter (from Migration_Data) */}
         {categories.length > 0 && (
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+          <div className="relative w-full lg:w-auto">
+            <Filter className="pointer-events-none absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full lg:w-[200px] h-11 border">
+              <SelectTrigger className="w-full lg:w-[200px] h-11 border pl-9 text-left">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>

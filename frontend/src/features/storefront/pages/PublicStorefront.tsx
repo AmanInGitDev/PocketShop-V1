@@ -23,6 +23,7 @@ import { CartSummary } from "@/components/cart/CartSummary";
 import { validateCartItems } from "@/schemas/checkoutSchema";
 import type { CheckoutFormData } from "@/schemas/checkoutSchema";
 import { ActiveOrdersWidget } from "@/components/storefront/ActiveOrdersWidget";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 export default function PublicStorefront() {
   const { vendorId } = useParams();
@@ -41,6 +42,7 @@ export default function PublicStorefront() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [onlyVeg, setOnlyVeg] = useState(false);
 
   // Check auth status
   useEffect(() => {
@@ -134,6 +136,9 @@ export default function PublicStorefront() {
     if (!products) return [];
     
     return products.filter((product) => {
+      if (onlyVeg && product.diet_type !== "veg") {
+        return false;
+      }
       if (selectedCategory !== "all" && product.category !== selectedCategory) {
         return false;
       }
@@ -149,7 +154,7 @@ export default function PublicStorefront() {
       
       return true;
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, onlyVeg]);
 
   const handleCheckout = async (
     customerData: CheckoutFormData,
@@ -285,23 +290,23 @@ export default function PublicStorefront() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[#f5f5f5] pb-24">
+      {/* Header / Hero */}
+      <header className="bg-gradient-to-b from-orange-500 to-orange-400 text-white pb-6 shadow-md">
+        <div className="max-w-5xl mx-auto px-4 pt-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               {vendor.logo_url && (
                 <img
                   src={vendor.logo_url}
                   alt={vendor.business_name}
-                  className="h-12 w-12 rounded-full object-cover"
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-white/70"
                 />
               )}
               <div>
-                <h1 className="text-2xl font-bold">{vendor.business_name}</h1>
+                <h1 className="text-2xl font-bold leading-tight">{vendor.business_name}</h1>
                 {vendor.description && (
-                  <p className="text-sm text-muted-foreground">{vendor.description}</p>
+                  <p className="text-sm text-white/90">{vendor.description}</p>
                 )}
               </div>
             </div>
@@ -309,7 +314,12 @@ export default function PublicStorefront() {
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" title="Account">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      title="Account"
+                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    >
                       <User className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -335,6 +345,7 @@ export default function PublicStorefront() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                   onClick={() => navigate(`/customer-auth?vendorId=${vendorId}&redirect=/storefront/${vendorId}`)}
                 >
                   <LogIn className="h-4 w-4 mr-2" />
@@ -342,7 +353,11 @@ export default function PublicStorefront() {
                 </Button>
               )}
               {getTotalItems() > 0 && !showCheckout && (
-                <Button size="lg" className="relative" onClick={() => setShowCheckout(true)}>
+                <Button
+                  size="sm"
+                  className="relative bg-white text-orange-600 hover:bg-white/90"
+                  onClick={() => setShowCheckout(true)}
+                >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Cart
                   <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center">
@@ -354,7 +369,7 @@ export default function PublicStorefront() {
           </div>
 
           {vendor.address && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="mt-3 flex items-center gap-2 text-sm text-white/90">
               <MapPin className="h-4 w-4" />
               <span>{vendor.address}</span>
             </div>
@@ -363,7 +378,7 @@ export default function PublicStorefront() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="max-w-3xl mx-auto px-4 md:px-0 -mt-6 py-10 space-y-6">
         {showCheckout ? (
           <CheckoutForm
             onBack={() => setShowCheckout(false)}
@@ -372,13 +387,13 @@ export default function PublicStorefront() {
         ) : (
           <>
             {/* Active Orders Widget */}
-            <div className="mb-8">
+            <div className="mb-6">
               <ActiveOrdersWidget vendorId={vendorId!} />
             </div>
 
             {/* Search and Filters */}
-            <div className="mb-8 space-y-4">
-              <div className="relative max-w-md">
+            <div className="mb-8 space-y-4 bg-white rounded-2xl shadow-sm px-4 py-5">
+              <div className="relative max-w-xl">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
@@ -399,42 +414,47 @@ export default function PublicStorefront() {
                 )}
               </div>
 
-              {categories.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={selectedCategory === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory("all")}
-                  >
-                    All Products
-                  </Button>
-                  {categories.map((category) => (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              )}
+              {/* Quick filters row (Veg etc., inspired by Swiggy) */}
+              <div className="flex flex-wrap gap-2 pt-3">
+                <Button
+                  type="button"
+                  variant={onlyVeg ? "default" : "outline"}
+                  className={`h-9 rounded-full px-4 text-sm font-medium flex items-center gap-2 ${
+                    onlyVeg ? "bg-green-600 text-white border-transparent" : "border-gray-300 text-gray-700"
+                  }`}
+                  onClick={() => setOnlyVeg((v) => !v)}
+                >
+                  <span className="h-3 w-3 rounded-sm border border-green-600 flex items-center justify-center bg-white">
+                    <span className="h-2 w-2 rounded-[2px] bg-green-600" />
+                  </span>
+                  Veg only
+                </Button>
+                {/* Placeholder chips for future filters */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full px-4 text-sm font-medium border-gray-300 text-gray-700"
+                  disabled
+                >
+                  Best rated (coming soon)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full px-4 text-sm font-medium border-gray-300 text-gray-700"
+                  disabled
+                >
+                  Offers (coming soon)
+                </Button>
+              </div>
             </div>
 
             {/* Results Count */}
             <div className="mb-4 text-sm text-muted-foreground">
-              {searchQuery || selectedCategory !== "all" ? (
-                <p>
-                  Showing {filteredProducts.length} of {products?.length || 0} products
-                  {searchQuery && ` for "${searchQuery}"`}
-                </p>
-              ) : (
-                <p>{products?.length || 0} products available</p>
-              )}
+              <p>{filteredProducts.length} delicious items available</p>
             </div>
-            
-            {/* Products Grid */}
+
+            {/* Menu sections */}
             {!products || products.length === 0 ? (
               <div className="text-center py-12">
                 <Store className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -455,111 +475,137 @@ export default function PublicStorefront() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => {
-                  const quantity = getItemQuantity(product.id);
-                  const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
-                  const isLowStock = product.stock_quantity !== null && product.stock_quantity > 0 && product.stock_quantity <= (product.low_stock_threshold || 0);
-                  const maxQuantity = product.stock_quantity !== null ? product.stock_quantity : 999;
-                  const canAddMore = quantity < maxQuantity;
-                  
-                  return (
-                     <Card key={product.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${isOutOfStock ? 'opacity-60' : ''}`}>
-                      {product.image_url && (
-                        <div className="relative">
-                          <LazyImage
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-full h-48 object-cover"
-                          />
-                          {isOutOfStock && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <Badge variant="destructive" className="text-lg px-4 py-2">
-                                Out of Stock
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <CardHeader>
-                        <CardTitle className="text-lg">{product.name}</CardTitle>
-                        {product.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {product.description}
-                          </p>
-                        )}
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold">₹{product.price}</span>
-                          <div className="flex flex-col items-end gap-1">
-                            {product.category && (
-                              <Badge variant="secondary">{product.category}</Badge>
-                            )}
-                            {!isOutOfStock && product.stock_quantity !== null && (
-                              <Badge variant={isLowStock ? "destructive" : "outline"} className="text-xs">
-                                {product.stock_quantity} in stock
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+              <Accordion type="single" collapsible className="space-y-2">
+                {Object.entries(
+                  filteredProducts.reduce<Record<string, any[]>>((groups, product) => {
+                    const key = product.category || "Recommended";
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(product);
+                    return groups;
+                  }, {}),
+                ).map(([category, items]) => (
+                  <AccordionItem key={category} value={category} className="border-none">
+                    <AccordionTrigger className="text-base font-semibold px-0">
+                      <div className="flex items-center justify-between w-full">
+                        <span>{category}</span>
+                        <span className="text-xs text-muted-foreground">{items.length} items</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-4 px-0">
+                      {items.map((product) => {
+                        const quantity = getItemQuantity(product.id);
+                        const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
+                        const isLowStock =
+                          product.stock_quantity !== null &&
+                          product.stock_quantity > 0 &&
+                          product.stock_quantity <= (product.low_stock_threshold || 0);
+                        const maxQuantity = product.stock_quantity !== null ? product.stock_quantity : 999;
+                        const canAddMore = quantity < maxQuantity;
 
-                        {isOutOfStock ? (
-                          <Button className="w-full" disabled>
-                            Out of Stock
-                          </Button>
-                        ) : quantity > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => removeFromCart(product.id)}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="text-lg font-medium px-4 min-w-[3rem] text-center">
-                              {quantity}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              disabled={!canAddMore}
-                              onClick={() => {
-                                if (canAddMore) {
-                                  addToCart(product.id, {
-                                    name: product.name,
-                                    price: Number(product.price),
-                                    image: product.image_url || undefined,
-                                  });
-                                } else {
-                                  toast.error(`Maximum available quantity: ${maxQuantity}`);
-                                }
-                              }}
-                              title={!canAddMore ? 'Maximum quantity reached' : 'Add one more'}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            className="w-full"
-                            onClick={() =>
-                              addToCart(product.id, {
-                                name: product.name,
-                                price: Number(product.price),
-                                image: product.image_url || undefined,
-                              })
-                            }
+                        return (
+                          <div
+                            key={product.id}
+                            className="flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0"
                           >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add to Cart
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center gap-2">
+                                {product.diet_type && (
+                                  <span
+                                    className={`h-3 w-3 rounded-sm border flex items-center justify-center bg-white ${
+                                      product.diet_type === "veg" ? "border-green-600" : "border-red-600"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`h-2 w-2 rounded-[2px] ${
+                                        product.diet_type === "veg" ? "bg-green-600" : "bg-red-600"
+                                      }`}
+                                    />
+                                  </span>
+                                )}
+                                <p className="font-medium text-sm">{product.name}</p>
+                              </div>
+                              <p className="text-sm font-semibold">₹{product.price}</p>
+                              {product.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                  {product.description}
+                                </p>
+                              )}
+                              {!isOutOfStock && product.stock_quantity !== null && (
+                                <p className="text-[11px] text-muted-foreground">
+                                  {product.stock_quantity} left
+                                  {isLowStock ? " · Low stock" : ""}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              {product.image_url && (
+                                <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted">
+                                  <LazyImage
+                                    src={product.image_url}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              {isOutOfStock ? (
+                                <Button className="rounded-full px-5 h-8 text-xs" disabled>
+                                  Out of Stock
+                                </Button>
+                              ) : quantity > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="rounded-full h-8 w-8"
+                                    onClick={() => removeFromCart(product.id)}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-sm font-medium min-w-[2.5rem] text-center">
+                                    {quantity}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="rounded-full h-8 w-8"
+                                    disabled={!canAddMore}
+                                    onClick={() => {
+                                      if (canAddMore) {
+                                        addToCart(product.id, {
+                                          name: product.name,
+                                          price: Number(product.price),
+                                          image: product.image_url || undefined,
+                                        });
+                                      } else {
+                                        toast.error(`Maximum available quantity: ${maxQuantity}`);
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  className="rounded-full px-6 h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs"
+                                  onClick={() =>
+                                    addToCart(product.id, {
+                                      name: product.name,
+                                      price: Number(product.price),
+                                      image: product.image_url || undefined,
+                                    })
+                                  }
+                                >
+                                  ADD
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             )}
           </>
         )}

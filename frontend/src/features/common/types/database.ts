@@ -213,6 +213,7 @@ export interface Database {
           price: number
           category: string | null
           image_url: string | null
+          diet_type: string | null
           is_available: boolean
           stock_quantity: number
           low_stock_threshold: number
@@ -227,6 +228,7 @@ export interface Database {
           price: number
           category?: string | null
           image_url?: string | null
+          diet_type?: string | null
           is_available?: boolean
           stock_quantity?: number
           low_stock_threshold?: number
@@ -241,6 +243,7 @@ export interface Database {
           price?: number
           category?: string | null
           image_url?: string | null
+          diet_type?: string | null
           is_available?: boolean
           stock_quantity?: number
           low_stock_threshold?: number

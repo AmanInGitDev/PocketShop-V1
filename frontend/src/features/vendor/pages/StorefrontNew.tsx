@@ -71,6 +71,7 @@ export default function StorefrontNew() {
   const { updateQRCode, isUpdatingQRCode } = useStorefront();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
 
   // Calculate statistics (mirrors Migration_Data Storefront behavior).
   const stats = useMemo(() => {
@@ -571,7 +572,7 @@ export default function StorefrontNew() {
       >
         <Card className="overflow-hidden border-0 shadow-xl">
           <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Eye className="h-6 w-6 text-primary" />
@@ -581,25 +582,67 @@ export default function StorefrontNew() {
                   See how your storefront looks to customers
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                onClick={handlePreview}
-                className="gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open in New Tab
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-full bg-muted/60 p-1">
+                  <Button
+                    type="button"
+                    variant={previewMode === "desktop" ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 rounded-full px-3 text-xs ${
+                      previewMode === "desktop" ? "" : "bg-transparent"
+                    }`}
+                    onClick={() => setPreviewMode("desktop")}
+                  >
+                    Desktop
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={previewMode === "mobile" ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 rounded-full px-3 text-xs ${
+                      previewMode === "mobile" ? "" : "bg-transparent"
+                    }`}
+                    onClick={() => setPreviewMode("mobile")}
+                  >
+                    Mobile
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handlePreview}
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="relative aspect-video overflow-hidden rounded-xl border-2 border-dashed border-primary/20 bg-gradient-to-br from-muted/50 to-muted">
-              {vendor?.id ? (
-                <iframe
-                  src={`/storefront/${vendor.id}`}
-                  className="h-full w-full rounded-lg border-0"
-                  title="Storefront Preview"
-                />
+            {vendor?.id ? (
+              previewMode === "desktop" ? (
+                <div className="relative aspect-video overflow-hidden rounded-xl border-2 border-dashed border-primary/20 bg-gradient-to-br from-muted/50 to-muted">
+                  <iframe
+                    src={`/storefront/${vendor.id}`}
+                    className="h-full w-full rounded-lg border-0"
+                    title="Storefront Preview Desktop"
+                  />
+                </div>
               ) : (
+                <div className="flex items-center justify-center">
+                  <div className="relative w-[390px] max-w-full aspect-[9/19.5] rounded-[2rem] border border-border bg-black/90 shadow-2xl">
+                    <div className="absolute inset-2 rounded-[1.6rem] overflow-hidden bg-white">
+                      <iframe
+                        src={`/storefront/${vendor.id}`}
+                        className="h-full w-full border-0"
+                        title="Storefront Preview Mobile"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="relative aspect-video overflow-hidden rounded-xl border-2 border-dashed border-primary/20 bg-gradient-to-br from-muted/50 to-muted">
                 <div className="flex h-full flex-col items-center justify-center gap-4">
                   <Store className="h-16 w-16 text-muted-foreground" />
                   <p className="text-muted-foreground">
@@ -610,8 +653,8 @@ export default function StorefrontNew() {
                     Open Live Preview
                   </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-green-500" />

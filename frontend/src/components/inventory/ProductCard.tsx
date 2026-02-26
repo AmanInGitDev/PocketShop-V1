@@ -35,21 +35,44 @@ export const ProductCard = ({ product, onDelete }: ProductCardProps) => {
   const isLowStock = product.stock_quantity <= (product.low_stock_threshold || 10);
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="aspect-[4/3] max-h-36 relative bg-muted">
+    <Card className="flex h-full flex-col overflow-hidden border border-border hover:border-primary hover:shadow-lg transition-colors transition-shadow duration-200">
+      <div className="relative aspect-[4/3] w-full bg-muted overflow-hidden group">
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
             No Image
           </div>
         )}
+        {product.category && (
+          <Badge className="absolute left-2 top-2 rounded-full bg-orange-500 text-white text-[10px] px-2 py-0.5">
+            {product.category}
+          </Badge>
+        )}
+        {product.diet_type && (
+          <div className="absolute left-2 bottom-2 flex items-center gap-1 text-[10px] font-medium">
+            <span
+              className={`h-3 w-3 rounded-sm border flex items-center justify-center ${
+                product.diet_type === "veg" ? "border-green-600" : "border-red-600"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-[2px] ${
+                  product.diet_type === "veg" ? "bg-green-600" : "bg-red-600"
+                }`}
+              />
+            </span>
+          </div>
+        )}
         {isLowStock && (
-          <Badge variant="destructive" className="absolute top-2 right-2">
+          <Badge
+            variant="destructive"
+            className="absolute top-2 right-2 animate-pulse shadow-md rounded-full px-3 py-1"
+          >
             <AlertCircle className="h-3 w-3 mr-1" />
             Low Stock
           </Badge>
@@ -60,7 +83,7 @@ export const ProductCard = ({ product, onDelete }: ProductCardProps) => {
           </Badge>
         )}
       </div>
-      <CardContent className="p-3">
+      <CardContent className="flex-1 p-3 flex flex-col">
         <h3 className="font-semibold text-base mb-0.5 line-clamp-1">{product.name}</h3>
         {product.category && (
           <Badge variant="outline" className="mb-1.5 text-xs">

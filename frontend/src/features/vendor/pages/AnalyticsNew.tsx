@@ -657,6 +657,13 @@ export default function AnalyticsNew() {
           </ResponsiveContainer>
         );
       case "devices":
+        if (!segmentDevices.length) {
+          return (
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              Device analytics coming soon (requires advanced tracking).
+            </div>
+          );
+        }
         return (
           <ResponsiveContainer
             width="100%"
@@ -687,6 +694,13 @@ export default function AnalyticsNew() {
           </ResponsiveContainer>
         );
       case "regions":
+        if (!segmentRegions.length) {
+          return (
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              Regional analytics coming soon (requires location data).
+            </div>
+          );
+        }
         return (
           <ResponsiveContainer
             width="100%"
@@ -792,12 +806,19 @@ export default function AnalyticsNew() {
           </ResponsiveContainer>
         );
       case "radar":
+        if (!analytics?.radarMetrics || !analytics.radarMetrics.length) {
+          return (
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              Benchmark radar coming soon.
+            </div>
+          );
+        }
         return (
           <ResponsiveContainer
             width="100%"
             height={extended ? 420 : 300}
           >
-            <RadarChart data={analytics?.radarMetrics || []}>
+            <RadarChart data={analytics.radarMetrics}>
               <PolarGrid />
               <PolarAngleAxis dataKey="metric" />
               <PolarRadiusAxis angle={30} domain={[0, 120]} />

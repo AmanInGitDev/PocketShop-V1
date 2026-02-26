@@ -25,6 +25,7 @@ const productSchema = z.object({
   stock_quantity: z.coerce.number().int().min(0, "Stock must be non-negative"),
   low_stock_threshold: z.coerce.number().int().min(0).optional(),
   category: z.string().max(50).optional(),
+  diet_type: z.enum(["veg", "non_veg"]).optional(),
   is_available: z.boolean(),
 });
 
@@ -35,6 +36,7 @@ type ProductFormValues = {
   stock_quantity: number;
   low_stock_threshold?: number;
   category?: string;
+  diet_type?: "veg" | "non_veg";
   is_available: boolean;
 };
 
@@ -58,6 +60,7 @@ export const ProductForm = ({ defaultValues, onSubmit, isLoading }: ProductFormP
       stock_quantity: 0,
       low_stock_threshold: 10,
       category: "",
+      diet_type: "veg",
       is_available: true,
     },
   });
@@ -188,6 +191,44 @@ export const ProductForm = ({ defaultValues, onSubmit, isLoading }: ProductFormP
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="diet_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Diet type</FormLabel>
+                <FormDescription>Select whether this item is vegetarian or non‑vegetarian.</FormDescription>
+                <FormControl>
+                  <div className="mt-2 flex gap-3">
+                    <Button
+                      type="button"
+                      variant={field.value === "veg" || !field.value ? "default" : "outline"}
+                      className="flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+                      onClick={() => field.onChange("veg")}
+                    >
+                      <span className="h-3 w-3 rounded-full border border-green-600 flex items-center justify-center">
+                        <span className="h-2 w-2 rounded-full bg-green-600" />
+                      </span>
+                      Veg
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={field.value === "non_veg" ? "default" : "outline"}
+                      className="flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+                      onClick={() => field.onChange("non_veg")}
+                    >
+                      <span className="h-3 w-3 rounded-full border border-red-600 flex items-center justify-center">
+                        <span className="h-2 w-2 rounded-full bg-red-600" />
+                      </span>
+                      Non‑veg
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
