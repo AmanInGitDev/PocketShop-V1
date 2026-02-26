@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -29,7 +30,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   QrCode,
@@ -43,15 +43,16 @@ import {
   ShoppingBag,
   TrendingUp,
   Eye,
-  Link as LinkIcon,
   Mail,
   Phone,
   MapPin,
   CheckCircle2,
   Sparkles,
   Globe,
+  Settings,
 } from "lucide-react";
 import { useStorefront } from "@/features/vendor/hooks/useStorefront";
+import { ROUTES } from "@/constants/routes";
 import { useVendor } from "@/features/vendor/hooks/useVendor";
 import { useProducts } from "@/features/vendor/hooks/useProducts";
 import { useOrders } from "@/features/vendor/hooks/useOrders";
@@ -67,22 +68,9 @@ export default function StorefrontNew() {
   const { data: vendor, isLoading: vendorLoading } = useVendor();
   const { data: products } = useProducts();
   const { data: orders } = useOrders();
-  const {
-    updateQRCode,
-    isUpdatingQRCode,
-    updateStorefront,
-    isUpdatingStorefront,
-  } = useStorefront();
+  const { updateQRCode, isUpdatingQRCode } = useStorefront();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-
-  const [formData, setFormData] = useState({
-    business_name: "",
-    description: "",
-    address: "",
-    contact_phone: "",
-    contact_email: "",
-  });
 
   // Calculate statistics (mirrors Migration_Data Storefront behavior).
   const stats = useMemo(() => {
@@ -114,18 +102,8 @@ export default function StorefrontNew() {
   }, [products, orders]);
 
   useEffect(() => {
-    if (vendor) {
-      setFormData({
-        business_name: vendor.business_name || "",
-        description: vendor.description || "",
-        address: vendor.address || "",
-        contact_phone: (vendor as any).contact_phone || vendor.mobile_number || "",
-        contact_email: (vendor as any).contact_email || vendor.email || "",
-      });
-
-      if ((vendor as any).qr_code_url) {
-        setQrCodeUrl((vendor as any).qr_code_url);
-      }
+    if (vendor && (vendor as any).qr_code_url) {
+      setQrCodeUrl((vendor as any).qr_code_url);
     }
   }, [vendor]);
 
@@ -183,25 +161,6 @@ export default function StorefrontNew() {
   const handlePreview = () => {
     if (!vendor?.id) return;
     window.open(`/storefront/${vendor.id}`, "_blank");
-  };
-
-  const handleSaveSettings = () => {
-    updateStorefront({
-      business_name: formData.business_name,
-      description: formData.description,
-      address: formData.address,
-      contact_phone: formData.contact_phone,
-      contact_email: formData.contact_email,
-    } as any);
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
   };
 
   if (vendorLoading) {
@@ -520,7 +479,7 @@ export default function StorefrontNew() {
           </Card>
         </motion.div>
 
-        {/* Storefront Settings - Enhanced */}
+        {/* Storefront Info (read-only) – edit in Settings */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -528,125 +487,77 @@ export default function StorefrontNew() {
         >
           <Card className="border-0 shadow-xl">
             <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5">
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Store className="h-6 w-6 text-primary" />
-                Storefront Settings
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Customize your storefront information
-              </CardDescription>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <Store className="h-6 w-6 text-primary" />
+                    Storefront Info
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    What customers see on your storefront
+                  </CardDescription>
+                </div>
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <Link
+                    to={ROUTES.VENDOR_DASHBOARD_SETTINGS}
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Edit in Settings
+                  </Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-5 p-6">
               <div className="space-y-2">
-                <Label
-                  htmlFor="business_name"
-                  className="flex items-center gap-2 text-base font-semibold"
-                >
+                <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
                   <Store className="h-4 w-4" />
                   Business Name
                 </Label>
-                <Input
-                  id="business_name"
-                  name="business_name"
-                  value={formData.business_name}
-                  onChange={handleChange}
-                  placeholder="Your business name"
-                  className="h-11"
-                />
+                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                  {vendor?.business_name || "—"}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="description"
-                  className="text-base font-semibold"
-                >
+                <Label className="text-base font-semibold text-foreground">
                   Description
                 </Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Tell customers about your business"
-                  rows={4}
-                  className="resize-none"
-                />
+                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground min-h-[4rem]">
+                  {vendor?.description || "—"}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="address"
-                  className="flex items-center gap-2 text-base font-semibold"
-                >
+                <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
                   <MapPin className="h-4 w-4" />
                   Address
                 </Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Your business address"
-                  className="h-11"
-                />
+                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                  {vendor?.address || "—"}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="contact_phone"
-                    className="flex items-center gap-2 text-base font-semibold"
-                  >
+                  <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
                     <Phone className="h-4 w-4" />
                     Phone
                   </Label>
-                  <Input
-                    id="contact_phone"
-                    name="contact_phone"
-                    value={formData.contact_phone}
-                    onChange={handleChange}
-                    placeholder="Contact phone"
-                    className="h-11"
-                  />
+                  <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                    {vendor?.mobile_number || "—"}
+                  </p>
                 </div>
-
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="contact_email"
-                    className="flex items-center gap-2 text-base font-semibold"
-                  >
+                  <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
                     <Mail className="h-4 w-4" />
                     Email
                   </Label>
-                  <Input
-                    id="contact_email"
-                    name="contact_email"
-                    type="email"
-                    value={formData.contact_email}
-                    onChange={handleChange}
-                    placeholder="Contact email"
-                    className="h-11"
-                  />
+                  <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                    {vendor?.email || "—"}
+                  </p>
                 </div>
               </div>
-
-              <Button
-                className="h-11 w-full bg-gradient-to-r from-primary to-primary/90 text-white shadow-lg hover:from-primary/90 hover:to-primary"
-                onClick={handleSaveSettings}
-                disabled={isUpdatingStorefront}
-              >
-                {isUpdatingStorefront ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Save Settings
-                  </>
-                )}
-              </Button>
             </CardContent>
           </Card>
         </motion.div>
