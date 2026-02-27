@@ -71,7 +71,7 @@ export default function StorefrontNew() {
   const { updateQRCode, isUpdatingQRCode } = useStorefront();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("mobile");
 
   // Calculate statistics (mirrors Migration_Data Storefront behavior).
   const stats = useMemo(() => {
@@ -586,17 +586,6 @@ export default function StorefrontNew() {
                 <div className="inline-flex rounded-full bg-muted/60 p-1">
                   <Button
                     type="button"
-                    variant={previewMode === "desktop" ? "default" : "ghost"}
-                    size="sm"
-                    className={`h-8 rounded-full px-3 text-xs ${
-                      previewMode === "desktop" ? "" : "bg-transparent"
-                    }`}
-                    onClick={() => setPreviewMode("desktop")}
-                  >
-                    Desktop
-                  </Button>
-                  <Button
-                    type="button"
                     variant={previewMode === "mobile" ? "default" : "ghost"}
                     size="sm"
                     className={`h-8 rounded-full px-3 text-xs ${
@@ -605,6 +594,17 @@ export default function StorefrontNew() {
                     onClick={() => setPreviewMode("mobile")}
                   >
                     Mobile
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={previewMode === "desktop" ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 rounded-full px-3 text-xs ${
+                      previewMode === "desktop" ? "" : "bg-transparent"
+                    }`}
+                    onClick={() => setPreviewMode("desktop")}
+                  >
+                    Desktop
                   </Button>
                 </div>
                 <Button

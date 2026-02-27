@@ -35,7 +35,12 @@ import {
   CreditCard,
   Loader2,
   Save,
+  ImageIcon,
+  Tag,
+  Plus,
+  Trash2,
 } from 'lucide-react';
+import { formatOfferText } from '@/features/storefront/utils/offerUtils';
 
 const BUSINESS_TYPES = [
   { value: 'restaurant', label: 'Restaurant' },
@@ -86,7 +91,21 @@ type ProfileFormState = {
   mobile_number: string;
   logo_url: string;
   banner_url: string;
+  banner_color: string;
 };
+
+const BANNER_COLOR_PRESETS = [
+  { value: '#f97316', label: 'Orange' },
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#22c55e', label: 'Green' },
+  { value: '#8b5cf6', label: 'Purple' },
+  { value: '#14b8a6', label: 'Teal' },
+  { value: '#ec4899', label: 'Pink' },
+  { value: '#eab308', label: 'Amber' },
+  { value: '#ef4444', label: 'Red' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#64748b', label: 'Slate' },
+];
 
 type OperationalHoursState = { open: string; close: string };
 
@@ -95,6 +114,15 @@ type FssaiState = {
   expiry_date: string; // YYYY-MM-DD
   document_url: string;
   status: 'unverified' | 'verifying' | 'verified';
+};
+
+type Offer = {
+  id: string;
+  type: 'percentage' | 'flat';
+  value: number;
+  max_discount?: number;
+  min_order: number;
+  promo_code: string;
 };
 
 export default function SettingsNew() {
@@ -119,6 +147,7 @@ export default function SettingsNew() {
     mobile_number: '',
     logo_url: '',
     banner_url: '',
+    banner_color: '#f97316',
   });
   const [workingDays, setWorkingDays] = useState<string[]>([]);
   const [operationalHours, setOperationalHours] = useState<OperationalHoursState>({ open: '09:00', close: '22:00' });
@@ -136,6 +165,7 @@ export default function SettingsNew() {
   const [foodImages, setFoodImages] = useState<string[]>([]);
   const [isUploadingRestaurant, setIsUploadingRestaurant] = useState(false);
   const [isUploadingFood, setIsUploadingFood] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>([]);
 
   const [baseline, setBaseline] = useState<{
     businessForm: BusinessFormState;
@@ -147,10 +177,12 @@ export default function SettingsNew() {
     fssaiForm: FssaiState;
     restaurantImages: string[];
     foodImages: string[];
+    offers: Offer[];
   } | null>(null);
 
   useEffect(() => {
     if (vendor) {
+      const meta = vendor.metadata as Record<string, unknown> | null;
       const nextBusinessForm = {
         business_name: vendor.business_name ?? '',
         business_type: vendor.business_type ?? '',
@@ -167,6 +199,7 @@ export default function SettingsNew() {
         mobile_number: vendor.mobile_number ?? '',
         logo_url: vendor.logo_url ?? '',
         banner_url: vendor.banner_url ?? '',
+        banner_color: (meta?.banner_color as string) || '#f97316',
       };
       const nextWorkingDays = ((vendor.working_days as string[]) ?? []).slice();
       const hours = vendor.operational_hours as Record<string, { open?: string; close?: string }> | null;
@@ -175,7 +208,6 @@ export default function SettingsNew() {
         open: first?.open ?? '09:00',
         close: first?.close ?? '22:00',
       };
-      const meta = vendor.metadata as Record<string, unknown> | null;
       const nextNotificationPrefs: NotificationPrefs = {
         ...DEFAULT_NOTIFICATION_PREFS,
         ...((meta?.notification_preferences as NotificationPrefs) ?? {}),
@@ -195,6 +227,19 @@ export default function SettingsNew() {
       };
       const nextRestaurantImages = ((meta?.restaurant_images as string[]) ?? []).slice();
       const nextFoodImages = ((meta?.food_images as string[]) ?? []).slice();
+      const rawOffers = (meta?.offers as Offer[]) ?? [];
+      const nextOffers = Array.isArray(rawOffers)
+        ? rawOffers
+            .filter((o) => o && typeof o === 'object' && ('type' in o || 'value' in o))
+            .map((o) => ({
+              id: (o as Offer)?.id ?? crypto.randomUUID(),
+              type: (o as Offer).type === 'flat' ? 'flat' : 'percentage',
+              value: Number((o as Offer).value) || 0,
+              max_discount: (o as Offer).max_discount != null ? Number((o as Offer).max_discount) : undefined,
+              min_order: Number((o as Offer).min_order) || 0,
+              promo_code: String((o as Offer).promo_code ?? '').trim() || '',
+            }))
+        : [];
 
       setBusinessForm(nextBusinessForm);
       setProfileForm(nextProfileForm);
@@ -207,6 +252,7 @@ export default function SettingsNew() {
       setShowBankForm(!nextPaymentForm.account_number); // if already saved, show summary by default
       setRestaurantImages(nextRestaurantImages);
       setFoodImages(nextFoodImages);
+      setOffers(nextOffers);
 
       setBaseline({
         businessForm: nextBusinessForm,
@@ -218,6 +264,7 @@ export default function SettingsNew() {
         fssaiForm: nextFssaiForm,
         restaurantImages: nextRestaurantImages,
         foodImages: nextFoodImages,
+        offers: nextOffers,
       });
     }
   }, [vendor]);
@@ -271,7 +318,8 @@ export default function SettingsNew() {
     !sameString(profileForm.email, baseline.profileForm.email) ||
     !sameString(profileForm.mobile_number, baseline.profileForm.mobile_number) ||
     !sameString(profileForm.logo_url, baseline.profileForm.logo_url) ||
-    !sameString(profileForm.banner_url, baseline.profileForm.banner_url)
+    !sameString(profileForm.banner_url, baseline.profileForm.banner_url) ||
+    !sameString(profileForm.banner_color, baseline.profileForm.banner_color)
   );
 
   const operationsDirty = !!baseline && (
@@ -287,6 +335,22 @@ export default function SettingsNew() {
     !sameString(paymentForm.ifsc, baseline.paymentForm.ifsc) ||
     (paymentForm.account_type ?? 'savings') !== (baseline.paymentForm.account_type ?? 'savings')
   );
+
+  const sameOffers = (a: Offer[], b: Offer[]) => {
+    if (a.length !== b.length) return false;
+    return a.every((oa, i) => {
+      const ob = b[i];
+      return (
+        oa.id === ob?.id &&
+        oa.type === ob?.type &&
+        oa.value === ob?.value &&
+        oa.max_discount === ob?.max_discount &&
+        oa.min_order === ob?.min_order &&
+        oa.promo_code === ob?.promo_code
+      );
+    });
+  };
+  const offersDirty = !!baseline && !sameOffers(offers, baseline.offers);
 
   const sameFssai = (a: FssaiState, b: FssaiState) =>
     sameString(a.license_number, b.license_number) &&
@@ -396,12 +460,14 @@ export default function SettingsNew() {
   };
 
   const saveProfile = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
     updateMutation.mutate({
       owner_name: profileForm.owner_name || null,
       email: profileForm.email,
       mobile_number: profileForm.mobile_number,
       logo_url: profileForm.logo_url || null,
       banner_url: profileForm.banner_url || null,
+      metadata: { ...meta, banner_color: profileForm.banner_color },
     });
     setBaseline((prev) => (prev ? { ...prev, profileForm: { ...profileForm } } : prev));
   };
@@ -451,6 +517,45 @@ export default function SettingsNew() {
     setShowBankForm(false);
   };
 
+  const saveOffers = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      metadata: {
+        ...meta,
+        offers: offers.filter((o) => o.value > 0 && o.min_order >= 0 && (o.promo_code || '').trim()),
+      },
+    });
+    setBaseline((prev) => (prev ? { ...prev, offers: [...offers] } : prev));
+  };
+
+  const addOffer = () => {
+    setOffers((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), type: 'percentage' as const, value: 20, max_discount: 50, min_order: 100, promo_code: '' },
+    ]);
+  };
+
+  const removeOffer = (id: string) => {
+    setOffers((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const updateOffer = (id: string, field: keyof Offer, value: string | number) => {
+    setOffers((prev) =>
+      prev.map((o) => {
+        if (o.id !== id) return o;
+        if (field === 'type') return { ...o, type: value as 'percentage' | 'flat' };
+        if (field === 'value') return { ...o, value: Number(value) || 0 };
+        if (field === 'min_order') return { ...o, min_order: Number(value) || 0 };
+        if (field === 'max_discount') {
+          const v = value === '' || value == null ? undefined : Number(value);
+          return { ...o, max_discount: v };
+        }
+        if (field === 'promo_code') return { ...o, promo_code: String(value ?? '').trim().toUpperCase() };
+        return o;
+      })
+    );
+  };
+
   const saveFssai = () => {
     const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
     updateMutation.mutate({
@@ -491,7 +596,7 @@ export default function SettingsNew() {
       </div>
 
       <Tabs defaultValue="business" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-2 h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 gap-2 h-auto p-1 bg-muted/50">
           <TabsTrigger value="business" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Business
@@ -499,6 +604,10 @@ export default function SettingsNew() {
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="offers" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Offers
           </TabsTrigger>
           <TabsTrigger value="operations" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -747,20 +856,58 @@ export default function SettingsNew() {
                 />
               </div>
               <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-medium text-foreground">Storefront header</h4>
+                </div>
+                <p className={textHint}>
+                  Wide image spanning the top of your storefront, or a solid color.
+                </p>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Header image</Label>
+                  <Input
+                    value={profileForm.banner_url}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, banner_url: e.target.value }))}
+                    placeholder="https://... (optional — wide banner image)"
+                    className="text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Header color</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {BANNER_COLOR_PRESETS.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setProfileForm((p) => ({ ...p, banner_color: value }))}
+                        className={`flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all hover:opacity-90 ${
+                          profileForm.banner_color === value
+                            ? 'ring-2 ring-offset-2 ring-offset-background ring-primary'
+                            : ''
+                        }`}
+                        title={label}
+                      >
+                        <span
+                          className="h-10 w-10 rounded-full border-2 border-white shadow-md"
+                          style={{ backgroundColor: value }}
+                        />
+                        <span className="text-xs font-medium text-foreground">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
               <div className="space-y-2">
-                <Label className={textLabel}>Logo URL</Label>
+                <Label className={textLabel}>Logo</Label>
+                <p className={textHint}>
+                  Small circular icon shown next to your business name (e.g. brand mark). Separate from the header image.
+                </p>
                 <Input
                   value={profileForm.logo_url}
                   onChange={(e) => setProfileForm((p) => ({ ...p, logo_url: e.target.value }))}
-                  placeholder="https://... (optional)"
-                  className="text-foreground"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className={textLabel}>Banner URL</Label>
-                <Input
-                  value={profileForm.banner_url}
-                  onChange={(e) => setProfileForm((p) => ({ ...p, banner_url: e.target.value }))}
                   placeholder="https://... (optional)"
                   className="text-foreground"
                 />
@@ -769,6 +916,114 @@ export default function SettingsNew() {
               <Button onClick={saveProfile} disabled={updateMutation.isPending || !profileDirty}>
                 {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save profile
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="offers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Offers</CardTitle>
+              <CardDescription className={textHint}>
+                Discount offers shown on your storefront. Text and cards are auto-generated.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {offers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className="p-4 rounded-lg border border-border bg-muted/20 space-y-4"
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Type</Label>
+                        <Select
+                          value={offer.type}
+                          onValueChange={(v) => updateOffer(offer.id, 'type', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">Percentage</SelectItem>
+                            <SelectItem value="flat">Flat amount</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">
+                          {offer.type === 'percentage' ? 'Discount %' : 'Discount ₹'}
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={offer.type === 'percentage' ? 100 : 9999}
+                          value={offer.value || ''}
+                          onChange={(e) => updateOffer(offer.id, 'value', e.target.value)}
+                          placeholder={offer.type === 'percentage' ? '20' : '50'}
+                        />
+                      </div>
+                      {offer.type === 'percentage' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Max discount ₹</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={offer.max_discount ?? ''}
+                            onChange={(e) => updateOffer(offer.id, 'max_discount', e.target.value)}
+                            placeholder="50"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Min order ₹</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={offer.min_order || ''}
+                          onChange={(e) => updateOffer(offer.id, 'min_order', e.target.value)}
+                          placeholder="100"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className="text-xs">Promo code (required)</Label>
+                        <Input
+                          placeholder="e.g. SAVE20"
+                          value={offer.promo_code || ''}
+                          onChange={(e) => updateOffer(offer.id, 'promo_code', e.target.value)}
+                          className="uppercase"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Customer must enter this code at checkout to apply the discount
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive shrink-0"
+                      onClick={() => removeOffer(offer.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {offer.value > 0 && offer.min_order >= 0 && (
+                    <div className="rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                      {formatOfferText(offer)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={addOffer} className="w-full gap-2">
+                <Plus className="h-4 w-4" />
+                Add offer
+              </Button>
+              <Button onClick={saveOffers} disabled={updateMutation.isPending || !offersDirty}>
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save offers
               </Button>
             </CardContent>
           </Card>

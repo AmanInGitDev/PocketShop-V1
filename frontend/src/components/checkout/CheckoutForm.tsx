@@ -13,13 +13,33 @@ import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
+import type { StructuredOffer } from "@/features/storefront/utils/offerUtils";
+import { findOfferByCode } from "@/features/storefront/utils/offerUtils";
+
 interface CheckoutFormProps {
   onBack: () => void;
   onCheckout: (data: CheckoutFormData, paymentMethod: 'card' | 'upi' | 'wallet' | 'cash') => Promise<void>;
+  /** Discount when promo applied */
+  discountAmount?: number;
+  discountLabel?: string;
+  appliedPromoCode?: string;
+  onApplyPromo?: (code: string) => void;
+  onRemovePromo?: () => void;
+  offers?: StructuredOffer[];
 }
 
-export function CheckoutForm({ onBack, onCheckout }: CheckoutFormProps) {
+export function CheckoutForm({
+  onBack,
+  onCheckout,
+  discountAmount = 0,
+  discountLabel,
+  appliedPromoCode = "",
+  onApplyPromo,
+  onRemovePromo,
+  offers = [],
+}: CheckoutFormProps) {
   const { cartItems, getTotalAmount, deleteFromCart } = useCart();
+  const [promoInput, setPromoInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'upi' | 'wallet' | 'cash' | null>(null);
 
@@ -172,11 +192,77 @@ export function CheckoutForm({ onBack, onCheckout }: CheckoutFormProps) {
               </div>
             ))}
           </div>
-          <div className="border-t pt-4 mt-4">
+          {offers.length > 0 && (
+            <div className="border-t pt-4 mt-4 space-y-2">
+              {appliedPromoCode ? (
+                <div className="flex items-center justify-between rounded-md bg-green-50 dark:bg-green-950/30 px-3 py-2">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                    {appliedPromoCode} applied
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-green-700 hover:text-green-800 h-7"
+                    onClick={() => {
+                      onRemovePromo?.();
+                      setPromoInput("");
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Promo code"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const code = promoInput.trim();
+                      if (!code) {
+                        toast.error("Enter a promo code");
+                        return;
+                      }
+                      const sub = getTotalAmount();
+                      const result = findOfferByCode(offers, code, sub);
+                      if (result) {
+                        onApplyPromo?.(code);
+                        toast.success("Promo applied!");
+                      } else {
+                        toast.error("Invalid code or min order not met");
+                      }
+                    }}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="border-t pt-4 mt-4 space-y-2">
+            {discountAmount > 0 && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>₹{getTotalAmount().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>{discountLabel || "Discount"}</span>
+                  <span>-₹{discountAmount.toFixed(2)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold">Total</span>
               <span className="text-2xl font-bold">
-                ₹{getTotalAmount().toFixed(2)}
+                ₹{(Math.max(0, getTotalAmount() - discountAmount)).toFixed(2)}
               </span>
             </div>
           </div>

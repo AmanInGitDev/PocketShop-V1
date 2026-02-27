@@ -24,6 +24,211 @@ import { validateCartItems } from "@/schemas/checkoutSchema";
 import type { CheckoutFormData } from "@/schemas/checkoutSchema";
 import { ActiveOrdersWidget } from "@/components/storefront/ActiveOrdersWidget";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import { formatOfferText, formatOfferShort, findOfferByCode, type StructuredOffer } from "@/features/storefront/utils/offerUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+function MenuItemRow({
+  product,
+  getItemQuantity,
+  addToCart,
+  removeFromCart,
+  toast,
+}: {
+  product: any;
+  getItemQuantity: (id: string) => number;
+  addToCart: (id: string, o: { name: string; price: number; image?: string }) => void;
+  removeFromCart: (id: string) => void;
+  toast: { error: (m: string) => void };
+}) {
+  const quantity = getItemQuantity(product.id);
+  const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
+  const isLowStock =
+    product.stock_quantity !== null &&
+    product.stock_quantity > 0 &&
+    product.stock_quantity <= (product.low_stock_threshold || 0);
+  const maxQuantity = product.stock_quantity !== null ? product.stock_quantity : 999;
+  const canAddMore = quantity < maxQuantity;
+
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0">
+      <div className="flex-1 space-y-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {product.diet_type && (
+            <span
+              className={`h-3 w-3 rounded-sm border flex items-center justify-center bg-white shrink-0 ${
+                product.diet_type === "veg" ? "border-green-600" : "border-red-600"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-[2px] ${
+                  product.diet_type === "veg" ? "bg-green-600" : "bg-red-600"
+                }`}
+              />
+            </span>
+          )}
+          <p className="font-medium text-sm truncate">{product.name}</p>
+        </div>
+        <p className="text-sm font-semibold">₹{product.price}</p>
+        {product.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+        )}
+        {!isOutOfStock && product.stock_quantity !== null && (
+          <p className="text-[11px] text-muted-foreground">
+            {product.stock_quantity} left
+            {isLowStock ? " · Low stock" : ""}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-2 shrink-0">
+        {product.image_url && (
+          <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted">
+            <LazyImage
+              src={product.image_url}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
+        {isOutOfStock ? (
+          <Button className="rounded-full px-5 h-8 text-xs" disabled>
+            Out of Stock
+          </Button>
+        ) : quantity > 0 ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-8 w-8"
+              onClick={() => removeFromCart(product.id)}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[2.5rem] text-center">{quantity}</span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-8 w-8"
+              disabled={!canAddMore}
+              onClick={() => {
+                if (canAddMore) {
+                  addToCart(product.id, {
+                    name: product.name,
+                    price: Number(product.price),
+                    image: product.image_url || undefined,
+                  });
+                } else {
+                  toast.error(`Maximum available quantity: ${maxQuantity}`);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            className="rounded-full px-6 h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs"
+            onClick={() =>
+              addToCart(product.id, {
+                name: product.name,
+                price: Number(product.price),
+                image: product.image_url || undefined,
+              })
+            }
+          >
+            ADD
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OffersCarousel({ offers }: { offers: StructuredOffer[] }) {
+  const [api, setApi] = useState<CarouselApi | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!api) return;
+    const onSelect = () => setCurrentIndex(api.selectedScrollSnap());
+    onSelect();
+    api.on("select", onSelect);
+    return () => api.off("select", onSelect);
+  }, [api]);
+
+  useEffect(() => {
+    if (!api || offers.length <= 1) return;
+    const t = setInterval(() => {
+      const next = (currentIndex + 1) % offers.length;
+      api.scrollTo(next);
+    }, 5500);
+    return () => clearInterval(t);
+  }, [api, offers.length, currentIndex]);
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <h3 className="text-lg font-bold text-foreground">Deals for you</h3>
+        {!isMobile && offers.length > 1 && (
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => api?.scrollPrev()}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => api?.scrollNext()}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <Carousel
+          opts={{ loop: true, align: "start" }}
+          setApi={setApi}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-3 md:-ml-5">
+            {offers.map((o) => (
+              <CarouselItem
+                key={o.id}
+                className="pl-3 md:pl-5 basis-[90%] sm:basis-[75%] md:basis-[340px] lg:basis-[380px]"
+              >
+                <div className="flex rounded-xl border border-gray-200 bg-white shadow-sm min-h-[88px] px-5 py-4 md:px-6 md:py-5">
+                  <div className="flex items-center gap-4 w-full">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                      <span className="text-base font-bold text-orange-600">%</span>
+                    </div>
+                    <div className="flex-1 min-w-0 py-0.5">
+                      <p className="font-semibold text-foreground text-sm leading-tight">
+                        {formatOfferShort(o)}
+                      </p>
+                      {o.promo_code && (
+                        <p className="mt-1 text-xs text-muted-foreground uppercase">
+                          USE {o.promo_code}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
+    </div>
+  );
+}
 
 export default function PublicStorefront() {
   const { vendorId } = useParams();
@@ -34,6 +239,7 @@ export default function PublicStorefront() {
     removeFromCart,
     clearCart,
     getTotalItems,
+    getTotalAmount,
     getItemQuantity,
   } = useCart();
 
@@ -131,18 +337,14 @@ export default function PublicStorefront() {
     return Array.from(uniqueCategories).sort();
   }, [products]);
 
-  // Filter products
-  const filteredProducts = useMemo(() => {
+  // Products filtered by search + veg only (for sidebar - keeps all categories visible)
+  const productsForSidebar = useMemo(() => {
     if (!products) return [];
-    
     return products.filter((product) => {
-      if (onlyVeg && product.diet_type !== "veg") {
-        return false;
+      if (onlyVeg) {
+        const dt = (product.diet_type ?? "").toString().toLowerCase();
+        if (dt && dt !== "veg") return false; // hide only if explicitly non_veg
       }
-      if (selectedCategory !== "all" && product.category !== selectedCategory) {
-        return false;
-      }
-      
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         return (
@@ -151,10 +353,70 @@ export default function PublicStorefront() {
           product.category?.toLowerCase().includes(query)
         );
       }
-      
+      return true;
+    });
+  }, [products, searchQuery, onlyVeg]);
+
+  // Sidebar: all categories from productsForSidebar (static - never filters by selected category)
+  const sidebarGroups = useMemo(() => {
+    const groups = productsForSidebar.reduce<Record<string, any[]>>((acc, product) => {
+      const key = product.category || "Recommended";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(product);
+      return acc;
+    }, {});
+    return groups;
+  }, [productsForSidebar]);
+
+  // Filter products (includes category filter for main content)
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter((product) => {
+      if (onlyVeg) {
+        const dt = (product.diet_type ?? "").toString().toLowerCase();
+        if (dt && dt !== "veg") return false; // hide only if explicitly non_veg
+      }
+      if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return (
+          product.name.toLowerCase().includes(query) ||
+          product.description?.toLowerCase().includes(query) ||
+          product.category?.toLowerCase().includes(query)
+        );
+      }
       return true;
     });
   }, [products, selectedCategory, searchQuery, onlyVeg]);
+
+  const offers = useMemo((): StructuredOffer[] => {
+    const raw = (vendor?.metadata as Record<string, unknown>)?.offers;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((o: unknown) => o && typeof o === 'object' && 'value' in o && 'min_order' in o)
+      .map((o: unknown) => ({
+        id: (o as { id?: string }).id ?? crypto.randomUUID(),
+        type: ((o as { type?: string }).type === 'flat' ? 'flat' : 'percentage') as 'percentage' | 'flat',
+        value: Number((o as { value?: number }).value) || 0,
+        max_discount: (o as { max_discount?: number }).max_discount != null ? Number((o as { max_discount: number }).max_discount) : undefined,
+        min_order: Number((o as { min_order?: number }).min_order) || 0,
+        promo_code: String((o as { promo_code?: string }).promo_code ?? '').trim().toUpperCase(),
+      }))
+      .filter((o) => o.value > 0 && o.promo_code);
+  }, [vendor?.metadata]);
+
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const subtotal = getTotalAmount();
+  const appliedOffer = useMemo(
+    () => (appliedPromoCode ? findOfferByCode(offers, appliedPromoCode, subtotal) : null),
+    [offers, appliedPromoCode, subtotal]
+  );
+  const discountAmount = appliedOffer?.discount ?? 0;
+  const discountLabel = appliedOffer ? formatOfferText(appliedOffer.offer) : undefined;
+
+  const productGroups = useMemo(() => {
+    return { groups: sidebarGroups, categoryKeys: Object.keys(sidebarGroups) };
+  }, [sidebarGroups]);
 
   const handleCheckout = async (
     customerData: CheckoutFormData,
@@ -186,6 +448,8 @@ export default function PublicStorefront() {
 
       validateCartItems(items);
 
+      // Discount only when user applied a valid promo code
+
       // Create order (tries Edge Function first, falls back to direct DB insertion)
       const { createOrder } = await import('@/services/orderService');
 
@@ -198,6 +462,7 @@ export default function PublicStorefront() {
             paymentMethod: paymentMethod !== 'card' ? paymentMethod : null,
             notes: customerData.notes || null,
             customerId: customerProfileId,
+            discountAmount: discountAmount > 0 ? discountAmount : undefined,
       }, {
         useEdgeFunction: true, // Try Edge Function first, fallback to direct DB
       });
@@ -291,9 +556,27 @@ export default function PublicStorefront() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pb-24">
-      {/* Header / Hero */}
-      <header className="bg-gradient-to-b from-orange-500 to-orange-400 text-white pb-6 shadow-md">
-        <div className="max-w-5xl mx-auto px-4 pt-4">
+      {/* Header / Hero - LinkedIn-style banner: image if set, else solid color */}
+      <header
+        className="relative text-white pb-6 shadow-md overflow-hidden"
+        style={
+          vendor.banner_url
+            ? {
+                backgroundImage: `url(${vendor.banner_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundColor: '#f97316',
+              }
+            : {
+                backgroundColor:
+                  (vendor.metadata as Record<string, unknown>)?.banner_color as string | undefined || '#f97316',
+              }
+        }
+      >
+        {vendor.banner_url && (
+          <div className="absolute inset-0 bg-black/30" aria-hidden />
+        )}
+        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               {vendor.logo_url && (
@@ -378,11 +661,20 @@ export default function PublicStorefront() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 md:px-0 -mt-6 py-10 space-y-6">
+      <main className="max-w-5xl mx-auto px-4 md:px-6 -mt-6 py-10 space-y-6">
         {showCheckout ? (
           <CheckoutForm
-            onBack={() => setShowCheckout(false)}
+            onBack={() => {
+              setShowCheckout(false);
+              setAppliedPromoCode("");
+            }}
             onCheckout={handleCheckout}
+            discountAmount={discountAmount}
+            discountLabel={discountLabel}
+            appliedPromoCode={appliedPromoCode}
+            onApplyPromo={setAppliedPromoCode}
+            onRemovePromo={() => setAppliedPromoCode("")}
+            offers={offers}
           />
         ) : (
           <>
@@ -391,8 +683,13 @@ export default function PublicStorefront() {
               <ActiveOrdersWidget vendorId={vendorId!} />
             </div>
 
+            {/* Offers carousel - auto-sliding when vendor has offers */}
+            {offers.length > 0 && (
+              <OffersCarousel offers={offers} />
+            )}
+
             {/* Search and Filters */}
-            <div className="mb-8 space-y-4 bg-white rounded-2xl shadow-sm px-4 py-5">
+            <div className="mb-6 space-y-4 bg-white rounded-2xl shadow-sm px-4 py-5">
               <div className="relative max-w-xl">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -414,7 +711,7 @@ export default function PublicStorefront() {
                 )}
               </div>
 
-              {/* Quick filters row (Veg etc., inspired by Swiggy) */}
+              {/* Veg filter only - keep it minimal */}
               <div className="flex flex-wrap gap-2 pt-3">
                 <Button
                   type="button"
@@ -429,32 +726,10 @@ export default function PublicStorefront() {
                   </span>
                   Veg only
                 </Button>
-                {/* Placeholder chips for future filters */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 rounded-full px-4 text-sm font-medium border-gray-300 text-gray-700"
-                  disabled
-                >
-                  Best rated (coming soon)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 rounded-full px-4 text-sm font-medium border-gray-300 text-gray-700"
-                  disabled
-                >
-                  Offers (coming soon)
-                </Button>
               </div>
             </div>
 
-            {/* Results Count */}
-            <div className="mb-4 text-sm text-muted-foreground">
-              <p>{filteredProducts.length} delicious items available</p>
-            </div>
-
-            {/* Menu sections */}
+            {/* Menu: Sidebar (desktop) + Content */}
             {!products || products.length === 0 ? (
               <div className="text-center py-12">
                 <Store className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -475,144 +750,107 @@ export default function PublicStorefront() {
                 </Button>
               </div>
             ) : (
-              <Accordion type="single" collapsible className="space-y-2">
-                {Object.entries(
-                  filteredProducts.reduce<Record<string, any[]>>((groups, product) => {
-                    const key = product.category || "Recommended";
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(product);
-                    return groups;
-                  }, {}),
-                ).map(([category, items]) => (
-                  <AccordionItem key={category} value={category} className="border-none">
-                    <AccordionTrigger className="text-base font-semibold px-0">
-                      <div className="flex items-center justify-between w-full">
-                        <span>{category}</span>
-                        <span className="text-xs text-muted-foreground">{items.length} items</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-4 px-0">
-                      {items.map((product) => {
-                        const quantity = getItemQuantity(product.id);
-                        const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
-                        const isLowStock =
-                          product.stock_quantity !== null &&
-                          product.stock_quantity > 0 &&
-                          product.stock_quantity <= (product.low_stock_threshold || 0);
-                        const maxQuantity = product.stock_quantity !== null ? product.stock_quantity : 999;
-                        const canAddMore = quantity < maxQuantity;
-
-                        return (
-                          <div
+              <>
+                {/* Desktop: Sidebar + Menu (Swiggy-style) */}
+                <div className="hidden md:flex gap-6">
+                  <aside className="w-56 shrink-0">
+                    <nav className="sticky top-4 space-y-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategory("all")}
+                        className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                          selectedCategory === "all"
+                            ? "bg-orange-500 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        All ({productsForSidebar.length})
+                      </button>
+                      {Object.entries(sidebarGroups).map(([category, items]) => (
+                        <button
+                          key={category}
+                          type="button"
+                          onClick={() => setSelectedCategory(category)}
+                          className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                            selectedCategory === category
+                              ? "bg-orange-500 text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {category} ({items.length})
+                        </button>
+                      ))}
+                    </nav>
+                  </aside>
+                  <div className="flex-1 min-w-0">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                      <h3 className="text-xl font-bold mb-4">
+                        {selectedCategory === "all" ? "All items" : selectedCategory}
+                      </h3>
+                      <div className="space-y-4">
+                        {(selectedCategory === "all"
+                          ? productsForSidebar
+                          : (sidebarGroups[selectedCategory] ?? [])
+                        ).map((product) => (
+                          <MenuItemRow
                             key={product.id}
-                            className="flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0"
-                          >
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center gap-2">
-                                {product.diet_type && (
-                                  <span
-                                    className={`h-3 w-3 rounded-sm border flex items-center justify-center bg-white ${
-                                      product.diet_type === "veg" ? "border-green-600" : "border-red-600"
-                                    }`}
-                                  >
-                                    <span
-                                      className={`h-2 w-2 rounded-[2px] ${
-                                        product.diet_type === "veg" ? "bg-green-600" : "bg-red-600"
-                                      }`}
-                                    />
-                                  </span>
-                                )}
-                                <p className="font-medium text-sm">{product.name}</p>
-                              </div>
-                              <p className="text-sm font-semibold">₹{product.price}</p>
-                              {product.description && (
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {product.description}
-                                </p>
-                              )}
-                              {!isOutOfStock && product.stock_quantity !== null && (
-                                <p className="text-[11px] text-muted-foreground">
-                                  {product.stock_quantity} left
-                                  {isLowStock ? " · Low stock" : ""}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              {product.image_url && (
-                                <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted">
-                                  <LazyImage
-                                    src={product.image_url}
-                                    alt={product.name}
-                                    className="h-full w-full object-cover"
-                                  />
-                                </div>
-                              )}
-                              {isOutOfStock ? (
-                                <Button className="rounded-full px-5 h-8 text-xs" disabled>
-                                  Out of Stock
-                                </Button>
-                              ) : quantity > 0 ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="rounded-full h-8 w-8"
-                                    onClick={() => removeFromCart(product.id)}
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <span className="text-sm font-medium min-w-[2.5rem] text-center">
-                                    {quantity}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="rounded-full h-8 w-8"
-                                    disabled={!canAddMore}
-                                    onClick={() => {
-                                      if (canAddMore) {
-                                        addToCart(product.id, {
-                                          name: product.name,
-                                          price: Number(product.price),
-                                          image: product.image_url || undefined,
-                                        });
-                                      } else {
-                                        toast.error(`Maximum available quantity: ${maxQuantity}`);
-                                      }
-                                    }}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  className="rounded-full px-6 h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs"
-                                  onClick={() =>
-                                    addToCart(product.id, {
-                                      name: product.name,
-                                      price: Number(product.price),
-                                      image: product.image_url || undefined,
-                                    })
-                                  }
-                                >
-                                  ADD
-                                </Button>
-                              )}
-                            </div>
+                            product={product}
+                            getItemQuantity={getItemQuantity}
+                            addToCart={addToCart}
+                            removeFromCart={removeFromCart}
+                            toast={toast}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile: Accordion */}
+                <div className="md:hidden">
+                  <Accordion
+                    type="multiple"
+                    defaultValue={productGroups.categoryKeys}
+                    className="space-y-2"
+                  >
+                    {Object.entries(productGroups.groups).map(([category, items]) => (
+                      <AccordionItem key={category} value={category} className="border-none">
+                        <AccordionTrigger className="text-base font-semibold px-0">
+                          <div className="flex items-center justify-between w-full">
+                            <span>{category}</span>
+                            <span className="text-xs text-muted-foreground">{items.length} items</span>
                           </div>
-                        );
-                      })}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4 px-0">
+                          {items.map((product) => (
+                            <MenuItemRow
+                              key={product.id}
+                              product={product}
+                              getItemQuantity={getItemQuantity}
+                              addToCart={addToCart}
+                              removeFromCart={removeFromCart}
+                              toast={toast}
+                            />
+                          ))}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+              </>
             )}
           </>
         )}
       </main>
 
       {/* Floating Cart Summary */}
-      {!showCheckout && <CartSummary onCheckout={() => setShowCheckout(true)} />}
+      {!showCheckout && (
+        <CartSummary
+          onCheckout={() => setShowCheckout(true)}
+          discountAmount={discountAmount}
+          discountLabel={discountLabel}
+        />
+      )}
     </div>
   );
 }

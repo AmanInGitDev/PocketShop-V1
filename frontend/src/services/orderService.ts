@@ -27,6 +27,8 @@ export interface CreateOrderPayload {
   paymentMethod?: 'cash' | 'upi' | 'wallet' | 'card' | null;
   notes?: string | null;
   customerId?: string | null;
+  /** Discount amount in ₹ (from vendor offers) */
+  discountAmount?: number;
 }
 
 export interface CreateOrderResponse {
@@ -80,7 +82,7 @@ function generateOrderNumber(): string {
  */
 export async function createOrderDirect(payload: CreateOrderPayload): Promise<CreateOrderResponse> {
   try {
-    const { vendorId, items, customerName, customerPhone, customerEmail, paymentMethod, notes, customerId } = payload;
+    const { vendorId, items, customerName, customerPhone, customerEmail, paymentMethod, notes, customerId, discountAmount } = payload;
 
     // Validate inputs
     if (!vendorId) {
@@ -127,7 +129,8 @@ export async function createOrderDirect(payload: CreateOrderPayload): Promise<Cr
     });
 
     // Calculate total amount
-    const totalAmount = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalAmount = Math.max(0, subtotal - (discountAmount ?? 0));
 
     // Determine payment status
     // For COD (cash), payment_status should be 'unpaid'

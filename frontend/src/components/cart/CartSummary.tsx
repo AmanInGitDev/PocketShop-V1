@@ -4,11 +4,17 @@ import { useCart } from '@/contexts/CartContext';
 
 interface CartSummaryProps {
   onCheckout: () => void;
+  /** Optional: discount applied (e.g. from vendor offers) */
+  discountAmount?: number;
+  discountLabel?: string;
 }
 
-export function CartSummary({ onCheckout }: CartSummaryProps) {
+export function CartSummary({ onCheckout, discountAmount = 0, discountLabel }: CartSummaryProps) {
   const { getTotalItems, getTotalAmount } = useCart();
   const totalItems = getTotalItems();
+  const subtotal = getTotalAmount();
+  const finalTotal = Math.max(0, subtotal - discountAmount);
+  const hasDiscount = discountAmount > 0;
 
   if (totalItems === 0) return null;
 
@@ -22,7 +28,17 @@ export function CartSummary({ onCheckout }: CartSummaryProps) {
               <p className="text-sm text-muted-foreground">
                 {totalItems} {totalItems === 1 ? 'item' : 'items'}
               </p>
-              <p className="text-2xl font-bold">₹{getTotalAmount().toFixed(2)}</p>
+              {hasDiscount ? (
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground line-through">₹{subtotal.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-green-600">₹{finalTotal.toFixed(2)}</span>
+                  {discountLabel && (
+                    <span className="text-xs text-green-600">{discountLabel}</span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-2xl font-bold">₹{subtotal.toFixed(2)}</p>
+              )}
             </div>
           </div>
           <Button size="lg" onClick={onCheckout}>
