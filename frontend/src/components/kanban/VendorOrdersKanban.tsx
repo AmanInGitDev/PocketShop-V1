@@ -30,7 +30,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Clock, AlertCircle, Info } from 'lucide-react';
+import { Clock, AlertCircle, Inbox, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
 import { useOrderContext } from '@/context/OrderProvider';
 import type { Order, OrderStatus } from '@/types';
 import { OrderCard } from './OrderCard';
@@ -46,8 +46,18 @@ interface ColumnConfig {
   title: string;
   status: OrderStatus;
   borderColor: string;
+  leftAccent: string;
   titleColor: string;
   bgColor: string;
+  bgGradient: string;
+  iconBg: string;
+  darkBg: string;
+  darkLeftAccent: string;
+  darkTitle: string;
+  darkIconBg: string;
+  Icon: React.ComponentType<{ className?: string; size?: number }>;
+  emptyIcon: React.ComponentType<{ className?: string; size?: number }>;
+  emptyCopy: string;
   nextStatus?: OrderStatus;
   actionLabel?: string;
 }
@@ -58,8 +68,18 @@ const COLUMNS: ColumnConfig[] = [
     title: 'New Orders',
     status: 'NEW',
     borderColor: 'border-orange-400',
-    titleColor: 'text-orange-600',
+    leftAccent: 'border-l-orange-400',
+    titleColor: 'text-orange-700',
     bgColor: 'bg-orange-50',
+    bgGradient: 'from-orange-50/80 to-amber-50/60',
+    iconBg: 'bg-orange-100',
+    darkBg: 'dark:bg-orange-950/30',
+    darkLeftAccent: 'dark:border-l-orange-500/70',
+    darkTitle: 'dark:text-orange-300',
+    darkIconBg: 'dark:bg-orange-900/50',
+    Icon: Inbox,
+    emptyIcon: Sparkles,
+    emptyCopy: 'New orders will appear here',
     nextStatus: 'IN_PROGRESS',
     actionLabel: 'Accept',
   },
@@ -68,8 +88,18 @@ const COLUMNS: ColumnConfig[] = [
     title: 'In Progress',
     status: 'IN_PROGRESS',
     borderColor: 'border-blue-400',
-    titleColor: 'text-blue-600',
+    leftAccent: 'border-l-blue-400',
+    titleColor: 'text-blue-700',
     bgColor: 'bg-blue-50',
+    bgGradient: 'from-blue-50/80 to-indigo-50/60',
+    iconBg: 'bg-blue-100',
+    darkBg: 'dark:bg-blue-950/30',
+    darkLeftAccent: 'dark:border-l-blue-500/70',
+    darkTitle: 'dark:text-blue-300',
+    darkIconBg: 'dark:bg-blue-900/50',
+    Icon: Loader2,
+    emptyIcon: Loader2,
+    emptyCopy: 'Orders you\'re preparing',
     nextStatus: 'READY',
     actionLabel: 'Mark Ready',
   },
@@ -78,8 +108,18 @@ const COLUMNS: ColumnConfig[] = [
     title: 'Ready',
     status: 'READY',
     borderColor: 'border-green-400',
-    titleColor: 'text-green-600',
+    leftAccent: 'border-l-green-400',
+    titleColor: 'text-green-700',
     bgColor: 'bg-green-50',
+    bgGradient: 'from-green-50/80 to-emerald-50/60',
+    iconBg: 'bg-green-100',
+    darkBg: 'dark:bg-green-950/30',
+    darkLeftAccent: 'dark:border-l-green-500/70',
+    darkTitle: 'dark:text-green-300',
+    darkIconBg: 'dark:bg-green-900/50',
+    Icon: CheckCircle2,
+    emptyIcon: CheckCircle2,
+    emptyCopy: 'Ready for pickup',
     nextStatus: 'COMPLETED',
     actionLabel: 'Complete',
   },
@@ -109,24 +149,46 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     id: column.id,
   });
 
+  const EmptyIcon = column.emptyIcon;
+
   return (
     <section
       ref={setNodeRef}
-      className={`${column.bgColor} rounded-lg p-4 min-h-[500px] flex flex-col transition-colors ${
-        isOver ? 'ring-2 ring-blue-500 ring-offset-2' : ''
-      }`}
+      className={`
+        ${column.bgColor} ${column.darkBg} relative overflow-hidden rounded-xl p-4 min-h-[500px] flex flex-col
+        shadow-sm border border-gray-200/60 dark:border-gray-700/50 border-l-4 ${column.leftAccent} ${column.darkLeftAccent}
+        transition-all duration-200
+        ${isOver ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-background scale-[1.02] shadow-md' : 'hover:shadow-md'}
+      `}
       aria-label={`${column.title} column with ${orders.length} orders`}
     >
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300">
-        <h3 className={`text-sm font-bold ${column.titleColor}`}>{column.title}</h3>
+      {/* Subtle gradient overlay - lighter in dark mode */}
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${column.bgGradient} dark:opacity-20 pointer-events-none opacity-60`}
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 flex items-center justify-between mb-4 pb-3 border-b border-gray-200/80 dark:border-gray-600/50">
+        <div className="flex items-center gap-2.5">
+          <div className={`${column.iconBg} ${column.darkIconBg} ${column.titleColor} ${column.darkTitle} p-2 rounded-lg`}>
+            <column.Icon className="w-4 h-4" aria-hidden="true" />
+          </div>
+          <h3 className={`text-sm font-bold ${column.titleColor} ${column.darkTitle}`}>{column.title}</h3>
+        </div>
         <span
-          className="bg-white text-gray-700 rounded-full text-xs font-semibold px-2.5 py-0.5 shadow-sm"
+          className={`
+            min-w-[1.75rem] h-7 flex items-center justify-center rounded-full text-xs font-bold
+            ${orders.length > 0
+              ? 'bg-white/90 dark:bg-white/10 text-gray-700 dark:text-gray-300 shadow-sm'
+              : 'bg-gray-200/80 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400'}
+          `}
           aria-label={`${orders.length} ${column.title.toLowerCase()}`}
         >
           {orders.length}
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto">
+
+      <div className="relative z-10 flex-1 overflow-y-auto">
         <SortableContext items={orderIds} strategy={verticalListSortingStrategy}>
           {orders.length > 0 ? (
             orders.map((order) => (
@@ -142,12 +204,30 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             ))
           ) : (
             <div
-              className="flex flex-col items-center justify-center py-12 text-center"
+              className={`
+                flex flex-col items-center justify-center py-14 px-4 text-center rounded-lg
+                border-2 border-dashed border-gray-200/80 dark:border-gray-600/50
+                ${isOver
+                  ? 'border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/30'
+                  : 'bg-white/40 dark:bg-white/5'}
+              `}
               role="status"
               aria-live="polite"
             >
-              <Info className="w-12 h-12 text-gray-300 mb-3" aria-hidden="true" />
-              <p className="text-sm text-gray-500 font-medium">No {column.title.toLowerCase()}</p>
+              <div
+                className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
+                  isOver ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-800/60'
+                }`}
+              >
+                <EmptyIcon
+                  className={`w-7 h-7 ${isOver ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`}
+                  aria-hidden="true"
+                />
+              </div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                No {column.title.toLowerCase()}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{column.emptyCopy}</p>
             </div>
           )}
         </SortableContext>
@@ -282,8 +362,8 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <Clock className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading orders...</p>
+          <Clock className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading orders...</p>
         </div>
       </div>
     );
@@ -292,11 +372,11 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
   // Error state
   if (error) {
     return (
-      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md flex items-center gap-3">
-        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+      <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 rounded-md flex items-center gap-3">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-red-800">Error loading orders</p>
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">Error loading orders</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       </div>
     );
@@ -324,14 +404,14 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
         </div>
 
         {/* Drag Overlay - Shows the card being dragged */}
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {activeOrder ? (
-            <div className="bg-white rounded-md shadow-lg border-l-4 border-blue-400 p-4 opacity-95 rotate-2">
-              <div className="text-base font-bold text-gray-900 mb-1">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border-l-4 border-blue-500 p-4 opacity-95 rotate-1 scale-105 ring-2 ring-blue-200/80 dark:ring-blue-500/40 cursor-grabbing">
+              <div className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">
                 #{activeOrder.orderNumber ?? activeOrder.id.slice(-6).toUpperCase()} -{' '}
                 {activeOrder.customerName ?? 'Anonymous'}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 {new Intl.NumberFormat('en-IN', {
                   style: 'currency',
                   currency: 'INR',

@@ -10,9 +10,11 @@ import logoImage from '@/assets/images/logo.png';
 interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** 'light' = dark text (for light backgrounds), 'dark' = white text (for dark backgrounds) */
+  variant?: 'light' | 'dark';
 }
 
-const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
+const Logo: React.FC<LogoProps> = ({ className = '', size = 'md', variant = 'dark' }) => {
   const sizeClasses = {
     sm: 'h-8',
     md: 'h-10',
@@ -25,6 +27,10 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
     lg: 'text-3xl'
   };
 
+  const textColor = variant === 'light'
+    ? 'text-gray-900 dark:text-slate-100'
+    : 'text-white';
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <img
@@ -33,7 +39,7 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
         className={`${sizeClasses[size]} w-auto object-contain`}
       />
       <span
-        className={`text-white font-bold ${textSizeClasses[size]}`}
+        className={`${textColor} font-bold ${textSizeClasses[size]}`}
       >
         PocketShop
       </span>

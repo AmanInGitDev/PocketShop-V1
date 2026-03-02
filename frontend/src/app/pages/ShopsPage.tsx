@@ -101,7 +101,7 @@ export default function ShopsPage() {
               <span className="text-sm font-medium">Back</span>
             </button>
             <Link to={ROUTES.HOME}>
-              <Logo size="md" />
+              <Logo size="md" variant="light" />
             </Link>
             <div className="w-16" />
           </div>

@@ -120,7 +120,7 @@ export default function CustomerProfile() {
       <header className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link to={ROUTES.CUSTOMER_HOME}>
-            <Logo size="md" />
+            <Logo size="md" variant="light" />
           </Link>
           <Link to={ROUTES.HOME} className="text-sm text-gray-500 hover:text-gray-700">
             Main site

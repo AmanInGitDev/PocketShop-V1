@@ -106,7 +106,7 @@ export default function CustomerAuth() {
           </button>
           <div className="flex-1 flex justify-center">
             <Link to={ROUTES.HOME}>
-              <Logo size="md" />
+              <Logo size="md" variant="light" />
             </Link>
           </div>
           <div className="w-10" />
