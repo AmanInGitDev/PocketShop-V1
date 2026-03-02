@@ -18,7 +18,7 @@ export default function StatusToggle({ online, onToggle, disabled = false }: Sta
       disabled={disabled}
       aria-pressed={online}
       className={`
-        flex items-center gap-2 text-sm px-3 py-1.5 rounded-md font-medium
+        flex items-center justify-center gap-2 h-9 text-sm px-3 rounded-md font-medium
         transition-colors focus:outline-none focus:ring-2 focus:ring-ring
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         ${

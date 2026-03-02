@@ -3,6 +3,7 @@
  * 
  * Persistent header bar that spans the full width of the application.
  * Contains logo, search, status indicator, and user menu.
+ * Handles operational hours: modal for going online outside hours, extended session timer.
  */
 
 import React, { useState } from 'react';
@@ -11,21 +12,51 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import StatusToggle from '@/components/common/StatusToggle';
-import { useVendorStatus } from '@/features/vendor/hooks/useVendorStatus';
+import { useVendorStatusContext } from '@/features/vendor/context/VendorStatusContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { GoOnlineOutsideHoursModal } from '@/components/vendor/GoOnlineOutsideHoursModal';
+import { ExtendedSessionTimer } from '@/components/vendor/ExtendedSessionTimer';
 
 interface TopNavbarProps {
   onMenuToggle?: () => void;
   isMenuOpen?: boolean;
+  isSidebarCollapsed?: boolean;
+  sidebarWidth?: number;
 }
 
-const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuToggle, isMenuOpen: _isMenuOpen }) => {
+const TopNavbar: React.FC<TopNavbarProps> = ({
+  onMenuToggle,
+  isMenuOpen: _isMenuOpen,
+  isSidebarCollapsed = false,
+  sidebarWidth = 256,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showGoOnlineModal, setShowGoOnlineModal] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { isOnline, isToggling, toggleStatus } = useVendorStatus();
+  const {
+    isOnline,
+    isToggling,
+    toggleStatus,
+    goOnlineWithExtension,
+    extendSession,
+    operationalInfo,
+    isInExtendedSession,
+    minutesRemainingInExtendedSession,
+  } = useVendorStatusContext();
+
+  const handleStatusToggle = async () => {
+    const result = await toggleStatus();
+    if (result.success === false && 'needExtensionModal' in result && result.needExtensionModal) {
+      setShowGoOnlineModal(true);
+    }
+  };
+
+  const handleGoOnlineConfirm = async (minutes: number) => {
+    await goOnlineWithExtension(minutes);
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -34,54 +65,65 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuToggle, isMenuOpen: _isMenu
   };
 
   return (
-    <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 bg-background border-b border-border z-50 shadow-sm">
-      <div className="h-full px-6">
-        <div className="flex items-center justify-between h-full max-w-[1400px] mx-auto">
-          {/* Left: Mobile Menu Toggle + Search Area */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {/* Mobile Menu Toggle */}
+    <header
+      className={`fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-50 shadow-sm transition-[left] duration-300 ${
+        (sidebarWidth ?? 256) <= 72 ? 'lg:left-[72px]' : 'lg:left-64'
+      }`}
+    >
+      <div className="h-full px-4 sm:px-6 w-full min-w-0">
+        <div className="flex items-center h-full w-full min-w-0 gap-4">
+          {/* Left: Universal Search - pinned to left */}
+          <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
             {onMenuToggle && (
               <button
                 onClick={onMenuToggle}
-                className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+                className="lg:hidden h-9 w-9 shrink-0 flex items-center justify-center rounded-md hover:bg-muted transition-colors"
                 aria-label="Toggle sidebar"
               >
-                <Menu className="w-6 h-6 text-gray-600" />
+                <Menu className="w-5 h-5 text-muted-foreground" />
               </button>
             )}
-          </div>
-
-          {/* Center: Universal Search */}
-          <div className="flex-1 flex justify-center px-4">
-            <div className="relative w-full max-w-2xl">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <div className="relative w-60 sm:w-80 md:max-w-lg min-w-[200px] flex-shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 placeholder="Universal Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md bg-muted border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                className="w-full h-9 pl-10 pr-4 rounded-md bg-muted border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
           </div>
 
-          {/* Right: Status Toggle + Notification Bell + User Menu */}
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <StatusToggle 
-              online={isOnline} 
-              onToggle={toggleStatus} 
-              disabled={isToggling}
-            />
+          {/* Spacer - pushes right section to the edge */}
+          <div className="flex-1 min-w-4" aria-hidden="true" />
 
-            <ThemeToggle />
+          {/* Right: Status + Theme + Notifications | Account - pinned to right */}
+          <div className="flex items-center flex-shrink-0 h-9 gap-4">
+            {/* Status, theme, notifications */}
+            <div className="flex items-center gap-2">
+              {isInExtendedSession && minutesRemainingInExtendedSession != null && (
+                <ExtendedSessionTimer
+                  minutesRemaining={minutesRemainingInExtendedSession}
+                  onExtend={() => extendSession(30)}
+                />
+              )}
+              <span className="relative z-[60] inline-flex items-center h-9">
+                <StatusToggle
+                  online={isOnline}
+                  onToggle={handleStatusToggle}
+                  disabled={isToggling}
+                />
+              </span>
+              <ThemeToggle />
+              <NotificationBell />
+            </div>
 
-            <NotificationBell />
-
-            {/* User Menu Dropdown */}
-            <div className="relative">
+            {/* Account - far right, extra space from notifications */}
+            <div className="relative h-9 flex items-center border-l border-border pl-4">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                className="flex items-center gap-2 h-9 px-3 rounded-md hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label="User menu"
               >
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -130,6 +172,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuToggle, isMenuOpen: _isMenu
           </div>
         </div>
       </div>
+
+      <GoOnlineOutsideHoursModal
+        open={showGoOnlineModal}
+        onClose={() => setShowGoOnlineModal(false)}
+        onConfirm={handleGoOnlineConfirm}
+        isBeforeOpening={operationalInfo?.isBeforeOpening ?? false}
+        openingTimeFormatted={operationalInfo?.openingTimeFormatted ?? null}
+        closingTimeFormatted={operationalInfo?.closingTimeFormatted ?? null}
+        isConfirming={isToggling}
+      />
     </header>
   );
 };

@@ -479,11 +479,53 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Category Cards - Magicpin Style: Going Out tag, horizontal scroll on mobile */}
+          {/* Category Cards - Available first, then Coming Soon. Soft shadows, slideable on mobile */}
           <div className="w-full max-w-7xl mx-auto mb-12 md:mb-16 px-3 sm:px-4 lg:px-8">
-            <div className="flex gap-4 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory md:snap-none -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+            <div className="flex gap-3 md:gap-5 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 snap-x snap-mandatory md:snap-none -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20 touch-pan-x">
+            {/* Quick Bites - Available, first */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
+              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1"
+            >
+              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Going Out
+              </span>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
+                  <img src={CATEGORY_IMAGES.quickBites} alt="Quick Bites" className="w-full h-full object-contain" />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-gray-900 text-sm md:text-base">Quick Bites</p>
+              </div>
+            </div>
+
+            {/* Fine Dining - Available, second */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
+              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1"
+            >
+              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Going Out
+              </span>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
+                  <img src={CATEGORY_IMAGES.fineDining} alt="Fine Dining" className="w-full h-full object-contain" />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-gray-900 text-sm md:text-base">Fine Dining</p>
+              </div>
+            </div>
+
             {/* Fashion - Locked */}
-            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
               <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Coming Soon
               </span>
@@ -501,7 +543,7 @@ const LandingPage: React.FC = () => {
             </div>
 
             {/* Salon - Locked */}
-            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
               <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Coming Soon
               </span>
@@ -518,29 +560,8 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Bites - Clickable, goes to shops */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
-              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
-              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1"
-            >
-              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
-                Going Out
-              </span>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <img src={CATEGORY_IMAGES.quickBites} alt="Quick Bites" className="w-full h-full object-contain" />
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-gray-900 text-sm md:text-base">Quick Bites</p>
-              </div>
-            </div>
-
             {/* Medicare - Locked */}
-            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
               <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Coming Soon
               </span>
@@ -557,29 +578,8 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Fine Dining - Clickable, goes to shops */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
-              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
-              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1"
-            >
-              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
-                Going Out
-              </span>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <img src={CATEGORY_IMAGES.fineDining} alt="Fine Dining" className="w-full h-full object-contain" />
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-gray-900 text-sm md:text-base">Fine Dining</p>
-              </div>
-            </div>
-
             {/* Local Stores - Locked */}
-            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] flex flex-col min-w-[130px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
               <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Coming Soon
               </span>

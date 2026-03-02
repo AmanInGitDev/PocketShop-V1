@@ -14,7 +14,7 @@ export function ThemeToggle() {
   const isDark = theme === 'dark';
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+    <div className="flex items-center gap-2 h-9 rounded-md border border-border bg-muted/50 px-3">
       <Sun className="h-4 w-4 text-amber-500 dark:text-amber-400/60" aria-hidden />
       <Switch
         id="theme-toggle"
