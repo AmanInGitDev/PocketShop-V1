@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
-import { DollarSign, CreditCard, TrendingUp, Download, CheckCircle, Clock } from "lucide-react";
+import { IndianRupee, CreditCard, TrendingUp, Download, CheckCircle, Clock } from "lucide-react";
 import { usePayments, usePaymentStats } from "@/features/vendor/hooks/usePayments";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -167,7 +167,7 @@ export default function Payments() {
           <MetricCard
             title="Total Revenue"
             value={`₹${stats?.totalRevenue.toFixed(2) || "0.00"}`}
-            icon={<DollarSign className="h-4 w-4" />}
+            icon={<IndianRupee className="h-4 w-4" />}
             description="All-time earnings"
             isLoading={statsLoading}
           />

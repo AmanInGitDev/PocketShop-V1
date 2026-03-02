@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { 
-  DollarSign, 
+  IndianRupee, 
   Calendar, 
   Download,
   CheckCircle,
@@ -17,15 +17,15 @@ import {
 
 const Payouts: React.FC = () => {
   const summary = {
-    available: '$12,458.92',
-    pending: '$2,340.50',
-    total: '$45,678.12',
+    available: '₹12,458.92',
+    pending: '₹2,340.50',
+    total: '₹45,678.12',
   };
 
   const payouts = [
     {
       id: '#PAY-001',
-      amount: '$8,234.56',
+      amount: '₹8,234.56',
       status: 'completed',
       date: '2025-01-10',
       method: 'Bank Transfer',
@@ -33,7 +33,7 @@ const Payouts: React.FC = () => {
     },
     {
       id: '#PAY-002',
-      amount: '$6,892.34',
+      amount: '₹6,892.34',
       status: 'completed',
       date: '2025-01-03',
       method: 'Bank Transfer',
@@ -41,7 +41,7 @@ const Payouts: React.FC = () => {
     },
     {
       id: '#PAY-003',
-      amount: '$2,340.50',
+      amount: '₹2,340.50',
       status: 'pending',
       date: '2025-01-11',
       method: 'Bank Transfer',
@@ -49,7 +49,7 @@ const Payouts: React.FC = () => {
     },
     {
       id: '#PAY-004',
-      amount: '$7,123.45',
+      amount: '₹7,123.45',
       status: 'completed',
       date: '2024-12-27',
       method: 'Bank Transfer',
@@ -86,7 +86,7 @@ const Payouts: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-medium text-gray-600">Available Now</p>
             <div className="p-2 bg-green-50 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600" />
+              <IndianRupee className="w-5 h-5 text-green-600" />
             </div>
           </div>
           <p className="text-3xl font-bold text-gray-900">{summary.available}</p>
@@ -110,7 +110,7 @@ const Payouts: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-medium text-gray-600">Total Earnings</p>
             <div className="p-2 bg-blue-50 rounded-lg">
-              <DollarSign className="w-5 h-5 text-blue-600" />
+              <IndianRupee className="w-5 h-5 text-blue-600" />
             </div>
           </div>
           <p className="text-3xl font-bold text-gray-900">{summary.total}</p>

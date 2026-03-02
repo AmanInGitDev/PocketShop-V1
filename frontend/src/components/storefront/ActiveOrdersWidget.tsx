@@ -96,7 +96,7 @@ export function ActiveOrdersWidget({ vendorId }: ActiveOrdersWidgetProps) {
       case 'completed':
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
       case 'cancelled':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
+        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
       default:
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }

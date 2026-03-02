@@ -27,7 +27,7 @@ import { useOrder } from "@/features/vendor/hooks/useOrder";
 import { useToast } from "@/hooks/use-toast";
 import { ROUTES } from "@/constants/routes";
 import { useMutation } from "@tanstack/react-query";
-import { DollarSign, Loader2 } from "lucide-react";
+import { IndianRupee, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 function RecordPaymentFallback({
@@ -79,7 +79,7 @@ function RecordPaymentFallback({
         {recordMutation.isPending ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : (
-          <DollarSign className="h-4 w-4 mr-2" />
+          <IndianRupee className="h-4 w-4 mr-2" />
         )}
         Mark as Paid
       </Button>
@@ -283,7 +283,24 @@ export default function OrderDetailNew() {
           <CardTitle>Payment Information</CardTitle>
         </CardHeader>
         <CardContent>
-          {payment ? (
+          {order.status === 'cancelled' ? (
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Method</p>
+                <p className="font-medium capitalize">{payment?.payment_method || order.payment_method || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Amount</p>
+                <p className="font-medium text-lg">₹{Number(order.total_amount).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge variant="outline" className="text-muted-foreground">
+                  N/A — Order cancelled
+                </Badge>
+              </div>
+            </div>
+          ) : payment ? (
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-muted-foreground">Method</p>

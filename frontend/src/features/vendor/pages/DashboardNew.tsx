@@ -12,7 +12,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  DollarSign,
+  IndianRupee,
   ShoppingCart,
   Package,
   AlertCircle,
@@ -24,12 +24,12 @@ import {
   Sparkles,
   Clock,
   Zap,
-  Plus,
   Eye,
   LayoutDashboard,
   Store,
   CheckCircle2,
   XCircle,
+  Calendar,
 } from 'lucide-react';
 import { useVendor } from '@/features/vendor/hooks/useVendor';
 import { useOrders } from '@/features/vendor/hooks/useOrders';
@@ -98,9 +98,9 @@ const ORDER_STATUS_CONFIG = {
   },
   cancelled: {
     icon: XCircle,
-    color: CHART_COLORS.destructive,
-    label: 'Cancelled',
-    badgeVariant: 'destructive' as const,
+    color: 'hsl(25, 95%, 53%)', // orange - Unable to deliver (red reserved for Cancelled)
+    label: 'Unable to deliver',
+    badgeVariant: 'outline' as const,
   },
 };
 
@@ -142,7 +142,7 @@ export default function DashboardNew() {
     { name: 'Processing', value: processingOrders, color: CHART_COLORS.processing },
     { name: 'Ready', value: readyOrders, color: CHART_COLORS.ready },
     { name: 'Completed', value: completedOrders, color: CHART_COLORS.orders },
-    { name: 'Cancelled', value: cancelledOrders, color: CHART_COLORS.destructive },
+    { name: 'Unable to deliver', value: cancelledOrders, color: 'hsl(25, 95%, 53%)' },
   ].filter((item) => item.value > 0);
 
   const revenueGrowth = analytics?.weeklyComparison?.revenueGrowth || 0;
@@ -174,9 +174,15 @@ export default function DashboardNew() {
               <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
                 Dashboard
               </h1>
-              <p className="text-muted-foreground mt-1">
-                {getGreeting()}, <span className="font-semibold text-foreground">{vendorName}</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                <p className="text-muted-foreground">
+                  {getGreeting()}, <span className="font-semibold text-foreground">{vendorName}</span>
+                </p>
+                <Badge variant="secondary" className="gap-1 font-normal">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(), 'EEEE, d MMM yyyy')}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -190,14 +196,6 @@ export default function DashboardNew() {
             <BarChart3 className="h-4 w-4" />
             View Analytics
           </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate('/vendor/dashboard/inventory/add')}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
         </div>
       </div>
 
@@ -210,7 +208,7 @@ export default function DashboardNew() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <DollarSign className="h-5 w-5 text-primary" />
+              <IndianRupee className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -355,6 +353,10 @@ export default function DashboardNew() {
                 <div className="text-3xl font-bold mb-2">{lowStockProducts}</div>
                 <p className="text-xs text-muted-foreground">
                   {lowStockProducts > 0 ? 'Products need restocking' : 'All products stocked'}
+                </p>
+                <p className="text-xs text-muted-foreground/80 mt-1 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Stock as of {format(new Date(), 'd MMM yyyy')}
                 </p>
               </>
             )}
@@ -513,14 +515,14 @@ export default function DashboardNew() {
             <Button
               variant="outline"
               className="w-full justify-start gap-3 h-auto py-3 hover:bg-primary/5 hover:border-primary/30 transition-all group"
-              onClick={() => navigate('/vendor/dashboard/inventory/add')}
+              onClick={() => navigate('/vendor/dashboard/inventory')}
             >
               <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Plus className="h-4 w-4 text-primary" />
+                <Package className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1 text-left">
-                <p className="font-medium">Add Product</p>
-                <p className="text-xs text-muted-foreground">Create new product</p>
+                <p className="font-medium">Inventory</p>
+                <p className="text-xs text-muted-foreground">Products & stock</p>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </Button>

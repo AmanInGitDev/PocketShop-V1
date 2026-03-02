@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { DollarSign, Loader2 } from "lucide-react";
+import { IndianRupee, Loader2 } from "lucide-react";
 
 interface PaymentStatusButtonProps {
   orderId: string;
@@ -40,7 +40,7 @@ export function PaymentStatusButton({ orderId, paymentStatus, amount }: PaymentS
   if (paymentStatus === 'completed') {
     return (
       <Button variant="outline" size="sm" disabled className="text-green-600">
-        <DollarSign className="h-4 w-4 mr-2" />
+        <IndianRupee className="h-4 w-4 mr-2" />
         Payment Received
       </Button>
     );
@@ -56,7 +56,7 @@ export function PaymentStatusButton({ orderId, paymentStatus, amount }: PaymentS
       {markAsPaidMutation.isPending ? (
         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
       ) : (
-        <DollarSign className="h-4 w-4 mr-2" />
+        <IndianRupee className="h-4 w-4 mr-2" />
       )}
       Mark as Paid
     </Button>

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { format } from "date-fns";
-import { ChevronRight, Package, DollarSign } from "lucide-react";
+import { ChevronRight, Package, IndianRupee } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -59,7 +59,7 @@ export function OrderCard({ order }: OrderCardProps) {
                   variant={payment.payment_status === 'completed' ? 'default' : 'secondary'}
                   className="gap-1"
                 >
-                  <DollarSign className="h-3 w-3" />
+                  <IndianRupee className="h-3 w-3" />
                   {payment.payment_status === 'completed' ? 'Paid' : 'Pending'}
                 </Badge>
               )}

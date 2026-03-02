@@ -20,10 +20,10 @@ export function OrderStatusTracker({ currentStatus }: OrderStatusTrackerProps) {
   return (
     <div className="w-full">
       {isCancelled ? (
-        <div className="text-center p-6 bg-destructive/10 rounded-lg border border-destructive/20">
-          <p className="text-destructive font-semibold text-lg">Order Cancelled</p>
+        <div className="text-center p-6 bg-amber-500/10 rounded-lg border border-amber-500/20">
+          <p className="text-amber-700 dark:text-amber-400 font-semibold text-lg">Unable to deliver</p>
           <p className="text-sm text-muted-foreground mt-2">
-            This order has been cancelled. Please contact the vendor for details.
+            The vendor was unable to fulfill this order. Please contact them for more details.
           </p>
         </div>
       ) : (

@@ -38,7 +38,8 @@ export const usePayments = () => {
             id,
             order_number,
             customer_name,
-            created_at
+            created_at,
+            status
           )
         `)
         .in('order_id', orderIds)
@@ -69,7 +70,7 @@ export const usePaymentStats = () => {
 
       const { data: payments, error } = await supabase
         .from('payments')
-        .select('amount, payment_status, created_at, orders!inner(vendor_id)')
+        .select('amount, payment_status, created_at, orders!inner(vendor_id, status)')
         .eq('orders.vendor_id', vendor.id);
 
       if (error) {
@@ -89,8 +90,13 @@ export const usePaymentStats = () => {
         .filter(p => p.payment_status === 'completed')
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
+      // Exclude cancelled orders - they will never be paid
       const pendingPayouts = (payments || [])
-        .filter(p => p.payment_status === 'pending')
+        .filter(
+          (p: any) =>
+            p.payment_status === 'pending' &&
+            p.orders?.status !== 'cancelled'
+        )
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
       const thisMonth = (payments || [])

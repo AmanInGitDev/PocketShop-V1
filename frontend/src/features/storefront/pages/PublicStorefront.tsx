@@ -26,8 +26,9 @@ import { ActiveOrdersWidget } from "@/components/storefront/ActiveOrdersWidget";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { formatOfferText, formatOfferShort, findOfferByCode, type StructuredOffer } from "@/features/storefront/utils/offerUtils";
+import { getNextReopeningText } from "@/features/storefront/utils/hoursUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 
 function MenuItemRow({
   product,
@@ -35,12 +36,14 @@ function MenuItemRow({
   addToCart,
   removeFromCart,
   toast,
+  isDisabled = false,
 }: {
   product: any;
   getItemQuantity: (id: string) => number;
   addToCart: (id: string, o: { name: string; price: number; image?: string }) => void;
   removeFromCart: (id: string) => void;
   toast: { error: (m: string) => void };
+  isDisabled?: boolean;
 }) {
   const quantity = getItemQuantity(product.id);
   const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
@@ -52,7 +55,11 @@ function MenuItemRow({
   const canAddMore = quantity < maxQuantity;
 
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0">
+    <div
+      className={`flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0 transition-all duration-300 ${
+        isDisabled ? "opacity-60 pointer-events-none select-none grayscale-[0.5]" : ""
+      }`}
+    >
       <div className="flex-1 space-y-1 min-w-0">
         <div className="flex items-center gap-2">
           {product.diet_type && (
@@ -87,15 +94,32 @@ function MenuItemRow({
             <LazyImage
               src={product.image_url}
               alt={product.name}
-              className="h-full w-full object-cover"
+              className={`h-full w-full object-cover ${isDisabled ? "brightness-90" : ""}`}
             />
+            {isDisabled && (
+              <div className="absolute inset-0 bg-slate-500/20 rounded-xl flex items-center justify-center">
+                <span className="rounded-full bg-slate-600/90 text-white text-[10px] font-medium px-2.5 py-1 shadow-sm">
+                  Closed
+                </span>
+              </div>
+            )}
           </div>
         )}
-        {isOutOfStock ? (
-          <Button className="rounded-full px-5 h-8 text-xs" disabled>
-            Out of Stock
+        {!product.image_url && (isDisabled || isOutOfStock) ? (
+          <Button
+            variant="outline"
+            className="rounded-full px-5 h-8 text-xs border-slate-300 bg-slate-50 text-slate-500"
+            disabled
+          >
+            {isDisabled ? "Closed" : "Out of Stock"}
           </Button>
-        ) : quantity > 0 ? (
+        ) : null}
+        {product.image_url && (isDisabled || isOutOfStock) ? (
+          <div className="rounded-full px-4 h-7 text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center">
+            {isDisabled ? "Closed" : "Out of Stock"}
+          </div>
+        ) : null}
+        {!isDisabled && !isOutOfStock && (quantity > 0 ? (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -139,13 +163,19 @@ function MenuItemRow({
           >
             ADD
           </Button>
-        )}
+        ))}
       </div>
     </div>
   );
 }
 
-function OffersCarousel({ offers }: { offers: StructuredOffer[] }) {
+function OffersCarousel({
+  offers,
+  isStoreClosed = false,
+}: {
+  offers: StructuredOffer[];
+  isStoreClosed?: boolean;
+}) {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const isMobile = useIsMobile();
@@ -168,9 +198,14 @@ function OffersCarousel({ offers }: { offers: StructuredOffer[] }) {
   }, [api, offers.length, currentIndex]);
 
   return (
-    <div className="mb-6">
+    <div className={`mb-6 transition-opacity duration-300 ${isStoreClosed ? "opacity-70" : ""}`}>
       <div className="flex items-center justify-between gap-2 mb-3">
-        <h3 className="text-lg font-bold text-foreground">Deals for you</h3>
+        <div>
+          <h3 className="text-lg font-bold text-foreground">Deals for you</h3>
+          {isStoreClosed && (
+            <p className="text-xs text-muted-foreground mt-0.5">Available when we reopen</p>
+          )}
+        </div>
         {!isMobile && offers.length > 1 && (
           <div className="flex gap-1">
             <Button
@@ -293,7 +328,7 @@ export default function PublicStorefront() {
     return () => window.removeEventListener('showCart', handleShowCart);
   }, []);
 
-  // Fetch vendor data
+  // Fetch vendor data (with or without is_active so we can show "closed" state)
   const { data: vendor, isLoading: vendorLoading } = useQuery({
     queryKey: ['public-vendor', vendorId],
     queryFn: async () => {
@@ -301,7 +336,6 @@ export default function PublicStorefront() {
         .from('vendor_profiles')
         .select('*')
         .eq('id', vendorId)
-        .eq('is_active', true)
         .maybeSingle();
 
       if (error) throw error;
@@ -309,6 +343,14 @@ export default function PublicStorefront() {
     },
     enabled: !!vendorId,
   });
+
+  const isStoreClosed = !!(vendor && !vendor.is_active);
+  const reopenText = useMemo(() => {
+    if (!vendor) return null;
+    const wd = vendor.working_days as string[] | undefined;
+    const oh = vendor.operational_hours as Record<string, { open: string; close: string }> | undefined;
+    return getNextReopeningText(wd, oh);
+  }, [vendor]);
 
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['public-products', vendorId],
@@ -540,6 +582,7 @@ export default function PublicStorefront() {
     );
   }
 
+  // Invalid vendor ID - store doesn't exist
   if (!vendor) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -547,7 +590,7 @@ export default function PublicStorefront() {
           <Store className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Storefront not found</h2>
           <p className="text-muted-foreground">
-            This storefront is not available or has been deactivated
+            This store does not exist or the link may be incorrect
           </p>
         </div>
       </div>
@@ -660,6 +703,25 @@ export default function PublicStorefront() {
         </div>
       </header>
 
+      {/* Closed store banner */}
+      {isStoreClosed && (
+        <div className="max-w-5xl mx-auto px-4 md:px-6 -mt-4 z-10">
+          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 flex items-center gap-4 shadow-md shadow-amber-200/20">
+            <div className="h-12 w-12 rounded-full bg-amber-100/80 flex items-center justify-center shrink-0 ring-2 ring-amber-200/50">
+              <Clock className="h-6 w-6 text-amber-700" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-amber-900 truncate">
+                {vendor.business_name} is currently closed
+              </p>
+              <p className="text-sm text-amber-800 mt-0.5 font-medium">
+                {reopenText ?? "Will reopen during working hours"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 md:px-6 -mt-6 py-10 space-y-6">
         {showCheckout ? (
@@ -685,7 +747,7 @@ export default function PublicStorefront() {
 
             {/* Offers carousel - auto-sliding when vendor has offers */}
             {offers.length > 0 && (
-              <OffersCarousel offers={offers} />
+              <OffersCarousel offers={offers} isStoreClosed={isStoreClosed} />
             )}
 
             {/* Search and Filters */}
@@ -783,9 +845,20 @@ export default function PublicStorefront() {
                     </nav>
                   </aside>
                   <div className="flex-1 min-w-0">
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div
+                      className={`rounded-xl border bg-white p-6 shadow-sm transition-colors ${
+                        isStoreClosed
+                          ? "border-slate-200 bg-slate-50/50"
+                          : "border-gray-200"
+                      }`}
+                    >
                       <h3 className="text-xl font-bold mb-4">
                         {selectedCategory === "all" ? "All items" : selectedCategory}
+                        {isStoreClosed && (
+                          <span className="ml-2 text-sm font-normal text-muted-foreground">
+                            (view only)
+                          </span>
+                        )}
                       </h3>
                       <div className="space-y-4">
                         {(selectedCategory === "all"
@@ -799,6 +872,7 @@ export default function PublicStorefront() {
                             addToCart={addToCart}
                             removeFromCart={removeFromCart}
                             toast={toast}
+                            isDisabled={isStoreClosed}
                           />
                         ))}
                       </div>
@@ -807,7 +881,7 @@ export default function PublicStorefront() {
                 </div>
 
                 {/* Mobile: Accordion */}
-                <div className="md:hidden">
+                <div className={`md:hidden ${isStoreClosed ? "opacity-95" : ""}`}>
                   <Accordion
                     type="multiple"
                     defaultValue={productGroups.categoryKeys}
@@ -830,6 +904,7 @@ export default function PublicStorefront() {
                               addToCart={addToCart}
                               removeFromCart={removeFromCart}
                               toast={toast}
+                              isDisabled={isStoreClosed}
                             />
                           ))}
                         </AccordionContent>

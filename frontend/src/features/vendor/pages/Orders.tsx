@@ -8,7 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Package, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { Clock, Package, TrendingUp, IndianRupee, Zap } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import VendorOrdersKanban from '@/components/kanban/VendorOrdersKanban';
 import { POSMode } from '@/components/orders/POSMode';
@@ -202,7 +202,7 @@ const Orders: React.FC = () => {
               Total Revenue
             </CardTitle>
             <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <IndianRupee className="h-4 w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>

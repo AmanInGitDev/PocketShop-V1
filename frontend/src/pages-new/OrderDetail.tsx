@@ -182,7 +182,24 @@ export default function OrderDetail() {
                 <CardTitle>Payment Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {payment ? (
+                {order.status === 'cancelled' ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Payment Method</p>
+                      <p className="font-medium capitalize">{payment?.payment_method || order.payment_method || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Payment Status</p>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        N/A — Order cancelled
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Amount</p>
+                      <p className="font-medium text-lg">₹{Number(order.total_amount).toLocaleString()}</p>
+                    </div>
+                  </>
+                ) : payment ? (
                   <>
                     <div>
                       <p className="text-sm text-muted-foreground">Payment Method</p>

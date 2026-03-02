@@ -48,7 +48,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   ShoppingCart,
-  DollarSign,
+  IndianRupee,
   Clock,
   Sparkles,
   Zap,
@@ -341,7 +341,7 @@ export default function AnalyticsNew() {
       trend: ((analytics?.weeklyComparison?.revenueGrowth ?? 0) >= 0
         ? "up"
         : "down") as "up" | "down" | "neutral",
-      icon: <DollarSign className="h-5 w-5" />,
+      icon: <IndianRupee className="h-5 w-5" />,
       tone: "primary" as const,
       loading: analyticsLoading,
     },

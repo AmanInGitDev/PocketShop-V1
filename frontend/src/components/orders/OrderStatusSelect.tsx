@@ -24,7 +24,7 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: "processing", label: "Processing" },
   { value: "ready", label: "Ready" },
   { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "cancelled", label: "Unable to deliver" },
 ];
 
 export function OrderStatusSelect({ orderId, currentStatus, vendorId }: OrderStatusSelectProps) {
@@ -97,7 +97,7 @@ export function OrderStatusSelect({ orderId, currentStatus, vendorId }: OrderSta
       toast({
         title: "Status Updated",
         description: newStatus === 'cancelled' 
-          ? "Order cancelled and stock restored successfully"
+          ? "Marked as unable to deliver. Stock has been restored."
           : "Order status has been updated successfully",
       });
     },

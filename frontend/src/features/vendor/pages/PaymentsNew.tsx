@@ -56,7 +56,7 @@ import {
   Legend,
 } from "recharts";
 import {
-  DollarSign,
+  IndianRupee,
   CreditCard,
   TrendingUp,
   Download,
@@ -73,6 +73,7 @@ import {
   Activity,
   Zap,
   X as XIcon,
+  PackageX,
 } from "lucide-react";
 
 import { usePayments, usePaymentStats } from "@/features/vendor/hooks/usePayments";
@@ -88,6 +89,7 @@ const STATUS_BADGE_VARIANTS: Record<
   pending: "secondary",
   failed: "destructive",
   refunded: "outline",
+  voided: "outline", // Unable to deliver - amber/orange styling (red reserved for cancelled)
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -104,6 +106,15 @@ const COLORS = [
   "hsl(280, 65%, 60%)", // purple
   "hsl(340, 75%, 55%)", // pink
 ];
+
+const PAYMENT_STATUS_CHART_COLORS: Record<string, string> = {
+  completed: "hsl(142, 71%, 45%)", // green
+  pending: "hsl(38, 92%, 50%)", // amber
+  unable_to_deliver: "hsl(25, 95%, 53%)", // orange - distinct from red (cancelled)
+  cancelled: "hsl(0, 84%, 55%)", // red - strictly for cancelled
+  failed: "hsl(0, 72%, 51%)",
+  refunded: "hsl(215, 16%, 47%)", // slate
+};
 
 const formatCurrency = (amount: number | null | undefined) =>
   `₹${Number(amount || 0).toLocaleString(undefined, {
@@ -221,22 +232,35 @@ export default function PaymentsNew() {
     }
   }, [payments, timeRange]);
 
-  // Calculate payment count by status
+  // Effective status: treat cancelled orders as "Unable to deliver"
+  const getEffectiveStatus = (p: any) =>
+    p.orders?.status === "cancelled" ? "unable_to_deliver" : (p.payment_status || "unknown");
+
+  // Calculate payment count by status (chart data)
   const paymentStatusData = useMemo(() => {
     if (!payments) return [];
 
     const statusCounts = (payments || []).reduce(
       (acc: Record<string, number>, payment: any) => {
-        const status = payment.payment_status || "unknown";
+        const status = getEffectiveStatus(payment);
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       },
       {} as Record<string, number>
     );
 
+    const statusLabels: Record<string, string> = {
+      completed: "Completed",
+      pending: "Pending",
+      unable_to_deliver: "Unable to deliver",
+      failed: "Failed",
+      refunded: "Refunded",
+    };
+
     return Object.entries(statusCounts).map(([status, count]) => ({
-      name: status.charAt(0).toUpperCase() + status.slice(1),
+      name: statusLabels[status] ?? status.replace(/_/g, " "),
       value: count,
+      statusKey: status,
     }));
   }, [payments]);
 
@@ -253,8 +277,11 @@ export default function PaymentsNew() {
     if (!payments) return [];
 
     return (payments || []).filter((payment: any) => {
-      // Status filter
-      if (statusFilter !== "all" && payment.payment_status !== statusFilter) {
+      // Status filter (use effective status for cancelled orders)
+      const effectiveStatus = getEffectiveStatus(payment);
+      const filterStatus =
+        statusFilter === "voided" ? "unable_to_deliver" : statusFilter;
+      if (statusFilter !== "all" && effectiveStatus !== filterStatus) {
         return false;
       }
 
@@ -309,15 +336,24 @@ export default function PaymentsNew() {
       pending: <Clock className="h-3 w-3 mr-1" />,
       failed: <XIcon className="h-3 w-3 mr-1" />,
       refunded: <ArrowDownRight className="h-3 w-3 mr-1" />,
+      voided: <PackageX className="h-3 w-3 mr-1" />,
     };
+    const labels: Record<string, string> = {
+      voided: "Unable to deliver",
+    };
+    // voided = orange/amber (red reserved for cancelled)
+    const voidedClassName =
+      status === "voided"
+        ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400 capitalize gap-1"
+        : "capitalize gap-1";
 
     return (
       <Badge
         variant={STATUS_BADGE_VARIANTS[status] || "outline"}
-        className="capitalize gap-1"
+        className={voidedClassName}
       >
         {icons[status]}
-        {status}
+        {labels[status] ?? status}
       </Badge>
     );
   };
@@ -368,7 +404,7 @@ export default function PaymentsNew() {
               Total Revenue
             </CardTitle>
             <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <DollarSign className="h-4 w-4 text-primary" />
+              <IndianRupee className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -604,7 +640,11 @@ export default function PaymentsNew() {
                     {paymentStatusData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+                        fill={
+                          PAYMENT_STATUS_CHART_COLORS[
+                            (entry as any).statusKey || entry.name?.toLowerCase().replace(/\s+/g, "_")
+                          ] || COLORS[index % COLORS.length]
+                        }
                       />
                     ))}
                   </Pie>
@@ -670,6 +710,7 @@ export default function PaymentsNew() {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="voided">Unable to deliver</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
                   <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
@@ -786,7 +827,7 @@ export default function PaymentsNew() {
                             <Wallet className="h-3 w-3" />
                           )}
                           {payment.payment_method === "cash" && (
-                            <DollarSign className="h-3 w-3" />
+                            <IndianRupee className="h-3 w-3" />
                           )}
                           {getPaymentMethodLabel(payment.payment_method)}
                         </Badge>
@@ -797,7 +838,9 @@ export default function PaymentsNew() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(payment.payment_status)}
+                        {payment.orders?.status === 'cancelled'
+                          ? getStatusBadge('voided')
+                          : getStatusBadge(payment.payment_status)}
                       </TableCell>
                     </TableRow>
                   ))

@@ -27,12 +27,101 @@ interface ProductCardProps {
     category?: string;
     image_url?: string;
     is_available: boolean;
+    diet_type?: string;
   };
   onDelete: (id: string) => void;
+  variant?: "grid" | "list";
 }
 
-export const ProductCard = ({ product, onDelete }: ProductCardProps) => {
+export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCardProps) => {
   const isLowStock = product.stock_quantity <= (product.low_stock_threshold || 10);
+
+  if (variant === "list") {
+    return (
+      <Card className="flex flex-row overflow-hidden border border-border hover:border-primary hover:shadow-md transition-colors duration-200">
+        <div className="relative w-24 sm:w-32 h-24 sm:h-28 shrink-0 bg-muted">
+          {product.image_url ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+              No Image
+            </div>
+          )}
+          {product.category && (
+            <Badge className="absolute left-1.5 top-1.5 rounded-full bg-orange-500 text-white text-[10px] px-1.5 py-0">
+              {product.category}
+            </Badge>
+          )}
+        </div>
+        <div className="flex-1 flex flex-col min-w-0 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-base truncate">{product.name}</h3>
+              {product.description && (
+                <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                  {product.description}
+                </p>
+              )}
+            </div>
+            <span className="font-bold text-primary shrink-0">₹{product.price.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">
+              {product.stock_quantity} in stock
+            </span>
+            {product.category && (
+              <Badge variant="outline" className="text-xs">
+                {product.category}
+              </Badge>
+            )}
+            {isLowStock && (
+              <Badge variant="destructive" className="text-xs">
+                Low Stock
+              </Badge>
+            )}
+            {!product.is_available && (
+              <Badge variant="secondary" className="text-xs">
+                Unavailable
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button variant="outline" size="sm" className="h-8" asChild>
+              <Link to={`${ROUTES.VENDOR_DASHBOARD_INVENTORY}/edit/${product.id}`} className="gap-1.5">
+                <Edit className="h-3.5 w-3.5" />
+                Edit
+              </Link>
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" className="h-8 w-8">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(product.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="flex h-full flex-col overflow-hidden border border-border hover:border-primary hover:shadow-lg transition-colors transition-shadow duration-200">

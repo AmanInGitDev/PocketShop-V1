@@ -10,6 +10,7 @@
 import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
@@ -18,7 +19,7 @@ import {
   Package, 
   TrendingDown, 
   XCircle, 
-  DollarSign, 
+  IndianRupee, 
   Grid3x3, 
   List, 
   Filter, 
@@ -42,7 +43,7 @@ export default function InventoryNew() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "unavailable" | "low-stock">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // Calculate statistics (mirrors Migration_Data Inventory behavior).
   // NOTE: Visual details (icons, borders) can be tuned later for pixel-perfect parity.
@@ -152,7 +153,7 @@ export default function InventoryNew() {
           <MetricCard
             title="Inventory Value"
             value={`₹${stats.totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
-            icon={<DollarSign className="h-4 w-4" />}
+            icon={<IndianRupee className="h-4 w-4" />}
             description="Total stock value"
             isLoading={isLoading}
             className="border-l-4 border-l-green-500"
@@ -275,10 +276,9 @@ export default function InventoryNew() {
       ) : filteredProducts && filteredProducts.length > 0 ? (
         <div
           className={cn(
-            "gap-4",
             viewMode === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : "grid grid-cols-1"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              : "flex flex-col gap-3"
           )}
         >
           {filteredProducts.map((product: any) => (
@@ -286,6 +286,7 @@ export default function InventoryNew() {
               key={product.id}
               product={product}
               onDelete={(id) => deleteProduct.mutate(id)}
+              variant={viewMode}
             />
           ))}
         </div>
