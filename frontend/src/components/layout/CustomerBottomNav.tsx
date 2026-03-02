@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 function isCustomerRoute(pathname: string): boolean {
   if (pathname === '/customer-home' || pathname === '/customer-profile') return true;
   if (pathname.startsWith('/storefront/') || pathname.startsWith('/order-tracking/')) return true;
+  if (pathname === '/shops' || pathname.startsWith('/shops')) return true;
   return false;
 }
 
@@ -90,7 +91,7 @@ export function CustomerBottomNav() {
     <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-swiggy-lg z-40 md:hidden"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-swiggy-lg z-40 md:hidden pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {

@@ -622,7 +622,7 @@ export default function SettingsNew() {
             Payment
           </TabsTrigger>
         </TabsList>
-
+        
         <TabsContent value="business" className="mt-6">
           <Card>
             <CardHeader>
@@ -1095,7 +1095,7 @@ export default function SettingsNew() {
             </CardContent>
           </Card>
         </TabsContent>
-
+        
         <TabsContent value="notifications" className="mt-6">
           <Card>
             <CardHeader>

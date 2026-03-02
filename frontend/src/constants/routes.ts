@@ -41,6 +41,9 @@ export const ROUTES = {
   // Public storefront route
   PUBLIC_STOREFRONT: '/storefront/:vendorId',
 
+  // Shops / Ordering - browse online vendors by category
+  SHOPS: '/shops',
+
   // Payment result routes (Stripe return URLs)
   PAYMENT_SUCCESS: '/payment-success',
   PAYMENT_CANCEL: '/payment-cancel',

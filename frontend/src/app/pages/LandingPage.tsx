@@ -7,14 +7,24 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, X, Lock } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { GOOGLE_MAPS_LIBRARIES } from '@/constants/maps';
 import { useLoadScript } from '@react-google-maps/api';
 import Logo from '@/features/common/components/Logo';
 import LocationDetector, { LocationDetectorRef } from '@/features/common/components/LocationDetector';
 import PlacesAutocomplete from '@/features/common/components/PlacesAutocomplete';
 
-const Libraries: ("places")[] = ["places"];
+// Category card images (from public folder - avoids Vite bundling issues with large PNGs)
+const CATEGORY_IMAGES = {
+  fashion: '/images/categories/fashion.png',
+  salons: '/images/categories/salons.png',
+  quickBites: '/images/categories/quick-bites.png',
+  medicare: '/images/categories/medicare.png',
+  fineDining: '/images/categories/fine-dining.png',
+  localStores: '/images/categories/local-stores.png',
+} as const;
+
 
 const LandingPage: React.FC = () => {
   const [searchLocation, setSearchLocation] = useState('');
@@ -28,12 +38,28 @@ const LandingPage: React.FC = () => {
     company: false,
   });
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [promoBannerDismissed, setPromoBannerDismissed] = useState(() =>
+    typeof localStorage !== 'undefined' && localStorage.getItem('pocketshop_promo_dismissed') === 'true'
+  );
   const navigate = useNavigate();
+
+  const dismissPromoBanner = () => {
+    setPromoBannerDismissed(true);
+    try {
+      localStorage.setItem('pocketshop_promo_dismissed', 'true');
+    } catch (_) {}
+  };
+
+  const clearLocation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSearchLocation('');
+    setUserLocation(null);
+  };
 
   // Load Google Maps script with Places library
   const { isLoaded: isMapsLoaded, loadError: mapsLoadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-    libraries: Libraries
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   // Handle PWA install prompt
@@ -217,12 +243,12 @@ const LandingPage: React.FC = () => {
               >
                 About us
               </a>
-              <a
-                href="#"
+              <Link
+                to={ROUTES.CUSTOMER_HOME}
                 className="text-white/90 hover:text-white text-sm font-medium transition-colors"
               >
-                Around you
-              </a>
+                Order
+              </Link>
               <Link
                 to="/business"
                 className="text-white/90 hover:text-white text-sm font-medium transition-colors"
@@ -253,13 +279,13 @@ const LandingPage: React.FC = () => {
                 >
                   About us
                 </a>
-                <a
-                  href="#"
+                <Link
+                  to={ROUTES.CUSTOMER_HOME}
                   className="text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Around you
-                </a>
+                  Order
+                </Link>
                 <Link
                   to="/business"
                   className="text-white/90 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors px-4 py-2.5 rounded-lg"
@@ -319,14 +345,24 @@ const LandingPage: React.FC = () => {
                   />
                 </svg>
                 <div 
-                  className="flex flex-col min-w-[140px] cursor-pointer" 
+                  className="flex flex-col min-w-[140px] cursor-pointer flex-1" 
                   onClick={() => desktopLocationBtnRef.current?.triggerDetection()}
                 >
                   <span className="text-xs text-gray-500">Location</span>
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 truncate">
                     {searchLocation || 'Detect Location'}
                   </span>
                 </div>
+                {searchLocation && (
+                  <button
+                    type="button"
+                    onClick={clearLocation}
+                    className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+                    aria-label="Clear location"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               
               {/* Hidden LocationDetector for Desktop */}
@@ -393,9 +429,20 @@ const LandingPage: React.FC = () => {
                     {searchLocation || 'Select Location'}
                   </span>
                 </div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                {searchLocation ? (
+                  <button
+                    type="button"
+                    onClick={clearLocation}
+                    className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    aria-label="Clear location"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
               </div>
               
               {/* Hidden LocationDetector for Mobile */}
@@ -432,350 +479,122 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Category Cards - Magicpin Style: Better Mobile Spacing */}
-          {/* Mobile: 2 columns, Desktop: 3 columns, Large: 6 columns */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5 lg:gap-6 w-full max-w-7xl mx-auto mb-12 md:mb-16 px-3 sm:px-4 lg:px-8">
-            {/* Fashion - Rich Magicpin-Style Illustration */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="bagGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ec4899" />
-                        <stop offset="50%" stopColor="#f472b6" />
-                        <stop offset="100%" stopColor="#be185d" />
-                      </linearGradient>
-                      <linearGradient id="standGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#f3f4f6" />
-                        <stop offset="100%" stopColor="#e5e7eb" />
-                      </linearGradient>
-                    </defs>
-                    {/* Display Stand Base */}
-                    <rect x="35" y="65" width="30" height="8" rx="4" fill="url(#standGradient)" stroke="#d1d5db" strokeWidth="1.5"/>
-                    <rect x="38" y="60" width="24" height="5" rx="2" fill="#f9fafb" stroke="#e5e7eb" strokeWidth="1"/>
-                    
-                    {/* Shopping Bag on Stand - Rich Detail */}
-                    <path d="M30 25 Q30 20 35 18 L65 18 Q70 20 70 25 L70 50 Q70 55 65 57 L35 57 Q30 55 30 50 Z" 
-                          fill="url(#bagGradient2)" stroke="#be185d" strokeWidth="2"/>
-                    <path d="M32 28 L68 28 L68 32 L32 32 Z" fill="#fce7f3" opacity="0.8"/>
-                    <path d="M35 35 L65 35" stroke="#be185d" strokeWidth="1.5" opacity="0.5"/>
-                    <path d="M35 42 L65 42" stroke="#be185d" strokeWidth="1.5" opacity="0.5"/>
-                    
-                    {/* Bag Handles with Dimension */}
-                    <path d="M32 30 Q32 15 40 13 Q50 13 50 15" 
-                          fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M50 15 Q50 13 60 13 Q68 15 68 30" 
-                          fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round"/>
-                    <path d="M40 13 Q50 13 60 13" stroke="#ec4899" strokeWidth="2" fill="none"/>
-                    
-                    {/* High Heel Shoe - Detailed */}
-                    <path d="M15 55 L20 55 L22 68 L28 72 L32 68 L32 62 L30 58" 
-                          fill="#ec4899" stroke="#be185d" strokeWidth="2"/>
-                    <ellipse cx="25" cy="63" rx="4" ry="3" fill="#be185d"/>
-                    <path d="M18 56 L20 56" stroke="#be185d" strokeWidth="1"/>
-                    
-                    {/* Small Handbag Accessory */}
-                    <path d="M75 20 L78 22 L78 28 L75 30 L72 28 L72 22 Z" 
-                          fill="#f472b6" stroke="#ec4899" strokeWidth="1.5"/>
-                    <circle cx="75" cy="25" r="1.5" fill="#be185d"/>
-                  </svg>
+          {/* Category Cards - Magicpin Style: Going Out tag, horizontal scroll on mobile */}
+          <div className="w-full max-w-7xl mx-auto mb-12 md:mb-16 px-3 sm:px-4 lg:px-8">
+            <div className="flex gap-4 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory md:snap-none -mx-3 px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+            {/* Fashion - Locked */}
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+              <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Coming Soon
+              </span>
+              <div className="absolute top-2 right-2 z-10">
+                <Lock className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.fashion} alt="Fashion" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">SHOP LOCAL</p>
-                <p className="font-bold text-gray-900 text-sm md:text-base">Fashion</p>
+                <p className="font-bold text-gray-600 text-sm md:text-base">Fashion</p>
               </div>
             </div>
 
-            {/* Salon - Rich Magicpin-Style Salon Scene */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="scissorGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#a78bfa" />
-                        <stop offset="50%" stopColor="#818cf8" />
-                        <stop offset="100%" stopColor="#6366f1" />
-                      </linearGradient>
-                    </defs>
-                    {/* Professional Scissors - Detailed */}
-                    <path d="M18 22 L28 32 M28 22 L18 32" 
-                          stroke="url(#scissorGradient2)" strokeWidth="5" strokeLinecap="round"/>
-                    <circle cx="18" cy="22" r="5" fill="#6366f1" stroke="#4f46e5" strokeWidth="2"/>
-                    <circle cx="28" cy="32" r="5" fill="#6366f1" stroke="#4f46e5" strokeWidth="2"/>
-                    <circle cx="18" cy="22" r="2.5" fill="#c4b5fd"/>
-                    <circle cx="28" cy="32" r="2.5" fill="#c4b5fd"/>
-                    
-                    {/* Hair Dryer - More Detailed */}
-                    <ellipse cx="55" cy="22" rx="10" ry="6" fill="#a78bfa" stroke="#7c3aed" strokeWidth="2"/>
-                    <rect x="50" y="20" width="12" height="5" rx="2.5" fill="#c4b5fd"/>
-                    <path d="M62 22 L68 26 L66 30 L60 26 Z" fill="#9333ea"/>
-                    <circle cx="55" cy="22" r="2" fill="#6366f1"/>
-                    {/* Air flow lines */}
-                    <path d="M68 22 L72 22 M68 26 L72 26" stroke="#9333ea" strokeWidth="1.5" strokeLinecap="round"/>
-                    
-                    {/* Professional Comb - Detailed */}
-                    <rect x="32" y="48" width="3" height="18" rx="1.5" fill="#818cf8" stroke="#6366f1" strokeWidth="1.5"/>
-                    <path d="M32 52 L40 56 M33 57 L41 61 M34 62 L42 66" 
-                          stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round"/>
-                    
-                    {/* Hair Clipper */}
-                    <rect x="60" y="45" width="12" height="6" rx="3" fill="#4f46e5" stroke="#4338ca" strokeWidth="1.5"/>
-                    <rect x="62" y="47" width="8" height="2" fill="#818cf8"/>
-                    <rect x="58" y="46" width="3" height="4" rx="1.5" fill="#6366f1"/>
-                    
-                    {/* Styling Brush */}
-                    <ellipse cx="20" cy="55" rx="4" ry="6" fill="#a78bfa" stroke="#7c3aed" strokeWidth="1.5"/>
-                    <path d="M18 52 L22 52 M18 55 L22 55 M18 58 L22 58" 
-                          stroke="#6366f1" strokeWidth="1" strokeLinecap="round"/>
-                  </svg>
+            {/* Salon - Locked */}
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+              <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Coming Soon
+              </span>
+              <div className="absolute top-2 right-2 z-10">
+                <Lock className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.salons} alt="Salons" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">FIND SERVICES</p>
-                <p className="font-bold text-gray-900 text-sm md:text-base">Salons</p>
+                <p className="font-bold text-gray-600 text-sm md:text-base">Salons</p>
               </div>
             </div>
 
-            {/* Quick Bites - Rich Magicpin-Style Meal Illustration */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
+            {/* Quick Bites - Clickable, goes to shops */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=quick-bites`)}
+              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1"
+            >
+              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Going Out
+              </span>
+              <div className="text-center mb-3 flex-1">
                 <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="bowlGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fef3c7" />
-                        <stop offset="50%" stopColor="#fde68a" />
-                        <stop offset="100%" stopColor="#fbbf24" />
-                      </linearGradient>
-                      <linearGradient id="curryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#dc2626" />
-                        <stop offset="100%" stopColor="#b91c1c" />
-                      </linearGradient>
-                    </defs>
-                    {/* Bowl - More Realistic */}
-                    <ellipse cx="45" cy="65" rx="28" ry="9" fill="#f59e0b" stroke="#d97706" strokeWidth="2.5"/>
-                    <path d="M20 58 Q20 50 30 46 Q40 40 45 40 Q50 40 60 46 Q70 50 70 58" 
-                          fill="url(#bowlGradient2)" stroke="#d97706" strokeWidth="2.5"/>
-                    {/* Rich Curry/Soup in Bowl */}
-                    <ellipse cx="40" cy="52" rx="12" ry="7" fill="url(#curryGradient)" opacity="0.9"/>
-                    <ellipse cx="52" cy="54" rx="9" ry="6" fill="#ea580c" opacity="0.9"/>
-                    <ellipse cx="35" cy="48" rx="6" ry="4" fill="#f59e0b" opacity="0.8"/>
-                    {/* Floating ingredients */}
-                    <circle cx="45" cy="46" r="2.5" fill="#fbbf24"/>
-                    <circle cx="50" cy="50" r="2" fill="#84cc16"/>
-                    <circle cx="38" cy="52" r="2" fill="#f97316"/>
-                    
-                    {/* Lime Wedge - Detailed */}
-                    <circle cx="15" cy="38" r="6" fill="#84cc16" stroke="#65a30d" strokeWidth="2"/>
-                    <path d="M12 36 L18 40 M18 36 L12 40" stroke="#65a30d" strokeWidth="2"/>
-                    <path d="M15 34 L15 42" stroke="#65a30d" strokeWidth="1.5"/>
-                    
-                    {/* Drink Glass - More Detailed */}
-                    <path d="M68 18 L64 48 Q64 54 69 54 Q74 54 74 48 L70 18 Q70 16 69 16 Q68 16 68 18" 
-                          fill="#fef3c7" stroke="#f59e0b" strokeWidth="2"/>
-                    <ellipse cx="69" cy="18" rx="3" ry="2" fill="#fbbf24" opacity="0.6"/>
-                    <ellipse cx="69" cy="25" rx="2" ry="1.5" fill="#fbbf24" opacity="0.4"/>
-                    <path d="M66 22 L72 22" stroke="#f59e0b" strokeWidth="1"/>
-                    
-                    {/* Crackers/Bread */}
-                    <ellipse cx="20" cy="68" rx="6" ry="3" fill="#d97706" opacity="0.8"/>
-                    <ellipse cx="24" cy="70" rx="5" ry="2.5" fill="#f59e0b" opacity="0.7"/>
-                    <path d="M18 68 L26 68" stroke="#d97706" strokeWidth="1"/>
-                  </svg>
+                  <img src={CATEGORY_IMAGES.quickBites} alt="Quick Bites" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">EAT LOCAL</p>
                 <p className="font-bold text-gray-900 text-sm md:text-base">Quick Bites</p>
               </div>
             </div>
 
-            {/* Medicare - Rich Magicpin-Style Medical Scene */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="medicalGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#5eead4" />
-                        <stop offset="50%" stopColor="#2dd4bf" />
-                        <stop offset="100%" stopColor="#14b8a6" />
-                      </linearGradient>
-                      <radialGradient id="medicalGlow2" cx="50%" cy="50%">
-                        <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.4" />
-                        <stop offset="70%" stopColor="#14b8a6" stopOpacity="0.2" />
-                        <stop offset="100%" stopColor="#0d9488" stopOpacity="0.05" />
-                      </radialGradient>
-                    </defs>
-                    {/* Medical Cross - Prominent & Detailed */}
-                    <circle cx="45" cy="45" r="32" fill="url(#medicalGlow2)"/>
-                    <rect x="42" y="15" width="10" height="50" rx="5" fill="url(#medicalGradient2)" 
-                          stroke="#0d9488" strokeWidth="2"/>
-                    <rect x="15" y="42" width="60" height="10" rx="5" fill="url(#medicalGradient2)" 
-                          stroke="#0d9488" strokeWidth="2"/>
-                    <circle cx="45" cy="45" r="5" fill="#ffffff"/>
-                    <circle cx="45" cy="45" r="3" fill="#2dd4bf" opacity="0.5"/>
-                    
-                    {/* Medicine Pills - Multiple & Detailed */}
-                    <ellipse cx="68" cy="22" rx="6" ry="4" fill="#2dd4bf" stroke="#14b8a6" strokeWidth="1.5"/>
-                    <line x1="64" y1="22" x2="72" y2="22" stroke="#0d9488" strokeWidth="1.5"/>
-                    <ellipse cx="72" cy="30" rx="5" ry="3" fill="#5eead4" stroke="#14b8a6" strokeWidth="1.5"/>
-                    <line x1="69" y1="30" x2="75" y2="30" stroke="#0d9488" strokeWidth="1"/>
-                    
-                    {/* Medical Kit/Box */}
-                    <rect x="18" y="20" width="12" height="10" rx="2" fill="#ecfeff" stroke="#14b8a6" strokeWidth="1.5"/>
-                    <path d="M18 20 L24 16 L30 20" fill="#ecfeff" stroke="#14b8a6" strokeWidth="1.5"/>
-                    <line x1="22" y1="20" x2="22" y2="30" stroke="#14b8a6" strokeWidth="1"/>
-                    <line x1="26" y1="20" x2="26" y2="30" stroke="#14b8a6" strokeWidth="1"/>
-                    
-                    {/* Heartbeat Line */}
-                    <path d="M20 62 L24 62 L26 58 L28 66 L30 62 L34 62" 
-                          stroke="#ef4444" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                    <circle cx="24" cy="62" r="1.5" fill="#ef4444"/>
-                    <circle cx="30" cy="62" r="1.5" fill="#ef4444"/>
-                  </svg>
+            {/* Medicare - Locked */}
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+              <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Coming Soon
+              </span>
+              <div className="absolute top-2 right-2 z-10">
+                <Lock className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.medicare} alt="Medicare" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">LOCAL ESSENTIALS</p>
-                <p className="font-bold text-gray-900 text-sm md:text-base">Medicare</p>
+                <p className="font-bold text-gray-600 text-sm md:text-base">Medicare</p>
               </div>
             </div>
 
-            {/* Fine Dining - Rich Magicpin-Style Elegant Plate */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
+            {/* Fine Dining - Clickable, goes to shops */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`${ROUTES.SHOPS}?category=fine-dining`)}
+              className="snap-start shrink-0 bg-white rounded-2xl p-4 md:p-5 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-[1.02] flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1"
+            >
+              <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Going Out
+              </span>
+              <div className="text-center mb-3 flex-1">
                 <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="plateGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ffffff" />
-                        <stop offset="50%" stopColor="#faf5ff" />
-                        <stop offset="100%" stopColor="#e9d5ff" />
-                      </linearGradient>
-                      <linearGradient id="wineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#991b1b" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0.9" />
-                      </linearGradient>
-                    </defs>
-                    {/* Elegant Plate - More Realistic */}
-                    <ellipse cx="45" cy="70" rx="32" ry="10" fill="#c4b5fd" stroke="#9333ea" strokeWidth="2.5"/>
-                    <circle cx="45" cy="55" r="28" fill="url(#plateGradient2)" stroke="#9333ea" strokeWidth="3"/>
-                    {/* Rim detail */}
-                    <ellipse cx="45" cy="30" rx="26" ry="4" fill="#faf5ff" stroke="#c4b5fd" strokeWidth="1"/>
-                    
-                    {/* Gourmet Food Presentation - Rich Detail */}
-                    <ellipse cx="38" cy="48" rx="14" ry="8" fill="#a855f7" opacity="0.85"/>
-                    <ellipse cx="52" cy="50" rx="11" ry="7" fill="#7c3aed" opacity="0.8"/>
-                    <ellipse cx="45" cy="45" rx="8" ry="5" fill="#6d28d9" opacity="0.9"/>
-                    {/* Sauce/drizzle detail */}
-                    <path d="M30 46 Q38 44 45 46 Q52 48 58 50" 
-                          stroke="#6d28d9" strokeWidth="3" fill="none" opacity="0.7"/>
-                    {/* Garnish - Fresh Herbs & Lemon */}
-                    <circle cx="25" cy="42" r="3" fill="#84cc16"/>
-                    <path d="M24 40 L26 44 M26 40 L24 44" stroke="#65a30d" strokeWidth="1"/>
-                    <circle cx="58" cy="46" r="3" fill="#fbbf24"/>
-                    <path d="M57 44 L59 48 M59 44 L57 48" stroke="#f59e0b" strokeWidth="1"/>
-                    <circle cx="50" cy="38" r="2.5" fill="#fde047"/>
-                    
-                    {/* Wine Glass - Elegant & Detailed */}
-                    <path d="M70 12 L66 58 Q66 64 71 64 Q76 64 76 58 L72 12 Q72 10 71 10 Q70 10 70 12" 
-                          fill="#fef2f2" stroke="#dc2626" strokeWidth="2.5"/>
-                    {/* Wine liquid */}
-                    <path d="M66 42 Q66 45 68 45 Q70 45 70 42 L70 25 Q70 22 68 22 Q66 22 66 25 Z" 
-                          fill="url(#wineGradient)"/>
-                    <ellipse cx="71" cy="12" rx="3.5" ry="2" fill="#dc2626" opacity="0.4"/>
-                    <ellipse cx="71" cy="18" rx="2.5" ry="1.5" fill="#dc2626" opacity="0.3"/>
-                    <ellipse cx="71" cy="24" rx="2" ry="1" fill="#dc2626" opacity="0.2"/>
-                    <path d="M68 28 L74 28" stroke="#dc2626" strokeWidth="1.5" opacity="0.6"/>
-                    
-                    {/* Fork Detail */}
-                    <rect x="15" y="52" width="2" height="12" rx="1" fill="#c4b5fd" stroke="#9333ea" strokeWidth="1"/>
-                    <path d="M15 52 L15 48 L16 48 L16 52 M15 56 L15 60 L16 60 L16 56" 
-                          stroke="#9333ea" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
+                  <img src={CATEGORY_IMAGES.fineDining} alt="Fine Dining" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">DINE OUT</p>
                 <p className="font-bold text-gray-900 text-sm md:text-base">Fine Dining</p>
               </div>
             </div>
 
-            {/* Local Stores - Rich Magicpin-Style Store Scene */}
-            <div className="bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group hover:scale-110 flex flex-col">
-              <div className="text-center mb-4">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <defs>
-                      <linearGradient id="mapGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fef3c7" />
-                        <stop offset="50%" stopColor="#fde68a" />
-                        <stop offset="100%" stopColor="#fbbf24" />
-                      </linearGradient>
-                    </defs>
-                    {/* Map - Rich Detail */}
-                    <rect x="10" y="15" width="70" height="60" rx="5" fill="url(#mapGradient2)" 
-                          stroke="#f59e0b" strokeWidth="3"/>
-                    {/* Folded corner with shadow */}
-                    <path d="M80 15 L80 25 L70 15 Z" fill="#fbbf24" opacity="0.7"/>
-                    <path d="M77 15 L77 22 L70 15" stroke="#d97706" strokeWidth="1"/>
-                    
-                    {/* Road Network */}
-                    <path d="M15 35 L35 40 L50 28 L65 38" 
-                          stroke="#f59e0b" strokeWidth="3" fill="none" strokeDasharray="4,4"/>
-                    <path d="M20 50 L45 45 L70 52" 
-                          stroke="#f59e0b" strokeWidth="2.5" fill="none" strokeDasharray="3,3"/>
-                    
-                    {/* Building Shapes on Map */}
-                    <rect x="18" y="25" width="8" height="6" rx="1" fill="#d97706" opacity="0.4"/>
-                    <rect x="45" y="20" width="10" height="7" rx="1" fill="#d97706" opacity="0.4"/>
-                    <rect x="60" y="32" width="7" height="5" rx="1" fill="#d97706" opacity="0.4"/>
-                    
-                    {/* Location Pins - Colorful & Detailed */}
-                    <g>
-                      <ellipse cx="25" cy="42" rx="5" ry="2.5" fill="#ef4444" opacity="0.4"/>
-                      <circle cx="25" cy="42" r="5" fill="#ef4444"/>
-                      <circle cx="25" cy="42" r="2.5" fill="#ffffff"/>
-                      <circle cx="25" cy="38" r="1.5" fill="#ef4444"/>
-                      <path d="M25 47 L25 52 L23 52 M25 47 L27 52" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
-                    </g>
-                    <g>
-                      <ellipse cx="48" cy="38" rx="5" ry="2.5" fill="#3b82f6" opacity="0.4"/>
-                      <circle cx="48" cy="38" r="5" fill="#3b82f6"/>
-                      <circle cx="48" cy="38" r="2.5" fill="#ffffff"/>
-                      <circle cx="48" cy="34" r="1.5" fill="#3b82f6"/>
-                      <path d="M48 43 L48 48 L46 48 M48 43 L50 48" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
-                    </g>
-                    <g>
-                      <ellipse cx="38" cy="52" rx="5" ry="2.5" fill="#10b981" opacity="0.4"/>
-                      <circle cx="38" cy="52" r="5" fill="#10b981"/>
-                      <circle cx="38" cy="52" r="2.5" fill="#ffffff"/>
-                      <circle cx="38" cy="48" r="1.5" fill="#10b981"/>
-                      <path d="M38 57 L38 62 L36 62 M38 57 L40 62" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round"/>
-                    </g>
-                    <g>
-                      <ellipse cx="62" cy="48" rx="4" ry="2" fill="#f59e0b" opacity="0.4"/>
-                      <circle cx="62" cy="48" r="4" fill="#f59e0b"/>
-                      <circle cx="62" cy="48" r="2" fill="#ffffff"/>
-                    </g>
-                    
-                    {/* Compass Rose */}
-                    <circle cx="70" cy="25" r="6" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5"/>
-                    <path d="M70 19 L72 23 L68 23 Z" fill="#ef4444"/>
-                    <path d="M70 31 L72 27 L68 27 Z" fill="#ef4444"/>
-                    <path d="M64 25 L68 23 L68 27 Z" fill="#3b82f6"/>
-                    <path d="M76 25 L72 23 L72 27 Z" fill="#3b82f6"/>
-                  </svg>
+            {/* Local Stores - Locked */}
+            <div className="snap-start shrink-0 bg-white/60 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col min-w-[140px] md:min-w-[160px] md:flex-1 relative cursor-not-allowed opacity-80">
+              <span className="inline-flex items-center self-start rounded-full bg-gray-400 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
+                Coming Soon
+              </span>
+              <div className="absolute top-2 right-2 z-10">
+                <Lock className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="text-center mb-3 flex-1">
+                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.localStores} alt="Local Stores" className="w-full h-full object-contain" />
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-[9px] md:text-[10px] text-gray-600 mb-1 font-normal uppercase tracking-wide">DISCOVER MORE</p>
-                <p className="font-bold text-gray-900 text-sm md:text-base">Local Stores</p>
+                <p className="font-bold text-gray-600 text-sm md:text-base">Local Stores</p>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -798,12 +617,20 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Promotional Banner Section */}
+      {!promoBannerDismissed && (
       <section className="relative z-10 bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-8 md:p-12 border-2 border-purple-100 shadow-xl">
+          <div className="relative bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-8 md:p-12 border-2 border-purple-100 shadow-xl">
+            <button
+              onClick={dismissPromoBanner}
+              className="absolute top-4 right-4 p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors"
+              aria-label="Close promotional banner"
+            >
+              <X className="h-5 w-5" />
+            </button>
             <div className="flex flex-col md:grid md:grid-cols-2 gap-8 items-center">
               {/* Left - Partner Logo/Brand */}
-              <div className="text-center md:text-left order-1 md:order-1">
+                <div className="text-center md:text-left order-1 md:order-1">
                 <div className="inline-block bg-white rounded-2xl p-3 shadow-md mb-3">
                   {/* Partner Logo Placeholder - Replace with actual partner logo */}
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
@@ -834,6 +661,7 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Split View - Customer & Business Sections */}
       <section className="relative z-10 py-16 bg-black/20 backdrop-blur-sm">

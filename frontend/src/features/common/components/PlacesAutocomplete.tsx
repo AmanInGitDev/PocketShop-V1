@@ -110,6 +110,8 @@ const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = ({
       <div className={`relative w-full ${className}`}>
         <input
           type="text"
+          value=""
+          readOnly
           placeholder={placeholder}
           disabled
           className="w-full outline-none text-gray-700 placeholder-gray-400 text-base bg-gray-100"
@@ -117,6 +119,12 @@ const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = ({
       </div>
     );
   }
+
+  const handleClear = () => {
+    setValue('', false);
+    clearSuggestions();
+    setShowSuggestions(false);
+  };
 
   return (
     <div className={`relative w-full ${className}`}>
@@ -132,8 +140,20 @@ const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = ({
         onKeyDown={handleKeyDown}
         disabled={!ready}
         placeholder={placeholder}
-        className="w-full outline-none text-gray-700 placeholder-gray-400 text-base"
+        className="w-full outline-none text-gray-700 placeholder-gray-400 text-base pr-9"
       />
+      {value && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          aria-label="Clear search"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
       
       {/* Suggestions dropdown */}
       {showSuggestions && status === 'OK' && data.length > 0 && (

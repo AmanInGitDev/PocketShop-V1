@@ -13,7 +13,7 @@ import type { Session } from '@supabase/supabase-js';
 export type OnboardingStatusValue = 'incomplete' | 'basic_info' | 'operational_details' | 'planning_selected' | 'completed';
 
 interface AuthContextType extends AuthState {
-  signUp: (email: string, password: string, userData: { full_name: string; mobile_number?: string; role: 'vendor' | 'customer' }) => Promise<{ data: any; error: any }>;
+  signUp: (email: string, password: string, userData: { full_name: string; mobile_number?: string; role: 'vendor' | 'customer' }, options?: { emailRedirectTo?: string }) => Promise<{ data: any; error: any }>;
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<{ error: any }>;
   session: Session | null;
@@ -283,10 +283,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, userData: { full_name: string; mobile_number?: string; role: 'vendor' | 'customer' }) => {
+  const signUp = async (email: string, password: string, userData: { full_name: string; mobile_number?: string; role: 'vendor' | 'customer' }, options?: { emailRedirectTo?: string }) => {
     try {
       setLoading(true);
       setError(null);
+
+      const redirectTo = options?.emailRedirectTo ?? (userData.role === 'customer'
+        ? `${window.location.origin}/customer-home`
+        : `${window.location.origin}/vendor/onboarding/stage-1`);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -298,7 +302,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             business_name: userData.full_name, // Trigger expects business_name for vendors
             mobile_number: userData.mobile_number || '', // Pass mobile number to metadata
           },
-          emailRedirectTo: `${window.location.origin}/vendor/onboarding/stage-1`,
+          emailRedirectTo: redirectTo,
         },
       });
 
