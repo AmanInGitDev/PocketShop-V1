@@ -93,13 +93,13 @@ export default function CustomerAuth() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-8">
-      {/* Header - mobile optimized */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+      {/* Header - mobile optimized, safe area for notched devices */}
+      <header className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 pt-[env(safe-area-inset-top,0px)] px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
+            className="p-3 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 active:bg-gray-200 dark:active:bg-slate-700 touch-manipulation touch-target"
             aria-label="Back"
           >
             <ChevronLeft className="w-6 h-6 text-gray-700" />
@@ -114,10 +114,10 @@ export default function CustomerAuth() {
       </header>
 
       <main className="flex-1 px-4 py-6 pb-8 max-w-md mx-auto w-full">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-1">
           {mode === 'login' ? 'Welcome back' : 'Create account'}
         </h1>
-        <p className="text-gray-600 text-sm mb-6">
+        <p className="text-gray-600 dark:text-slate-400 text-sm mb-6">
           {mode === 'login'
             ? 'Sign in to track orders and save details'
             : 'Sign up to get started'}
@@ -211,7 +211,7 @@ export default function CustomerAuth() {
 
           <Button
             type="submit"
-            className="w-full h-12 text-base font-semibold bg-orange-500 hover:bg-orange-600"
+            className="w-full h-12 min-h-[48px] text-base font-semibold bg-orange-500 hover:bg-orange-600 active:scale-[0.99] touch-target"
             disabled={loading}
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : mode === 'login' ? 'Sign in' : 'Create account'}
@@ -232,7 +232,7 @@ export default function CustomerAuth() {
           <Button
             type="button"
             variant="outline"
-            className="w-full h-12 text-base"
+            className="w-full h-12 min-h-[48px] text-base touch-target"
             onClick={handleGuestContinue}
           >
             Continue as Guest

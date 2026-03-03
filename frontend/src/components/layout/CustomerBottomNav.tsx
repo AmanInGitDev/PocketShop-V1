@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, ShoppingBag, User, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { motion } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
 
 /** Only show bottom nav on these customer-facing routes (mobile). */
 function isCustomerRoute(pathname: string): boolean {
@@ -91,7 +90,7 @@ export function CustomerBottomNav() {
     <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-swiggy-lg z-40 md:hidden pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-gray-200 dark:border-slate-800 shadow-swiggy-lg z-40 md:hidden pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
@@ -103,12 +102,12 @@ export function CustomerBottomNav() {
               key={item.label}
               onClick={item.onClick}
               whileTap={{ scale: 0.95 }}
-              className="flex flex-col items-center justify-center gap-1 flex-1 relative h-full"
+              className="flex flex-col items-center justify-center gap-1 flex-1 relative h-full min-h-[44px] touch-target"
             >
               <div className="relative">
                 <Icon
                   className={`h-6 w-6 transition-colors ${
-                    active ? 'text-[#fc8019]' : 'text-gray-400'
+                    active ? 'text-[#fc8019]' : 'text-gray-400 dark:text-slate-500'
                   }`}
                 />
                 {item.badge && item.badge > 0 && (
@@ -123,7 +122,7 @@ export function CustomerBottomNav() {
               </div>
               <span
                 className={`text-xs font-medium transition-colors ${
-                  active ? 'text-[#fc8019]' : 'text-gray-400'
+                  active ? 'text-[#fc8019]' : 'text-gray-400 dark:text-slate-500'
                 }`}
               >
                 {item.label}

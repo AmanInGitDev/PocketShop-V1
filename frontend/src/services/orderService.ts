@@ -29,6 +29,8 @@ export interface CreateOrderPayload {
   customerId?: string | null;
   /** Discount amount in ₹ (from vendor offers) */
   discountAmount?: number;
+  /** Table code: "3", "N-T1", or "PICKUP" for walk-in */
+  tableCode?: string | null;
 }
 
 export interface CreateOrderResponse {
@@ -82,7 +84,7 @@ function generateOrderNumber(): string {
  */
 export async function createOrderDirect(payload: CreateOrderPayload): Promise<CreateOrderResponse> {
   try {
-    const { vendorId, items, customerName, customerPhone, customerEmail, paymentMethod, notes, customerId, discountAmount } = payload;
+    const { vendorId, items, customerName, customerPhone, customerEmail, paymentMethod, notes, customerId, discountAmount, tableCode } = payload;
 
     // Validate inputs
     if (!vendorId) {
@@ -212,6 +214,7 @@ export async function createOrderDirect(payload: CreateOrderPayload): Promise<Cr
         customer_email: customerEmail || null,
         order_number: orderNumber,
         notes: notes || null,
+        table_code: tableCode || null,
       })
       .select()
       .single();

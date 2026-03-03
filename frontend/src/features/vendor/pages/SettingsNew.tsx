@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useVendor } from '@/features/vendor/hooks/useVendor';
@@ -39,7 +40,12 @@ import {
   Tag,
   Plus,
   Trash2,
+  LayoutGrid,
 } from 'lucide-react';
+import { TableConfigStrip } from '@/features/vendor/components/TableConfigStrip';
+import { TableQRCard } from '@/features/vendor/components/TableQRCard';
+import { useVendorTables } from '@/features/vendor/hooks/useVendorTables';
+import QRCode from 'qrcode';
 import { formatOfferText } from '@/features/storefront/utils/offerUtils';
 
 const BUSINESS_TYPES = [
@@ -130,6 +136,22 @@ export default function SettingsNew() {
   const { data: vendor, isLoading: vendorLoading } = useVendor();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const {
+    tables,
+    tableConfig,
+    vendorId,
+    isLoading: tablesLoading,
+    saveTableConfig,
+    isSaving,
+    saveLayout,
+    isSavingLayout,
+  } = useVendorTables();
+
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const defaultTab = ['business', 'profile', 'layout', 'offers', 'operations', 'notifications', 'payment'].includes(tabParam || '')
+    ? tabParam!
+    : 'business';
 
   const [businessForm, setBusinessForm] = useState<BusinessFormState>({
     business_name: '',
@@ -556,6 +578,27 @@ export default function SettingsNew() {
     );
   };
 
+  const handleDownloadTableQR = async (tableSlug: string, tableCode: string) => {
+    const url = `${window.location.origin}/storefront/${vendorId}?table=${tableSlug}`;
+    try {
+      const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2 });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `table-${tableCode}.png`;
+      a.click();
+    } catch (e) {
+      console.error('Failed to generate QR', e);
+    }
+  };
+
+  const handleDownloadAllTableQRs = async () => {
+    if (!vendorId) return;
+    for (const t of tables) {
+      await handleDownloadTableQR(t.table_slug, t.table_code);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  };
+
   const saveFssai = () => {
     const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
     updateMutation.mutate({
@@ -595,8 +638,8 @@ export default function SettingsNew() {
         </p>
       </div>
 
-      <Tabs defaultValue="business" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 gap-2 h-auto p-1 bg-muted/50">
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 gap-2 h-auto p-1 bg-muted/50">
           <TabsTrigger value="business" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Business
@@ -604,6 +647,10 @@ export default function SettingsNew() {
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="layout" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Layout
           </TabsTrigger>
           <TabsTrigger value="offers" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
@@ -919,6 +966,34 @@ export default function SettingsNew() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="layout" className="mt-6 space-y-6">
+          {/* Update configuration at top */}
+          {tablesLoading ? (
+            <div className="h-20 animate-pulse rounded-xl border bg-muted/30" />
+          ) : (
+            <TableConfigStrip
+              tableConfig={tableConfig}
+              saveTableConfig={saveTableConfig}
+              isSaving={isSaving}
+              tablesCount={tables.length}
+            />
+          )}
+          {/* Table QR codes & floor plan below */}
+          {tablesLoading ? (
+            <div className="h-64 animate-pulse rounded-xl border bg-muted/30" />
+          ) : (
+            <TableQRCard
+              tables={tables}
+              tableConfig={tableConfig}
+              vendorId={vendorId}
+              onDownloadTable={handleDownloadTableQR}
+              onDownloadAll={handleDownloadAllTableQRs}
+              onSaveLayout={saveLayout}
+              isSavingLayout={isSavingLayout}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="offers" className="mt-6">

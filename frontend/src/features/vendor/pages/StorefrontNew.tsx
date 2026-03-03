@@ -28,8 +28,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   QrCode,
@@ -56,19 +54,117 @@ import { ROUTES } from "@/constants/routes";
 import { useVendor } from "@/features/vendor/hooks/useVendor";
 import { useProducts } from "@/features/vendor/hooks/useProducts";
 import { useOrders } from "@/features/vendor/hooks/useOrders";
+import { useVendorTables } from "@/features/vendor/hooks/useVendorTables";
+import { TableQRCard } from "@/features/vendor/components/TableQRCard";
 import { motion } from "framer-motion";
+import QRCode from "qrcode";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { LucideIcon } from "lucide-react";
+
+const STAT_CARD_STYLES = {
+  blue: {
+    light: "from-blue-50 to-blue-100/50 dark:from-blue-950/60 dark:to-blue-900/40",
+    text: "text-blue-600 dark:text-blue-400",
+    iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
+    icon: "text-blue-600 dark:text-blue-400",
+  },
+  indigo: {
+    light: "from-indigo-50 to-indigo-100/50 dark:from-indigo-950/60 dark:to-indigo-900/40",
+    text: "text-indigo-600 dark:text-indigo-400",
+    iconBg: "bg-indigo-500/10 dark:bg-indigo-500/20",
+    icon: "text-indigo-600 dark:text-indigo-400",
+  },
+  emerald: {
+    light: "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/60 dark:to-emerald-900/40",
+    text: "text-emerald-600 dark:text-emerald-400",
+    iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+    icon: "text-emerald-600 dark:text-emerald-400",
+  },
+  purple: {
+    light: "from-purple-50 to-purple-100/50 dark:from-purple-950/60 dark:to-purple-900/40",
+    text: "text-purple-600 dark:text-purple-400",
+    iconBg: "bg-purple-500/10 dark:bg-purple-500/20",
+    icon: "text-purple-600 dark:text-purple-400",
+  },
+} as const;
+
+function StatCard({
+  delay,
+  icon: Icon,
+  label,
+  value,
+  subText,
+  colorScheme,
+}: {
+  delay: number;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  subText: string;
+  colorScheme: keyof typeof STAT_CARD_STYLES;
+}) {
+  const styles = STAT_CARD_STYLES[colorScheme];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, type: "spring", stiffness: 300, damping: 24 }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      className="h-full"
+    >
+      <motion.div
+        whileHover={{ scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="h-full"
+      >
+        <Card
+          className={`h-full border-0 bg-gradient-to-br ${styles.light} shadow-lg transition-shadow duration-300 hover:shadow-xl dark:border dark:border-white/5`}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="mb-1 text-sm font-medium text-muted-foreground">
+                  {label}
+                </p>
+                <p className={`text-3xl font-bold tabular-nums ${styles.text}`}>
+                  {value}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{subText}</p>
+              </div>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: delay + 0.1 }}
+                className={`rounded-xl p-3 ${styles.iconBg}`}
+              >
+                <Icon className={`h-8 w-8 ${styles.icon}`} />
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function StorefrontNew() {
   const { data: vendor, isLoading: vendorLoading } = useVendor();
   const { data: products } = useProducts();
   const { data: orders } = useOrders();
   const { updateQRCode, isUpdatingQRCode } = useStorefront();
+  const {
+    tables,
+    tableConfig,
+    vendorId,
+    isLoading: tablesLoading,
+    saveLayout,
+    isSavingLayout,
+  } = useVendorTables();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("mobile");
@@ -131,7 +227,7 @@ export default function StorefrontNew() {
   };
 
   const storefrontUrl = vendor?.id
-    ? `${window.location.origin}/storefront/${vendor.id}`
+    ? `${window.location.origin}/storefront/${vendor.id}?pickup=1`
     : "";
 
   const handleCopyStorefrontLink = () => {
@@ -164,6 +260,27 @@ export default function StorefrontNew() {
     window.open(`/storefront/${vendor.id}`, "_blank");
   };
 
+  const handleDownloadTableQR = async (tableSlug: string, tableCode: string) => {
+    const url = `${window.location.origin}/storefront/${vendorId}?table=${tableSlug}`;
+    try {
+      const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2 });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `table-${tableCode}.png`;
+      a.click();
+    } catch (e) {
+      console.error("Failed to generate QR", e);
+    }
+  };
+
+  const handleDownloadAllTableQRs = async () => {
+    if (!vendorId) return;
+    for (const t of tables) {
+      await handleDownloadTableQR(t.table_slug, t.table_code);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  };
+
   if (vendorLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -173,12 +290,18 @@ export default function StorefrontNew() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in pb-8">
-      {/* Hero Section */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-8"
+    >
+      {/* Blue banner – Storefront Info */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 text-white shadow-2xl"
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-6 text-white shadow-2xl dark:from-primary/95 dark:via-primary/90 dark:to-primary/80 sm:p-8"
       >
         <div className="absolute inset-0 opacity-10">
           <div
@@ -190,388 +313,227 @@ export default function StorefrontNew() {
             }}
           />
         </div>
-        <div className="relative z-10">
-          <div className="mb-6 flex items-start justify-between">
+        <div className="relative z-10 flex flex-col gap-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="rounded-2xl bg-white/20 p-3 backdrop-blur-sm">
                 <Store className="h-8 w-8" />
               </div>
               <div>
-                <h1 className="mb-2 text-4xl font-bold">
-                  Storefront Dashboard
+                <h1 className="mb-1 text-2xl font-bold sm:text-3xl">
+                  {vendor?.business_name || "Storefront"}
                 </h1>
-                <p className="text-lg text-white/90">
-                  Manage and customize your digital storefront
+                <p className="text-white/90">
+                  {vendor?.address || "Manage your digital storefront"}
                 </p>
               </div>
             </div>
-            <Badge className="flex items-center gap-2 rounded-2xl border-white/30 bg-white/20 px-4 py-2 text-white backdrop-blur-sm">
-              <Sparkles className="h-4 w-4" />
-              Active
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="flex items-center gap-2 rounded-2xl border-white/30 bg-white/20 px-4 py-2 text-white backdrop-blur-sm">
+                <Sparkles className="h-4 w-4" />
+                Active
+              </Badge>
+              <Button asChild variant="secondary" size="sm" className="border-white/30 bg-white/20 text-white hover:bg-white/30">
+                <Link
+                  to={ROUTES.VENDOR_DASHBOARD_SETTINGS}
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Edit in Settings
+                </Link>
+              </Button>
+            </div>
           </div>
 
-          {vendor?.business_name && (
-            <div className="flex items-center gap-2 text-white/90">
-              <Globe className="h-5 w-5" />
-              <span className="font-medium">{vendor.business_name}</span>
-            </div>
-          )}
+          <div className="grid gap-3 border-t border-white/20 pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            {vendor?.description && (
+              <div className="flex items-start gap-2">
+                <Globe className="mt-0.5 h-4 w-4 shrink-0 text-white/80" />
+                <span className="line-clamp-2 text-white/90">{vendor.description}</span>
+              </div>
+            )}
+            {vendor?.address && (
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white/80" />
+                <span className="text-white/90">{vendor.address}</span>
+              </div>
+            )}
+            {vendor?.mobile_number && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-white/80" />
+                <span className="text-white/90">{vendor.mobile_number}</span>
+              </div>
+            )}
+            {vendor?.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-white/80" />
+                <span className="truncate text-white/90">{vendor.email}</span>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-lg transition-shadow hover:shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    Total Products
-                  </p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {stats.totalProducts}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {stats.availableProducts} available
-                  </p>
-                </div>
-                <div className="rounded-xl bg-blue-500/10 p-3">
-                  <Package className="h-8 w-8 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100/50 shadow-lg transition-shadow hover:shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    Total Orders
-                  </p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {stats.totalOrders}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {stats.pendingOrders} pending
-                  </p>
-                </div>
-                <div className="rounded-xl bg-green-500/10 p-3">
-                  <ShoppingBag className="h-8 w-8 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="border-0 bg-gradient-to-br from-orange-50 to-orange-100/50 shadow-lg transition-shadow hover:shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    Total Revenue
-                  </p>
-                  <p className="text-3xl font-bold text-orange-600">
-                    ₹{stats.totalRevenue.toLocaleString()}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    All time
-                  </p>
-                </div>
-                <div className="rounded-xl bg-orange-500/10 p-3">
-                  <TrendingUp className="h-8 w-8 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 shadow-lg transition-shadow hover:shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    Storefront Views
-                  </p>
-                  <p className="text-3xl font-bold text-purple-600">-</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Coming soon
-                  </p>
-                </div>
-                <div className="rounded-xl bg-purple-500/10 p-3">
-                  <Eye className="h-8 w-8 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <StatCard
+          delay={0.1}
+          icon={Package}
+          label="Total Products"
+          value={String(stats.totalProducts)}
+          subText={`${stats.availableProducts} available`}
+          colorScheme="blue"
+        />
+        <StatCard
+          delay={0.2}
+          icon={ShoppingBag}
+          label="Total Orders"
+          value={String(stats.totalOrders)}
+          subText={`${stats.pendingOrders} pending`}
+          colorScheme="indigo"
+        />
+        <StatCard
+          delay={0.3}
+          icon={TrendingUp}
+          label="Total Revenue"
+          value={`₹${stats.totalRevenue.toLocaleString()}`}
+          subText="All time"
+          colorScheme="emerald"
+        />
+        <StatCard
+          delay={0.4}
+          icon={Eye}
+          label="Storefront Views"
+          value="-"
+          subText="Coming soon"
+          colorScheme="purple"
+        />
       </div>
 
+      {/* Pickup QR (left) | Tables & layout view (right) */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* QR Code Section - Enhanced */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: -24 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 24 }}
+          whileHover={{ scale: 1.01 }}
+          className="transition-transform duration-200"
         >
-          <Card className="overflow-hidden border-0 shadow-xl">
-            <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <QrCode className="h-6 w-6 text-primary" />
-                    Your QR Code
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Share your storefront with customers
-                  </CardDescription>
-                </div>
-              </div>
+          <Card className="overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl dark:border dark:border-white/10 dark:bg-card">
+            <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 dark:border-white/5">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <QrCode className="h-5 w-5 text-primary" />
+                Pickup QR Code
+              </CardTitle>
+              <CardDescription>
+                For walk-in pickup. Place at counter — can be regenerated if needed
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
-              <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/20 bg-gradient-to-br from-muted/50 to-muted p-8">
+              {/* Big QR on top */}
+              <div className="flex justify-center rounded-2xl border-2 border-dashed border-primary/20 bg-muted/30 p-6 dark:border-primary/30 dark:bg-muted/20">
                 {qrCodeUrl ? (
                   <motion.img
                     initial={{ scale: 0.9 }}
                     animate={{ scale: 1 }}
                     src={qrCodeUrl}
-                    alt="Storefront QR Code"
-                    className="h-72 w-72 rounded-xl bg-white p-4 shadow-2xl"
+                    alt="Pickup QR Code"
+                    className="h-56 w-56 rounded-xl bg-white p-3 shadow-lg dark:bg-white"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <QrCode className="h-32 w-32 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      QR Code will appear here
-                    </p>
+                  <div className="flex flex-col items-center gap-3">
+                    <QrCode className="h-24 w-24 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">QR Code will appear here</p>
                   </div>
                 )}
               </div>
-
+              {/* Options and link below */}
               <div className="space-y-3">
-                <Label className="text-base font-semibold">
-                  Storefront Link
-                </Label>
-                <div className="rounded-lg border bg-muted/50 p-3">
-                  <p className="mb-1.5 text-xs text-muted-foreground">
-                    QR Code Points To:
-                  </p>
-                  <p className="break-all font-mono text-sm text-foreground">
+                <p className="text-xs font-medium text-muted-foreground">Storefront link</p>
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2 dark:bg-muted/30 dark:border-white/10">
+                  <p className="min-w-0 flex-1 truncate font-mono text-sm" title={storefrontUrl}>
                     {storefrontUrl}
                   </p>
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={storefrontUrl}
-                    readOnly
-                    className="h-9 bg-muted/50 font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyStorefrontLink}
-                    className="shrink-0"
-                  >
+                  <Button variant="outline" size="icon" onClick={handleCopyStorefrontLink}>
                     <Copy className="h-4 w-4" />
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0"
-                      >
+                      <Button variant="outline" size="icon">
                         <Share2 className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={handleShare}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Share Link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleCopyStorefrontLink}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy Link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handlePreview}>
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Open Preview
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShare}>Share Link</DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleCopyStorefrontLink}>Copy Link</DropdownMenuItem>
+                      <DropdownMenuItem onClick={handlePreview}>Open Preview</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadQRCode}
-                  disabled={!qrCodeUrl}
-                  className="w-full"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handlePreview}
-                  className="w-full"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-              </div>
-
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={handleGenerateQRCode}
-                disabled={isUpdatingQRCode}
-              >
-                <RefreshCw
-                  className={`mr-2 h-4 w-4 ${
-                    isUpdatingQRCode ? "animate-spin" : ""
-                  }`}
-                />
-                {isUpdatingQRCode ? "Generating..." : "Regenerate QR Code"}
-              </Button>
-
-              {vendor && (
-                <div className="space-y-2 border-t pt-4">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Storefront Status
-                  </p>
-                  <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-900">
-                        Storefront is live
-                      </p>
-                      <p className="text-xs text-green-700">
-                        Customers can view your storefront
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={handleDownloadQRCode} disabled={!qrCodeUrl}>
+                    <Download className="mr-2 h-4 w-4" /> Download
+                  </Button>
+                  <Button variant="outline" onClick={handlePreview}>
+                    <ExternalLink className="mr-2 h-4 w-4" /> Preview
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleGenerateQRCode}
+                    disabled={isUpdatingQRCode}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isUpdatingQRCode ? "animate-spin" : ""}`} />
+                    {isUpdatingQRCode ? "Generating…" : "Regenerate Pickup QR"}
+                  </Button>
                 </div>
-              )}
+                {vendor && (
+                  <div className="flex items-center gap-2 text-sm text-green-700">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    Storefront is live
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Storefront Info (read-only) – edit in Settings */}
+        {/* Tables & layout – floor plan view (edit layout = drag only; add/remove tables in Settings) */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.6, type: "spring", stiffness: 300, damping: 24 }}
+          whileHover={{ scale: 1.01 }}
+          className="transition-transform duration-200"
         >
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <Store className="h-6 w-6 text-primary" />
-                    Storefront Info
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    What customers see on your storefront
-                  </CardDescription>
-                </div>
-                <Button asChild variant="outline" size="sm" className="shrink-0">
-                  <Link
-                    to={ROUTES.VENDOR_DASHBOARD_SETTINGS}
-                    className="flex items-center gap-2"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Edit in Settings
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5 p-6">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
-                  <Store className="h-4 w-4" />
-                  Business Name
-                </Label>
-                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
-                  {vendor?.business_name || "—"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-base font-semibold text-foreground">
-                  Description
-                </Label>
-                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground min-h-[4rem]">
-                  {vendor?.description || "—"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
-                  <MapPin className="h-4 w-4" />
-                  Address
-                </Label>
-                <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
-                  {vendor?.address || "—"}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
-                    <Phone className="h-4 w-4" />
-                    Phone
-                  </Label>
-                  <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
-                    {vendor?.mobile_number || "—"}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-base font-semibold text-foreground">
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </Label>
-                  <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
-                    {vendor?.email || "—"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {tablesLoading ? (
+            <Card className="border-0 shadow-xl">
+              <CardContent className="flex items-center justify-center py-24">
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </CardContent>
+            </Card>
+          ) : (
+            <TableQRCard
+              tables={tables}
+              tableConfig={tableConfig}
+              vendorId={vendorId}
+              onDownloadTable={handleDownloadTableQR}
+              onDownloadAll={handleDownloadAllTableQRs}
+              onSaveLayout={saveLayout}
+              isSavingLayout={isSavingLayout}
+              settingsUrl={`${ROUTES.VENDOR_DASHBOARD_SETTINGS}?tab=layout`}
+            />
+          )}
         </motion.div>
       </div>
 
       {/* Preview Section - Enhanced */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
+        transition={{ delay: 0.7, type: "spring", stiffness: 300, damping: 24 }}
       >
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5">
+        <Card className="overflow-hidden border-0 shadow-xl transition-shadow duration-300 hover:shadow-2xl dark:border dark:border-white/10 dark:bg-card">
+          <CardHeader className="border-b bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 dark:border-white/5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle className="flex items-center gap-2 text-2xl">
@@ -583,7 +545,7 @@ export default function StorefrontNew() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-full bg-muted/60 p-1">
+                <div className="inline-flex rounded-full bg-muted/60 p-1 dark:bg-muted/40">
                   <Button
                     type="button"
                     variant={previewMode === "mobile" ? "default" : "ghost"}
@@ -666,7 +628,7 @@ export default function StorefrontNew() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 

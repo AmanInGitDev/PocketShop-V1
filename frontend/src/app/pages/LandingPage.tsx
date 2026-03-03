@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Download, X, Lock } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { useBestOffer } from '@/hooks/useBestOffer';
 import { GOOGLE_MAPS_LIBRARIES } from '@/constants/maps';
 import { useLoadScript } from '@react-google-maps/api';
 import Logo from '@/features/common/components/Logo';
@@ -38,17 +39,8 @@ const LandingPage: React.FC = () => {
     company: false,
   });
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [promoBannerDismissed, setPromoBannerDismissed] = useState(() =>
-    typeof localStorage !== 'undefined' && localStorage.getItem('pocketshop_promo_dismissed') === 'true'
-  );
   const navigate = useNavigate();
-
-  const dismissPromoBanner = () => {
-    setPromoBannerDismissed(true);
-    try {
-      localStorage.setItem('pocketshop_promo_dismissed', 'true');
-    } catch (_) {}
-  };
+  const { bestOffer, isLoading: bestOfferLoading } = useBestOffer();
 
   const clearLocation = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -616,47 +608,55 @@ const LandingPage: React.FC = () => {
         </svg>
       </div>
 
-      {/* Promotional Banner Section */}
-      {!promoBannerDismissed && (
+      {/* Promotional Banner Section - Best offer from restaurants (highest discount) */}
+      {!bestOfferLoading && bestOffer && (
       <section className="relative z-10 bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-8 md:p-12 border-2 border-purple-100 shadow-xl">
-            <button
-              onClick={dismissPromoBanner}
-              className="absolute top-4 right-4 p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors"
-              aria-label="Close promotional banner"
-            >
-              <X className="h-5 w-5" />
-            </button>
             <div className="flex flex-col md:grid md:grid-cols-2 gap-8 items-center">
               {/* Left - Partner Logo/Brand */}
-                <div className="text-center md:text-left order-1 md:order-1">
+              <div className="text-center md:text-left order-1 md:order-1">
                 <div className="inline-block bg-white rounded-2xl p-3 shadow-md mb-3">
-                  {/* Partner Logo Placeholder - Replace with actual partner logo */}
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white text-lg md:text-xl font-bold">RB</span>
-                  </div>
+                  {bestOffer.vendorLogoUrl ? (
+                    <img
+                      src={bestOffer.vendorLogoUrl}
+                      alt={bestOffer.vendorName}
+                      className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-xl"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                      <span className="text-white text-lg md:text-xl font-bold">
+                        {bestOffer.vendorName.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-1">Restaurant Brand</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-1">{bestOffer.vendorName}</h3>
                 <p className="text-gray-600 text-xs md:text-sm">Partner Restaurant</p>
               </div>
 
               {/* Center - Offer (Hero) */}
               <div className="text-center order-2 md:order-2">
                 <h3 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-2 leading-tight">
-                  Flat <span className="text-pink-600">₹200</span> off
+                  {bestOffer.offer.type === 'flat' ? (
+                    <>Flat <span className="text-pink-600">₹{bestOffer.offer.value}</span> off</>
+                  ) : (
+                    <>{bestOffer.offer.value}% off{bestOffer.offer.max_discount ? <><span className="text-pink-600"> up to ₹{bestOffer.offer.max_discount}</span></> : null}</>
+                  )}
                 </h3>
                 <p className="text-sm md:text-base text-gray-600 mb-4">
-                  on purchase above ₹1,999
+                  on purchase above ₹{bestOffer.offer.min_order.toLocaleString('en-IN')}
                 </p>
-                <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg flex items-center gap-2 mx-auto">
+                <Link
+                  to={`/storefront/${bestOffer.vendorId}`}
+                  className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                >
                   Explore now
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </Link>
               </div>
-
             </div>
           </div>
         </div>

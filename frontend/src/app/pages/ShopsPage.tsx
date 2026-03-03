@@ -4,7 +4,7 @@
  * Displays vendors as cards; clicking navigates to their storefront.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { ROUTES } from '@/constants/routes';
@@ -88,14 +88,15 @@ export default function ShopsPage() {
   }, [category]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8">
+      {/* Header - safe area for notched devices */}
+      <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm pt-[env(safe-area-inset-top,0px)]">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center gap-2 px-3 py-2 -ml-3 rounded-lg text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800 active:scale-95 touch-target"
+              aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Back</span>
@@ -109,8 +110,8 @@ export default function ShopsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>
-        <p className="text-gray-600 mb-8">{subtitle}</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-1">{title}</h1>
+        <p className="text-gray-600 dark:text-slate-400 mb-8">{subtitle}</p>
 
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -119,10 +120,10 @@ export default function ShopsPage() {
             ))}
           </div>
         ) : vendors.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-            <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">No shops yet</h2>
-            <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800">
+            <Store className="w-16 h-16 text-gray-300 dark:text-slate-600 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">No shops yet</h2>
+            <p className="text-gray-600 dark:text-slate-400 mb-6 max-w-sm mx-auto">
               Be the first to add your business. Create your virtual storefront and start receiving orders.
             </p>
             <Link
@@ -136,11 +137,11 @@ export default function ShopsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {vendors.map((vendor) => (
-              <Link
-                key={vendor.id}
-                to={`/storefront/${vendor.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg hover:border-purple-200 transition-all"
-              >
+            <Link
+              key={vendor.id}
+              to={`/storefront/${vendor.id}`}
+              className="block bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-900/50 active:scale-[0.99] transition-all touch-target min-h-[88px]"
+            >
                 <div className="flex gap-4">
                   <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
                     {vendor.logo_url ? (
@@ -154,9 +155,9 @@ export default function ShopsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">{vendor.business_name}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-slate-100 truncate">{vendor.business_name}</h3>
                     {vendor.business_type && (
-                      <p className="text-sm text-gray-500 capitalize">{vendor.business_type.replace(/-/g, ' ')}</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 capitalize">{vendor.business_type.replace(/-/g, ' ')}</p>
                     )}
                     {vendor.address && (
                       <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 truncate">

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { ShoppingCart, Store, MapPin, Search, X, Plus, Minus, User, LogOut, LogIn } from "lucide-react";
+import { ShoppingCart, Store, MapPin, Search, X, Plus, Minus, User, LogOut, LogIn, Sun, Moon } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
@@ -28,6 +28,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { formatOfferText, formatOfferShort, findOfferByCode, type StructuredOffer } from "@/features/storefront/utils/offerUtils";
 import { getNextReopeningText } from "@/features/storefront/utils/hoursUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/contexts/ThemeContext";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 
 function MenuItemRow({
@@ -56,7 +57,7 @@ function MenuItemRow({
 
   return (
     <div
-      className={`flex items-start justify-between gap-3 border-b border-gray-100 pb-4 last:border-b-0 transition-all duration-300 ${
+      className={`flex items-start justify-between gap-3 border-b border-gray-100 dark:border-slate-700 pb-4 last:border-b-0 transition-all duration-300 ${
         isDisabled ? "opacity-60 pointer-events-none select-none grayscale-[0.5]" : ""
       }`}
     >
@@ -75,9 +76,9 @@ function MenuItemRow({
               />
             </span>
           )}
-          <p className="font-medium text-sm truncate">{product.name}</p>
+          <p className="font-medium text-sm truncate text-foreground">{product.name}</p>
         </div>
-        <p className="text-sm font-semibold">₹{product.price}</p>
+        <p className="text-sm font-semibold text-foreground">₹{product.price}</p>
         {product.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
         )}
@@ -90,7 +91,7 @@ function MenuItemRow({
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
         {product.image_url && (
-          <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted">
+          <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted dark:bg-slate-800">
             <LazyImage
               src={product.image_url}
               alt={product.name}
@@ -108,14 +109,14 @@ function MenuItemRow({
         {!product.image_url && (isDisabled || isOutOfStock) ? (
           <Button
             variant="outline"
-            className="rounded-full px-5 h-8 text-xs border-slate-300 bg-slate-50 text-slate-500"
+            className="rounded-full px-5 h-8 text-xs border-slate-300 bg-slate-50 text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
             disabled
           >
             {isDisabled ? "Closed" : "Out of Stock"}
           </Button>
         ) : null}
         {product.image_url && (isDisabled || isOutOfStock) ? (
-          <div className="rounded-full px-4 h-7 text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center">
+          <div className="rounded-full px-4 h-7 text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600 flex items-center justify-center">
             {isDisabled ? "Closed" : "Out of Stock"}
           </div>
         ) : null}
@@ -239,10 +240,10 @@ function OffersCarousel({
                 key={o.id}
                 className="pl-3 md:pl-5 basis-[90%] sm:basis-[75%] md:basis-[340px] lg:basis-[380px]"
               >
-                <div className="flex rounded-xl border border-gray-200 bg-white shadow-sm min-h-[88px] px-5 py-4 md:px-6 md:py-5">
+                <div className="flex rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 shadow-sm min-h-[88px] px-5 py-4 md:px-6 md:py-5">
                   <div className="flex items-center gap-4 w-full">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-                      <span className="text-base font-bold text-orange-600">%</span>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/40">
+                      <span className="text-base font-bold text-orange-600 dark:text-orange-400">%</span>
                     </div>
                     <div className="flex-1 min-w-0 py-0.5">
                       <p className="font-semibold text-foreground text-sm leading-tight">
@@ -268,6 +269,9 @@ function OffersCarousel({
 export default function PublicStorefront() {
   const { vendorId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tableSlug = searchParams.get("table");
+  const isPickup = searchParams.get("pickup") === "1";
   const {
     cart,
     addToCart,
@@ -284,6 +288,7 @@ export default function PublicStorefront() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [onlyVeg, setOnlyVeg] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // Check auth status
   useEffect(() => {
@@ -345,6 +350,25 @@ export default function PublicStorefront() {
   });
 
   const isStoreClosed = !!(vendor && !vendor.is_active);
+
+  // Resolve table slug to table_code for order (when customer scanned table QR)
+  const { data: tableRecord } = useQuery({
+    queryKey: ['vendor-table', vendorId, tableSlug],
+    queryFn: async () => {
+      if (!vendorId || !tableSlug) return null;
+      const { data, error } = await supabase
+        .from('vendor_tables')
+        .select('table_code')
+        .eq('vendor_id', vendorId)
+        .eq('table_slug', tableSlug)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!vendorId && !!tableSlug,
+  });
+
+  const tableCode = isPickup ? 'PICKUP' : (tableRecord?.table_code ?? null);
   const reopenText = useMemo(() => {
     if (!vendor) return null;
     const wd = vendor.working_days as string[] | undefined;
@@ -505,6 +529,7 @@ export default function PublicStorefront() {
             notes: customerData.notes || null,
             customerId: customerProfileId,
             discountAmount: discountAmount > 0 ? discountAmount : undefined,
+            tableCode: tableCode ?? undefined,
       }, {
         useEdgeFunction: true, // Try Edge Function first, fallback to direct DB
       });
@@ -576,7 +601,7 @@ export default function PublicStorefront() {
 
   if (vendorLoading || productsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-slate-950">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -585,7 +610,7 @@ export default function PublicStorefront() {
   // Invalid vendor ID - store doesn't exist
   if (!vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-slate-950">
         <div className="text-center">
           <Store className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Storefront not found</h2>
@@ -598,7 +623,7 @@ export default function PublicStorefront() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pb-24">
+    <div className="min-h-screen bg-[#f5f5f5] dark:bg-slate-950 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       {/* Header / Hero - LinkedIn-style banner: image if set, else solid color */}
       <header
         className="relative text-white pb-6 shadow-md overflow-hidden"
@@ -619,7 +644,7 @@ export default function PublicStorefront() {
         {vendor.banner_url && (
           <div className="absolute inset-0 bg-black/30" aria-hidden />
         )}
-        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-4">
+        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top,1rem))]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               {vendor.logo_url && (
@@ -637,6 +662,19 @@ export default function PublicStorefront() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Light mode" : "Dark mode"}
+                className="text-white/90 hover:bg-white/20 hover:text-white"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -694,6 +732,13 @@ export default function PublicStorefront() {
             </div>
           </div>
 
+          {(tableCode || isPickup) && (
+            <div className="mt-2">
+              <span className="inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
+                {tableCode === 'PICKUP' || isPickup ? 'Pickup order' : `Table ${tableCode}`}
+              </span>
+            </div>
+          )}
           {vendor.address && (
             <div className="mt-3 flex items-center gap-2 text-sm text-white/90">
               <MapPin className="h-4 w-4" />
@@ -706,15 +751,15 @@ export default function PublicStorefront() {
       {/* Closed store banner */}
       {isStoreClosed && (
         <div className="max-w-5xl mx-auto px-4 md:px-6 -mt-4 z-10">
-          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 flex items-center gap-4 shadow-md shadow-amber-200/20">
-            <div className="h-12 w-12 rounded-full bg-amber-100/80 flex items-center justify-center shrink-0 ring-2 ring-amber-200/50">
-              <Clock className="h-6 w-6 text-amber-700" />
+          <div className="rounded-2xl border border-amber-200/80 dark:border-amber-500/30 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/40 px-5 py-4 flex items-center gap-4 shadow-md shadow-amber-200/20 dark:shadow-none">
+            <div className="h-12 w-12 rounded-full bg-amber-100/80 dark:bg-amber-900/50 flex items-center justify-center shrink-0 ring-2 ring-amber-200/50 dark:ring-amber-500/30">
+              <Clock className="h-6 w-6 text-amber-700 dark:text-amber-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-amber-900 truncate">
+              <p className="font-semibold text-amber-900 dark:text-amber-200 truncate">
                 {vendor.business_name} is currently closed
               </p>
-              <p className="text-sm text-amber-800 mt-0.5 font-medium">
+              <p className="text-sm text-amber-800 dark:text-amber-300 mt-0.5 font-medium">
                 {reopenText ?? "Will reopen during working hours"}
               </p>
             </div>
@@ -751,7 +796,7 @@ export default function PublicStorefront() {
             )}
 
             {/* Search and Filters */}
-            <div className="mb-6 space-y-4 bg-white rounded-2xl shadow-sm px-4 py-5">
+            <div className="mb-6 space-y-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm dark:shadow-none dark:border dark:border-slate-800 px-4 py-5">
               <div className="relative max-w-xl">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -779,7 +824,7 @@ export default function PublicStorefront() {
                   type="button"
                   variant={onlyVeg ? "default" : "outline"}
                   className={`h-9 rounded-full px-4 text-sm font-medium flex items-center gap-2 ${
-                    onlyVeg ? "bg-green-600 text-white border-transparent" : "border-gray-300 text-gray-700"
+                    onlyVeg ? "bg-green-600 text-white border-transparent" : "border-gray-300 text-gray-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                   }`}
                   onClick={() => setOnlyVeg((v) => !v)}
                 >
@@ -816,14 +861,14 @@ export default function PublicStorefront() {
                 {/* Desktop: Sidebar + Menu (Swiggy-style) */}
                 <div className="hidden md:flex gap-6">
                   <aside className="w-56 shrink-0">
-                    <nav className="sticky top-4 space-y-0.5 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+                    <nav className="sticky top-4 space-y-0.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 shadow-sm">
                       <button
                         type="button"
                         onClick={() => setSelectedCategory("all")}
                         className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                           selectedCategory === "all"
                             ? "bg-orange-500 text-white"
-                            : "text-gray-700 hover:bg-gray-100"
+                            : "text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
                         }`}
                       >
                         All ({productsForSidebar.length})
@@ -836,7 +881,7 @@ export default function PublicStorefront() {
                           className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                             selectedCategory === category
                               ? "bg-orange-500 text-white"
-                              : "text-gray-700 hover:bg-gray-100"
+                              : "text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
                           }`}
                         >
                           {category} ({items.length})
@@ -846,13 +891,13 @@ export default function PublicStorefront() {
                   </aside>
                   <div className="flex-1 min-w-0">
                     <div
-                      className={`rounded-xl border bg-white p-6 shadow-sm transition-colors ${
+                      className={`rounded-xl border bg-white dark:bg-slate-900 p-6 shadow-sm transition-colors ${
                         isStoreClosed
-                          ? "border-slate-200 bg-slate-50/50"
-                          : "border-gray-200"
+                          ? "border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-900/70"
+                          : "border-gray-200 dark:border-slate-700"
                       }`}
                     >
-                      <h3 className="text-xl font-bold mb-4">
+                      <h3 className="text-xl font-bold mb-4 text-foreground">
                         {selectedCategory === "all" ? "All items" : selectedCategory}
                         {isStoreClosed && (
                           <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -888,11 +933,11 @@ export default function PublicStorefront() {
                     className="space-y-2"
                   >
                     {Object.entries(productGroups.groups).map(([category, items]) => (
-                      <AccordionItem key={category} value={category} className="border-none">
-                        <AccordionTrigger className="text-base font-semibold px-0">
+                      <AccordionItem key={category} value={category} className="border-b border-gray-100 dark:border-slate-700 last:border-0">
+                        <AccordionTrigger className="text-base font-semibold px-0 text-foreground hover:no-underline hover:text-foreground">
                           <div className="flex items-center justify-between w-full">
                             <span>{category}</span>
-                            <span className="text-xs text-muted-foreground">{items.length} items</span>
+                            <span className="text-xs text-muted-foreground dark:text-slate-400">{items.length} items</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="space-y-4 px-0">

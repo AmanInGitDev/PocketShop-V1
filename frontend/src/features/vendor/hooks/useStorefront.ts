@@ -17,8 +17,9 @@ export const useStorefront = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  /** Pickup QR - links to storefront with ?pickup=1 (walk-in / no table). Regeneratable. */
   const generateQRCode = async (vendorId: string): Promise<string> => {
-    const storefrontUrl = `${window.location.origin}/storefront/${vendorId}`;
+    const storefrontUrl = `${window.location.origin}/storefront/${vendorId}?pickup=1`;
     try {
       const qrCodeDataUrl = await QRCode.toDataURL(storefrontUrl, {
         width: 400,

@@ -139,6 +139,22 @@ body {
   min-height: 100vh;
 }
 
+/* PWA / mobile: safe area inset variables for notched devices */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0);
+  --safe-area-right: env(safe-area-inset-right, 0);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-left: env(safe-area-inset-left, 0);
+}
+
+/* Mobile-first: ensure tap targets are at least 44px (accessibility) */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

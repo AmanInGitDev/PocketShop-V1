@@ -29,9 +29,9 @@ export default function CustomerHome() {
   const cartCount = getTotalItems();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
+      {/* Header - safe area for notched devices */}
+      <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm pt-[env(safe-area-inset-top,0px)]">
         <div className="px-4 sm:px-6 py-4 sm:py-3 max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-4">
             <Link to={ROUTES.CUSTOMER_HOME} className="shrink-0">
@@ -39,7 +39,7 @@ export default function CustomerHome() {
             </Link>
             <Link
               to={user ? ROUTES.CUSTOMER_PROFILE : ROUTES.CUSTOMER_AUTH}
-              className="shrink-0 w-10 h-10 rounded-full border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              className="touch-target shrink-0 w-11 h-11 rounded-full border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700 active:scale-95 transition-all"
               aria-label={user ? 'Open profile' : 'Sign in'}
             >
               <User className="w-5 h-5 text-gray-700 dark:text-slate-200" aria-hidden="true" />
@@ -168,11 +168,12 @@ export default function CustomerHome() {
         </section>
       </main>
 
-      {/* Floating cart button - when items in cart */}
+      {/* Floating cart button - above bottom nav, safe area aware */}
       {cartCount > 0 && (
         <button
           onClick={() => navigate(ROUTES.SHOPS)}
-          className="fixed bottom-24 right-4 z-30 flex items-center gap-2 px-4 py-3 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600"
+          className="fixed z-30 flex items-center gap-2 px-5 py-3.5 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 active:scale-95 touch-target transition-transform"
+          style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))', right: 'max(1rem, env(safe-area-inset-right, 1rem))' }}
         >
           <ShoppingBag className="w-5 h-5" />
           <span className="font-semibold">{cartCount} items</span>

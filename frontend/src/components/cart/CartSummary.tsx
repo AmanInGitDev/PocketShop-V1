@@ -19,7 +19,7 @@ export function CartSummary({ onCheckout, discountAmount = 0, discountLabel }: C
   if (totalItems === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50 animate-in slide-in-from-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-card dark:bg-slate-900 border-t dark:border-slate-800 shadow-lg z-50 animate-in slide-in-from-bottom pb-[env(safe-area-inset-bottom)]">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export function CartSummary({ onCheckout, discountAmount = 0, discountLabel }: C
                   )}
                 </div>
               ) : (
-                <p className="text-2xl font-bold">₹{subtotal.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-foreground">₹{subtotal.toFixed(2)}</p>
               )}
             </div>
           </div>

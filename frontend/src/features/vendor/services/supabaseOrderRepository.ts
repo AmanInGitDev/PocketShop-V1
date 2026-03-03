@@ -31,12 +31,24 @@ const UI_TO_DB_STATUS: Record<OrderStatus, string> = {
   CANCELLED: 'cancelled',
 };
 
-// DB payment_status -> frontend PaymentStatus
+// DB payment_status (orders table: unpaid/paid/refunded) -> frontend PaymentStatus
 const DB_TO_UI_PAYMENT: Record<string, 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'> = {
   unpaid: 'PENDING',
   paid: 'PAID',
   refunded: 'REFUNDED',
 };
+
+// payments.payment_status (enum: pending/completed/failed) -> treat completed as PAID
+function resolvePaymentStatus(
+  orderPaymentStatus: string | undefined,
+  payments: { payment_status?: string }[] | { payment_status?: string } | null | undefined
+): 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | undefined {
+  const payList = Array.isArray(payments) ? payments : payments ? [payments] : [];
+  const hasCompleted = payList.some((p) => (p?.payment_status ?? '').toLowerCase() === 'completed');
+  if (hasCompleted) return 'PAID';
+  if (orderPaymentStatus) return DB_TO_UI_PAYMENT[orderPaymentStatus];
+  return undefined;
+}
 
 function mapDbOrderToOrder(row: any): Order {
   const items = Array.isArray(row.items) ? row.items : [];
@@ -54,7 +66,7 @@ function mapDbOrderToOrder(row: any): Order {
     vendorId: row.vendor_id,
     total,
     status: DB_TO_UI_STATUS[row.status] ?? 'NEW',
-    paymentStatus: row.payment_status ? DB_TO_UI_PAYMENT[row.payment_status] : undefined,
+    paymentStatus: resolvePaymentStatus(row.payment_status, row.payments),
     createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
     version: 1,
@@ -81,7 +93,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
   async fetchOrders(vendorId: string): Promise<Order[]> {
     const { data, error } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, payments(payment_status)')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: false });
 
