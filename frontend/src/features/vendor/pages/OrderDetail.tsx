@@ -87,7 +87,7 @@ function RecordPaymentFallback({
   );
 }
 
-export default function OrderDetailNew() {
+export default function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

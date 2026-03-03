@@ -250,7 +250,7 @@ function HeatmapMatrix({
   );
 }
 
-export default function AnalyticsNew() {
+export default function Analytics() {
   const [days, setDays] = useState(30);
   const [activeChart, setActiveChart] = useState<ChartKey | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {

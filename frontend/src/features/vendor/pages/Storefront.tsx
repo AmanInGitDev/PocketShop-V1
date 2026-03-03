@@ -152,7 +152,7 @@ function StatCard({
   );
 }
 
-export default function StorefrontNew() {
+export default function Storefront() {
   const { data: vendor, isLoading: vendorLoading } = useVendor();
   const { data: products } = useProducts();
   const { data: orders } = useOrders();

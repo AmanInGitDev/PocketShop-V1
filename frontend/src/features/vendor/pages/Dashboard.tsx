@@ -114,7 +114,7 @@ const getGreeting = () => {
 const formatCurrency = (value: number) =>
   `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-export default function DashboardNew() {
+export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 

@@ -83,18 +83,13 @@ out
 *.tmp
 *.temp
 
-# Documentation - only root README.md; keep key docs for setup/troubleshooting
+# Documentation - only root README.md tracked
 *.md
 !README.md
-!docs/README.md
-!docs/PROJECT_INVENTORY.md
-!docs/DEPLOYMENT.md
-!docs/setup/*.md
-!docs/troubleshooting/*.md
-!docs/troubleshooting/**/*.md
-!docs/guides/*.md
-!docs/database/*.md
-!docs/database/reference/*.md
+
+# Database operational/fix scripts (report SQL in docs/reports/sql/ kept)
+docs/database/*.sql
+docs/database/**/*.sql
 
 # Archived reference repository
 .archive/dawn-of-app-craft/

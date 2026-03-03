@@ -1,327 +1,1436 @@
 /**
- * Settings Page Component
- * 
- * Vendor account and store settings management.
+ * Settings Page - Vendor configuration
+ *
+ * Manages business info, profile, operations, notifications, and payment settings.
+ * Data is stored in vendor_profiles and metadata (JSONB).
  */
 
-import React, { useState } from 'react';
-import { 
-  Store, 
-  User, 
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { useVendor } from '@/features/vendor/hooks/useVendor';
+import { updateVendorProfile } from '@/features/vendor/services/vendorService';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseClient';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Building2,
+  User,
   Bell,
-  Shield,
+  Clock,
   CreditCard,
+  Loader2,
   Save,
-  Camera
+  ImageIcon,
+  Tag,
+  Plus,
+  Trash2,
+  LayoutGrid,
 } from 'lucide-react';
+import { TableConfigStrip } from '@/features/vendor/components/TableConfigStrip';
+import { TableQRCard } from '@/features/vendor/components/TableQRCard';
+import { useVendorTables } from '@/features/vendor/hooks/useVendorTables';
+import QRCode from 'qrcode';
+import { formatOfferText } from '@/features/storefront/utils/offerUtils';
 
-const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+const BUSINESS_TYPES = [
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'cafe', label: 'Café' },
+  { value: 'food', label: 'Food' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'salon', label: 'Salon' },
+  { value: 'clinic', label: 'Clinic' },
+  { value: 'other', label: 'Other' },
+];
 
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'store', label: 'Store', icon: Store },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'payment', label: 'Payment', icon: CreditCard },
-  ];
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                V
-              </div>
-              <div>
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Camera className="w-4 h-4" />
-                  <span>Change Photo</span>
-                </button>
-              </div>
-            </div>
+const DEFAULT_NOTIFICATION_PREFS = {
+  email_notifications: true,
+  order_notifications: true,
+  low_stock_alerts: true,
+  payout_notifications: true,
+} satisfies Record<string, boolean>;
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  defaultValue="Vendor Name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  defaultValue="vendor@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                <input
-                  type="tel"
-                  defaultValue="+1 (555) 123-4567"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                <input
-                  type="text"
-                  defaultValue="Vendor"
-                  disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
-                />
-              </div>
-            </div>
+type NotificationPrefs = {
+  email_notifications?: boolean;
+  order_notifications?: boolean;
+  low_stock_alerts?: boolean;
+  payout_notifications?: boolean;
+};
 
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
-            </button>
-          </div>
-        );
+type BankAccount = {
+  account_number?: string;
+  ifsc?: string;
+  account_type?: 'savings' | 'current';
+};
 
-      case 'store':
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-              <input
-                type="text"
-                defaultValue="My Awesome Store"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+type BusinessFormState = {
+  business_name: string;
+  business_type: string;
+  description: string;
+  address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+};
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea
-                rows={4}
-                defaultValue="A wonderful store serving quality products to our community."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+type ProfileFormState = {
+  owner_name: string;
+  email: string;
+  mobile_number: string;
+  logo_url: string;
+  banner_url: string;
+  banner_color: string;
+};
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <input
-                  type="text"
-                  defaultValue="123 Main St"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                <input
-                  type="text"
-                  defaultValue="New York"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                <input
-                  type="text"
-                  defaultValue="NY"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                <input
-                  type="text"
-                  defaultValue="10001"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
+const BANNER_COLOR_PRESETS = [
+  { value: '#f97316', label: 'Orange' },
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#22c55e', label: 'Green' },
+  { value: '#8b5cf6', label: 'Purple' },
+  { value: '#14b8a6', label: 'Teal' },
+  { value: '#ec4899', label: 'Pink' },
+  { value: '#eab308', label: 'Amber' },
+  { value: '#ef4444', label: 'Red' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#64748b', label: 'Slate' },
+];
 
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Save className="w-4 h-4" />
-              <span>Save Changes</span>
-            </button>
-          </div>
-        );
+type OperationalHoursState = { open: string; close: string };
 
-      case 'notifications':
-        return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Email Notifications</p>
-                  <p className="text-sm text-gray-600">Receive updates via email</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+type FssaiState = {
+  license_number: string;
+  expiry_date: string; // YYYY-MM-DD
+  document_url: string;
+  status: 'unverified' | 'verifying' | 'verified';
+};
 
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Order Notifications</p>
-                  <p className="text-sm text-gray-600">Get notified when new orders arrive</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+type Offer = {
+  id: string;
+  type: 'percentage' | 'flat';
+  value: number;
+  max_discount?: number;
+  min_order: number;
+  promo_code: string;
+};
 
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Low Stock Alerts</p>
-                  <p className="text-sm text-gray-600">Warn me when inventory is low</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+export default function Settings() {
+  const { user } = useAuth();
+  const { data: vendor, isLoading: vendorLoading } = useVendor();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const {
+    tables,
+    tableConfig,
+    vendorId,
+    isLoading: tablesLoading,
+    saveTableConfig,
+    isSaving,
+    saveLayout,
+    isSavingLayout,
+  } = useVendorTables();
 
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Payout Notifications</p>
-                  <p className="text-sm text-gray-600">Notify me when payouts are processed</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-        );
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const defaultTab = ['business', 'profile', 'layout', 'offers', 'operations', 'notifications', 'payment'].includes(tabParam || '')
+    ? tabParam!
+    : 'business';
 
-      case 'security':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Change Password</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  Update Password
-                </button>
-              </div>
-            </div>
+  const [businessForm, setBusinessForm] = useState<BusinessFormState>({
+    business_name: '',
+    business_type: '',
+    description: '',
+    address: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'IN',
+  });
+  const [profileForm, setProfileForm] = useState<ProfileFormState>({
+    owner_name: '',
+    email: '',
+    mobile_number: '',
+    logo_url: '',
+    banner_url: '',
+    banner_color: '#f97316',
+  });
+  const [workingDays, setWorkingDays] = useState<string[]>([]);
+  const [operationalHours, setOperationalHours] = useState<OperationalHoursState>({ open: '09:00', close: '22:00' });
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({ ...DEFAULT_NOTIFICATION_PREFS });
+  const [paymentForm, setPaymentForm] = useState<BankAccount>({ account_number: '', ifsc: '' });
+  const [confirmAccount, setConfirmAccount] = useState('');
+  const [showBankForm, setShowBankForm] = useState(true);
+  const [fssaiForm, setFssaiForm] = useState<FssaiState>({
+    license_number: '',
+    expiry_date: '',
+    document_url: '',
+    status: 'unverified',
+  });
+  const [restaurantImages, setRestaurantImages] = useState<string[]>([]);
+  const [foodImages, setFoodImages] = useState<string[]>([]);
+  const [isUploadingRestaurant, setIsUploadingRestaurant] = useState(false);
+  const [isUploadingFood, setIsUploadingFood] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>([]);
 
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Two-Factor Authentication</h3>
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Enable 2FA</p>
-                  <p className="text-sm text-gray-600">Add an extra layer of security</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-        );
+  const [baseline, setBaseline] = useState<{
+    businessForm: BusinessFormState;
+    profileForm: ProfileFormState;
+    workingDays: string[];
+    operationalHours: OperationalHoursState;
+    notificationPrefs: NotificationPrefs;
+    paymentForm: BankAccount;
+    fssaiForm: FssaiState;
+    restaurantImages: string[];
+    foodImages: string[];
+    offers: Offer[];
+  } | null>(null);
 
-      case 'payment':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Bank Account</h3>
-              <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                <p className="text-sm text-gray-600 mb-1">Account Number</p>
-                <p className="text-lg font-semibold text-gray-900">•••• •••• •••• 1234</p>
-              </div>
-            </div>
+  useEffect(() => {
+    if (vendor) {
+      const meta = vendor.metadata as Record<string, unknown> | null;
+      const nextBusinessForm = {
+        business_name: vendor.business_name ?? '',
+        business_type: vendor.business_type ?? '',
+        description: vendor.description ?? '',
+        address: vendor.address ?? '',
+        city: vendor.city ?? '',
+        state: vendor.state ?? '',
+        postal_code: vendor.postal_code ?? '',
+        country: vendor.country ?? 'IN',
+      };
+      const nextProfileForm = {
+        owner_name: vendor.owner_name ?? '',
+        email: vendor.email ?? '',
+        mobile_number: vendor.mobile_number ?? '',
+        logo_url: vendor.logo_url ?? '',
+        banner_url: vendor.banner_url ?? '',
+        banner_color: (meta?.banner_color as string) || '#f97316',
+      };
+      const nextWorkingDays = ((vendor.working_days as string[]) ?? []).slice();
+      const hours = vendor.operational_hours as Record<string, { open?: string; close?: string }> | null;
+      const first = hours ? Object.values(hours).find((h) => h?.open || h?.close) : undefined;
+      const nextOperationalHours = {
+        open: first?.open ?? '09:00',
+        close: first?.close ?? '22:00',
+      };
+      const nextNotificationPrefs: NotificationPrefs = {
+        ...DEFAULT_NOTIFICATION_PREFS,
+        ...((meta?.notification_preferences as NotificationPrefs) ?? {}),
+      };
+      const nextPaymentForm: BankAccount = {
+        account_number: '',
+        ifsc: '',
+        account_type: 'savings',
+        ...((meta?.bank_account as BankAccount) ?? {}),
+      };
+      const nextFssaiForm: FssaiState = {
+        license_number: '',
+        expiry_date: '',
+        document_url: '',
+        status: 'unverified',
+        ...((meta?.fssai as Partial<FssaiState>) ?? {}),
+      };
+      const nextRestaurantImages = ((meta?.restaurant_images as string[]) ?? []).slice();
+      const nextFoodImages = ((meta?.food_images as string[]) ?? []).slice();
+      const rawOffers = (meta?.offers as Offer[]) ?? [];
+      const nextOffers = Array.isArray(rawOffers)
+        ? rawOffers
+            .filter((o) => o && typeof o === 'object' && ('type' in o || 'value' in o))
+            .map((o) => ({
+              id: (o as Offer)?.id ?? crypto.randomUUID(),
+              type: (o as Offer).type === 'flat' ? 'flat' : 'percentage',
+              value: Number((o as Offer).value) || 0,
+              max_discount: (o as Offer).max_discount != null ? Number((o as Offer).max_discount) : undefined,
+              min_order: Number((o as Offer).min_order) || 0,
+              promo_code: String((o as Offer).promo_code ?? '').trim() || '',
+            }))
+        : [];
 
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Payout Schedule</h3>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>Weekly</option>
-                <option>Bi-weekly</option>
-                <option>Monthly</option>
-              </select>
-            </div>
+      setBusinessForm(nextBusinessForm);
+      setProfileForm(nextProfileForm);
+      setWorkingDays(nextWorkingDays);
+      setOperationalHours(nextOperationalHours);
+      setNotificationPrefs(nextNotificationPrefs);
+      setPaymentForm(nextPaymentForm);
+      setConfirmAccount('');
+      setFssaiForm(nextFssaiForm);
+      setShowBankForm(!nextPaymentForm.account_number); // if already saved, show summary by default
+      setRestaurantImages(nextRestaurantImages);
+      setFoodImages(nextFoodImages);
+      setOffers(nextOffers);
 
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Update Payment Settings
-            </button>
-          </div>
-        );
+      setBaseline({
+        businessForm: nextBusinessForm,
+        profileForm: nextProfileForm,
+        workingDays: nextWorkingDays,
+        operationalHours: nextOperationalHours,
+        notificationPrefs: nextNotificationPrefs,
+        paymentForm: nextPaymentForm,
+        fssaiForm: nextFssaiForm,
+        restaurantImages: nextRestaurantImages,
+        foodImages: nextFoodImages,
+        offers: nextOffers,
+      });
+    }
+  }, [vendor]);
 
-      default:
-        return null;
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, unknown>) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const { data, error } = await updateVendorProfile(user.id, {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor'] });
+      toast({ title: 'Settings saved', description: 'Your changes have been saved.' });
+    },
+    onError: (err: Error) => {
+      toast({ variant: 'destructive', title: 'Error', description: err.message });
+    },
+  });
+
+  const toggleWorkingDay = (day: string) => {
+    setWorkingDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  };
+
+  const normalizeDays = (days: string[]) => days.slice().sort((a, b) => a.localeCompare(b));
+  const sameDays = (a: string[], b: string[]) => normalizeDays(a).join('|') === normalizeDays(b).join('|');
+  const sameString = (a?: string, b?: string) => (a ?? '') === (b ?? '');
+  const sameNotif = (a: NotificationPrefs, b: NotificationPrefs) => {
+    const keys = Object.keys(DEFAULT_NOTIFICATION_PREFS) as (keyof NotificationPrefs)[];
+    return keys.every((k) => !!a[k] === !!b[k]);
+  };
+
+  const businessDirty = !!baseline && (
+    !sameString(businessForm.business_name, baseline.businessForm.business_name) ||
+    !sameString(businessForm.business_type, baseline.businessForm.business_type) ||
+    !sameString(businessForm.description, baseline.businessForm.description) ||
+    !sameString(businessForm.address, baseline.businessForm.address) ||
+    !sameString(businessForm.city, baseline.businessForm.city) ||
+    !sameString(businessForm.state, baseline.businessForm.state) ||
+    !sameString(businessForm.postal_code, baseline.businessForm.postal_code) ||
+    !sameString(businessForm.country, baseline.businessForm.country)
+  );
+
+  const profileDirty = !!baseline && (
+    !sameString(profileForm.owner_name, baseline.profileForm.owner_name) ||
+    !sameString(profileForm.email, baseline.profileForm.email) ||
+    !sameString(profileForm.mobile_number, baseline.profileForm.mobile_number) ||
+    !sameString(profileForm.logo_url, baseline.profileForm.logo_url) ||
+    !sameString(profileForm.banner_url, baseline.profileForm.banner_url) ||
+    !sameString(profileForm.banner_color, baseline.profileForm.banner_color)
+  );
+
+  const operationsDirty = !!baseline && (
+    !sameDays(workingDays, baseline.workingDays) ||
+    !sameString(operationalHours.open, baseline.operationalHours.open) ||
+    !sameString(operationalHours.close, baseline.operationalHours.close)
+  );
+
+  const notificationsDirty = !!baseline && !sameNotif(notificationPrefs, baseline.notificationPrefs);
+
+  const paymentDirty = !!baseline && (
+    !sameString(paymentForm.account_number, baseline.paymentForm.account_number) ||
+    !sameString(paymentForm.ifsc, baseline.paymentForm.ifsc) ||
+    (paymentForm.account_type ?? 'savings') !== (baseline.paymentForm.account_type ?? 'savings')
+  );
+
+  const sameOffers = (a: Offer[], b: Offer[]) => {
+    if (a.length !== b.length) return false;
+    return a.every((oa, i) => {
+      const ob = b[i];
+      return (
+        oa.id === ob?.id &&
+        oa.type === ob?.type &&
+        oa.value === ob?.value &&
+        oa.max_discount === ob?.max_discount &&
+        oa.min_order === ob?.min_order &&
+        oa.promo_code === ob?.promo_code
+      );
+    });
+  };
+  const offersDirty = !!baseline && !sameOffers(offers, baseline.offers);
+
+  const sameFssai = (a: FssaiState, b: FssaiState) =>
+    sameString(a.license_number, b.license_number) &&
+    sameString(a.expiry_date, b.expiry_date) &&
+    sameString(a.document_url, b.document_url) &&
+    a.status === b.status;
+
+  const fssaiDirty = !!baseline && !sameFssai(fssaiForm, baseline.fssaiForm);
+
+  const uploadVendorImage = async (file: File, folder: 'restaurant' | 'food') => {
+    if (!vendor?.id) throw new Error('No vendor ID');
+
+    const ext = file.name.split('.').pop() || 'jpg';
+    const fileName = `${vendor.id}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, file);
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleRestaurantImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setIsUploadingRestaurant(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const url = await uploadVendorImage(file, 'restaurant');
+        uploaded.push(url);
+      }
+      const next = [...restaurantImages, ...uploaded];
+      setRestaurantImages(next);
+
+      const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+      const currentFood = (meta.food_images as string[]) ?? foodImages;
+      updateMutation.mutate({
+        metadata: {
+          ...meta,
+          restaurant_images: next,
+          food_images: currentFood,
+        },
+      });
+      setBaseline((prev) => (prev ? { ...prev, restaurantImages: next } : prev));
+    } catch (err: any) {
+      console.error('Error uploading restaurant images', err);
+      toast({
+        title: 'Error',
+        description: err?.message || 'Failed to upload restaurant images',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingRestaurant(false);
+      e.target.value = '';
     }
   };
 
+  const handleFoodImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setIsUploadingFood(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const url = await uploadVendorImage(file, 'food');
+        uploaded.push(url);
+      }
+      const next = [...foodImages, ...uploaded];
+      setFoodImages(next);
+
+      const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+      const currentRestaurant = (meta.restaurant_images as string[]) ?? restaurantImages;
+      updateMutation.mutate({
+        metadata: {
+          ...meta,
+          restaurant_images: currentRestaurant,
+          food_images: next,
+        },
+      });
+      setBaseline((prev) => (prev ? { ...prev, foodImages: next } : prev));
+    } catch (err: any) {
+      console.error('Error uploading food images', err);
+      toast({
+        title: 'Error',
+        description: err?.message || 'Failed to upload food images',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingFood(false);
+      e.target.value = '';
+    }
+  };
+
+  const saveBusiness = () => {
+    updateMutation.mutate({
+      business_name: businessForm.business_name,
+      business_type: businessForm.business_type || null,
+      description: businessForm.description || null,
+      address: businessForm.address || null,
+      city: businessForm.city || null,
+      state: businessForm.state || null,
+      postal_code: businessForm.postal_code || null,
+      country: businessForm.country,
+    });
+    setBaseline((prev) => (prev ? { ...prev, businessForm: { ...businessForm } } : prev));
+  };
+
+  const saveProfile = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      owner_name: profileForm.owner_name || null,
+      email: profileForm.email,
+      mobile_number: profileForm.mobile_number,
+      logo_url: profileForm.logo_url || null,
+      banner_url: profileForm.banner_url || null,
+      metadata: { ...meta, banner_color: profileForm.banner_color },
+    });
+    setBaseline((prev) => (prev ? { ...prev, profileForm: { ...profileForm } } : prev));
+  };
+
+  const saveOperationalHours = () => {
+    const hours: Record<string, { open: string; close: string }> = {};
+    workingDays.forEach((d) => {
+      hours[d.toLowerCase()] = operationalHours;
+    });
+    updateMutation.mutate({
+      working_days: workingDays,
+      operational_hours: Object.keys(hours).length ? hours : null,
+    });
+    setBaseline((prev) =>
+      prev
+        ? { ...prev, workingDays: workingDays.slice(), operationalHours: { ...operationalHours } }
+        : prev,
+    );
+  };
+
+  const toggleNotification = (key: keyof NotificationPrefs, value: boolean) => {
+    setNotificationPrefs((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const saveNotifications = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      metadata: { ...meta, notification_preferences: notificationPrefs },
+    });
+    setBaseline((prev) => (prev ? { ...prev, notificationPrefs: { ...notificationPrefs } } : prev));
+  };
+
+  const savePayment = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      metadata: {
+        ...meta,
+        bank_account: {
+          account_number: paymentForm.account_number || undefined,
+          ifsc: paymentForm.ifsc || undefined,
+          account_type: paymentForm.account_type || undefined,
+        },
+      },
+    });
+    setBaseline((prev) => (prev ? { ...prev, paymentForm: { ...paymentForm } } : prev));
+    setConfirmAccount('');
+    setShowBankForm(false);
+  };
+
+  const saveOffers = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      metadata: {
+        ...meta,
+        offers: offers.filter((o) => o.value > 0 && o.min_order >= 0 && (o.promo_code || '').trim()),
+      },
+    });
+    setBaseline((prev) => (prev ? { ...prev, offers: [...offers] } : prev));
+  };
+
+  const addOffer = () => {
+    setOffers((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), type: 'percentage' as const, value: 20, max_discount: 50, min_order: 100, promo_code: '' },
+    ]);
+  };
+
+  const removeOffer = (id: string) => {
+    setOffers((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const updateOffer = (id: string, field: keyof Offer, value: string | number) => {
+    setOffers((prev) =>
+      prev.map((o) => {
+        if (o.id !== id) return o;
+        if (field === 'type') return { ...o, type: value as 'percentage' | 'flat' };
+        if (field === 'value') return { ...o, value: Number(value) || 0 };
+        if (field === 'min_order') return { ...o, min_order: Number(value) || 0 };
+        if (field === 'max_discount') {
+          const v = value === '' || value == null ? undefined : Number(value);
+          return { ...o, max_discount: v };
+        }
+        if (field === 'promo_code') return { ...o, promo_code: String(value ?? '').trim().toUpperCase() };
+        return o;
+      })
+    );
+  };
+
+  const handleDownloadTableQR = async (tableSlug: string, tableCode: string) => {
+    const url = `${window.location.origin}/storefront/${vendorId}?table=${tableSlug}`;
+    try {
+      const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2 });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `table-${tableCode}.png`;
+      a.click();
+    } catch (e) {
+      console.error('Failed to generate QR', e);
+    }
+  };
+
+  const handleDownloadAllTableQRs = async () => {
+    if (!vendorId) return;
+    for (const t of tables) {
+      await handleDownloadTableQR(t.table_slug, t.table_code);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  };
+
+  const saveFssai = () => {
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    updateMutation.mutate({
+      metadata: {
+        ...meta,
+        fssai: {
+          license_number: fssaiForm.license_number || undefined,
+          expiry_date: fssaiForm.expiry_date || undefined,
+          document_url: fssaiForm.document_url || undefined,
+          status: fssaiForm.status || 'unverified',
+        },
+      },
+    });
+    setBaseline((prev) => (prev ? { ...prev, fssaiForm: { ...fssaiForm } } : prev));
+  };
+
+  if (vendorLoading || !vendor) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const textLabel = 'text-sm font-medium text-foreground';
+  const textHint = 'text-sm text-slate-400 dark:text-slate-400';
+  const isFoodBusiness = ['restaurant', 'food', 'cafe'].includes((businessForm.business_type || '').toLowerCase());
+  const savedAccountLast4 = (baseline?.paymentForm.account_number || '').slice(-4);
+  const hasSavedBank = !!baseline?.paymentForm.account_number && !!baseline?.paymentForm.ifsc;
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">
-          Manage your account and store preferences
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Settings</h2>
+        <p className={textHint}>
+          Manage your account, business, and preferences
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200">
-          <div className="flex gap-0 overflow-x-auto">
-            {tabs.map((tab) => {
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 gap-2 h-auto p-1 bg-muted/50">
+          <TabsTrigger value="business" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Business
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="layout" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Layout
+          </TabsTrigger>
+          <TabsTrigger value="offers" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Offers
+          </TabsTrigger>
+          <TabsTrigger value="operations" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Operations
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Payment
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="business" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Business Information</CardTitle>
+              <CardDescription className={textHint}>
+                Your store details shown to customers on your storefront
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className={textLabel}>Business name</Label>
+                <Input
+                  value={businessForm.business_name}
+                  onChange={(e) => setBusinessForm((p) => ({ ...p, business_name: e.target.value }))}
+                  placeholder="e.g. My Restaurant"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={textLabel}>Business type</Label>
+                <Select
+                  value={businessForm.business_type}
+                  onValueChange={(v) => setBusinessForm((p) => ({ ...p, business_type: v }))}
                 >
-                  <TabIcon className="w-5 h-5" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUSINESS_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className={textLabel}>Description</Label>
+                <Textarea
+                  value={businessForm.description}
+                  onChange={(e) => setBusinessForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Brief description of your business"
+                  rows={3}
+                  className="text-foreground"
+                />
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Label className={textLabel}>Address</Label>
+                <Input
+                  value={businessForm.address}
+                  onChange={(e) => setBusinessForm((p) => ({ ...p, address: e.target.value }))}
+                  placeholder="Street address"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className={textLabel}>City</Label>
+                  <Input
+                    value={businessForm.city}
+                    onChange={(e) => setBusinessForm((p) => ({ ...p, city: e.target.value }))}
+                    placeholder="City"
+                    className="text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={textLabel}>State</Label>
+                  <Input
+                    value={businessForm.state}
+                    onChange={(e) => setBusinessForm((p) => ({ ...p, state: e.target.value }))}
+                    placeholder="State"
+                    className="text-foreground"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className={textLabel}>Postal code</Label>
+                  <Input
+                    value={businessForm.postal_code}
+                    onChange={(e) => setBusinessForm((p) => ({ ...p, postal_code: e.target.value }))}
+                    placeholder="Postal code"
+                    className="text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Country</Label>
+                  <Input
+                    value={businessForm.country}
+                    onChange={(e) => setBusinessForm((p) => ({ ...p, country: e.target.value }))}
+                    placeholder="Country code (e.g. IN)"
+                    className="text-foreground"
+                  />
+                </div>
+              </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {renderTabContent()}
-        </div>
-      </div>
+              {isFoodBusiness && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-base font-semibold text-foreground">Menu & operational photos</p>
+                      <p className={textHint}>
+                        Add images that will appear on your restaurant page. Keep it clean and simple for customers.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-foreground">Restaurant images</p>
+                      <p className="text-xs text-muted-foreground">
+                        Add entrance and interior photos. JPEG/PNG up to 5MB each.
+                      </p>
+                      <div className="space-y-3">
+                        <label className="flex flex-col items-center justify-center w-full min-h-[140px] rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors">
+                          <span className="text-sm font-medium text-primary mb-1">Add restaurant images</span>
+                          <span className="text-xs text-muted-foreground">Click to upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleRestaurantImagesChange}
+                          />
+                        </label>
+                        {isUploadingRestaurant && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Uploading images...
+                          </p>
+                        )}
+                        {restaurantImages.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {restaurantImages.map((url) => (
+                              <img
+                                key={url}
+                                src={url}
+                                alt="Restaurant"
+                                className="h-16 w-24 rounded-md object-cover border border-border"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-foreground">Food images (optional)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Showcase some of your best dishes. JPEG/PNG up to 5MB each.
+                      </p>
+                      <div className="space-y-3">
+                        <label className="flex flex-col items-center justify-center w-full min-h-[120px] rounded-lg border-2 border-dashed border-border bg-muted/40 cursor-pointer hover:bg-muted transition-colors">
+                          <span className="text-sm font-medium text-foreground mb-1">Add food images</span>
+                          <span className="text-xs text-muted-foreground">Click to upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleFoodImagesChange}
+                          />
+                        </label>
+                        {isUploadingFood && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Uploading images...
+                          </p>
+                        )}
+                        {foodImages.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {foodImages.map((url) => (
+                              <img
+                                key={url}
+                                src={url}
+                                alt="Food"
+                                className="h-16 w-24 rounded-md object-cover border border-border"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Button onClick={saveBusiness} disabled={updateMutation.isPending || !businessDirty}>
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save business info
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="profile" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Profile Settings</CardTitle>
+              <CardDescription className={textHint}>
+                Owner and contact information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className={textLabel}>Owner name</Label>
+                <Input
+                  value={profileForm.owner_name}
+                  onChange={(e) => setProfileForm((p) => ({ ...p, owner_name: e.target.value }))}
+                  placeholder="Your full name"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={textLabel}>Email</Label>
+                <Input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="business@example.com"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={textLabel}>Mobile number</Label>
+                <Input
+                  value={profileForm.mobile_number}
+                  onChange={(e) => setProfileForm((p) => ({ ...p, mobile_number: e.target.value }))}
+                  placeholder="+91 9876543210"
+                  className="text-foreground"
+                />
+              </div>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-medium text-foreground">Storefront header</h4>
+                </div>
+                <p className={textHint}>
+                  Wide image spanning the top of your storefront, or a solid color.
+                </p>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Header image</Label>
+                  <Input
+                    value={profileForm.banner_url}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, banner_url: e.target.value }))}
+                    placeholder="https://... (optional — wide banner image)"
+                    className="text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Header color</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {BANNER_COLOR_PRESETS.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setProfileForm((p) => ({ ...p, banner_color: value }))}
+                        className={`flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all hover:opacity-90 ${
+                          profileForm.banner_color === value
+                            ? 'ring-2 ring-offset-2 ring-offset-background ring-primary'
+                            : ''
+                        }`}
+                        title={label}
+                      >
+                        <span
+                          className="h-10 w-10 rounded-full border-2 border-white shadow-md"
+                          style={{ backgroundColor: value }}
+                        />
+                        <span className="text-xs font-medium text-foreground">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+              <div className="space-y-2">
+                <Label className={textLabel}>Logo</Label>
+                <p className={textHint}>
+                  Small circular icon shown next to your business name (e.g. brand mark). Separate from the header image.
+                </p>
+                <Input
+                  value={profileForm.logo_url}
+                  onChange={(e) => setProfileForm((p) => ({ ...p, logo_url: e.target.value }))}
+                  placeholder="https://... (optional)"
+                  className="text-foreground"
+                />
+              </div>
+
+              <Button onClick={saveProfile} disabled={updateMutation.isPending || !profileDirty}>
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save profile
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="layout" className="mt-6 space-y-6">
+          {/* Update configuration at top */}
+          {tablesLoading ? (
+            <div className="h-20 animate-pulse rounded-xl border bg-muted/30" />
+          ) : (
+            <TableConfigStrip
+              tableConfig={tableConfig}
+              saveTableConfig={saveTableConfig}
+              isSaving={isSaving}
+              tablesCount={tables.length}
+            />
+          )}
+          {/* Table QR codes & floor plan below */}
+          {tablesLoading ? (
+            <div className="h-64 animate-pulse rounded-xl border bg-muted/30" />
+          ) : (
+            <TableQRCard
+              tables={tables}
+              tableConfig={tableConfig}
+              vendorId={vendorId}
+              onDownloadTable={handleDownloadTableQR}
+              onDownloadAll={handleDownloadAllTableQRs}
+              onSaveLayout={saveLayout}
+              isSavingLayout={isSavingLayout}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="offers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Offers</CardTitle>
+              <CardDescription className={textHint}>
+                Discount offers shown on your storefront. Text and cards are auto-generated.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {offers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className="p-4 rounded-lg border border-border bg-muted/20 space-y-4"
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Type</Label>
+                        <Select
+                          value={offer.type}
+                          onValueChange={(v) => updateOffer(offer.id, 'type', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percentage">Percentage</SelectItem>
+                            <SelectItem value="flat">Flat amount</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">
+                          {offer.type === 'percentage' ? 'Discount %' : 'Discount ₹'}
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={offer.type === 'percentage' ? 100 : 9999}
+                          value={offer.value || ''}
+                          onChange={(e) => updateOffer(offer.id, 'value', e.target.value)}
+                          placeholder={offer.type === 'percentage' ? '20' : '50'}
+                        />
+                      </div>
+                      {offer.type === 'percentage' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Max discount ₹</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={offer.max_discount ?? ''}
+                            onChange={(e) => updateOffer(offer.id, 'max_discount', e.target.value)}
+                            placeholder="50"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Min order ₹</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={offer.min_order || ''}
+                          onChange={(e) => updateOffer(offer.id, 'min_order', e.target.value)}
+                          placeholder="100"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className="text-xs">Promo code (required)</Label>
+                        <Input
+                          placeholder="e.g. SAVE20"
+                          value={offer.promo_code || ''}
+                          onChange={(e) => updateOffer(offer.id, 'promo_code', e.target.value)}
+                          className="uppercase"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Customer must enter this code at checkout to apply the discount
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive shrink-0"
+                      onClick={() => removeOffer(offer.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {offer.value > 0 && offer.min_order >= 0 && (
+                    <div className="rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                      {formatOfferText(offer)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={addOffer} className="w-full gap-2">
+                <Plus className="h-4 w-4" />
+                Add offer
+              </Button>
+              <Button onClick={saveOffers} disabled={updateMutation.isPending || !offersDirty}>
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save offers
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="operations" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Operations</CardTitle>
+              <CardDescription className={textHint}>
+                Working days and hours (same hours apply to all selected days)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className={textLabel}>Mark open days</Label>
+                <p className={textHint}>Don&apos;t forget to uncheck your off-day.</p>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  {WEEKDAYS.map((day) => {
+                    const isActive = workingDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleWorkingDay(day)}
+                        className={`min-w-[96px] rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            : 'bg-background text-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-primary">
+                  Have separate day wise timings?{' '}
+                  <span className="underline underline-offset-2 pointer-events-none select-none">
+                    Add day wise slots (coming soon)
+                  </span>
+                </p>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className={textLabel}>Open time</Label>
+                  <Input
+                    type="time"
+                    value={operationalHours.open}
+                    onChange={(e) => setOperationalHours((p) => ({ ...p, open: e.target.value }))}
+                    className="text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className={textLabel}>Close time</Label>
+                  <Input
+                    type="time"
+                    value={operationalHours.close}
+                    onChange={(e) => setOperationalHours((p) => ({ ...p, close: e.target.value }))}
+                    className="text-foreground"
+                  />
+                </div>
+              </div>
+              <Button onClick={saveOperationalHours} disabled={updateMutation.isPending || !operationsDirty}>
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save hours
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notifications" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Notifications</CardTitle>
+              <CardDescription className={textHint}>
+                Choose how you want to be notified
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {[
+                {
+                  key: 'email_notifications' as const,
+                  title: 'Email notifications',
+                  desc: 'Receive updates via email',
+                },
+                {
+                  key: 'order_notifications' as const,
+                  title: 'Order notifications',
+                  desc: 'Get notified when new orders arrive',
+                },
+                {
+                  key: 'low_stock_alerts' as const,
+                  title: 'Low stock alerts',
+                  desc: 'Warn when inventory is low',
+                },
+                {
+                  key: 'payout_notifications' as const,
+                  title: 'Payout notifications',
+                  desc: 'Notify when payouts are processed',
+                },
+              ].map(({ key, title, desc }) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{title}</p>
+                    <p className={textHint}>{desc}</p>
+                  </div>
+                  <Switch checked={!!notificationPrefs[key]} onCheckedChange={(v) => toggleNotification(key, v)} />
+                </div>
+              ))}
+              <div className="pt-2">
+                <Button onClick={saveNotifications} disabled={updateMutation.isPending || !notificationsDirty}>
+                  {updateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save notifications
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payment" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Payment & Payouts</CardTitle>
+              <CardDescription className={textHint}>
+                Bank account for receiving payouts (stored securely)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-base font-semibold text-foreground">Bank account details</p>
+                  {hasSavedBank && !showBankForm && (
+                    <Button type="button" variant="outline" onClick={() => setShowBankForm(true)}>
+                      Change
+                    </Button>
+                  )}
+                </div>
+                <p className={textHint}>This is where PocketShop will deposit your earnings.</p>
+              </div>
+
+              {hasSavedBank && !showBankForm ? (
+                <div className="rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Account number</p>
+                      <p className="mt-1 font-mono text-sm text-foreground">
+                        •••• •••• •••• {savedAccountLast4 || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">IFSC</p>
+                      <p className="mt-1 font-mono text-sm text-foreground">
+                        {(baseline?.paymentForm.ifsc || '').toUpperCase() || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Account type</p>
+                      <p className="mt-1 text-sm text-foreground capitalize">
+                        {baseline?.paymentForm.account_type || 'savings'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label className={textLabel}>Bank account number</Label>
+                    <Input
+                      type="password"
+                      value={paymentForm.account_number ?? ''}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, account_number: e.target.value }))}
+                      placeholder="Enter bank account number"
+                      className="text-foreground"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className={textLabel}>Re-enter bank account number</Label>
+                    <Input
+                      value={confirmAccount}
+                      onChange={(e) => setConfirmAccount(e.target.value)}
+                      placeholder="Type account number again"
+                      className="text-foreground"
+                      autoComplete="off"
+                    />
+                    {confirmAccount && paymentForm.account_number !== confirmAccount && (
+                      <p className="text-xs text-destructive">Account numbers do not match.</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className={textLabel}>Enter IFSC code</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={paymentForm.ifsc ?? ''}
+                          onChange={(e) => setPaymentForm((p) => ({ ...p, ifsc: e.target.value.toUpperCase() }))}
+                          placeholder="e.g. SBIN0001234"
+                          className="text-foreground"
+                        />
+                        <Button type="button" variant="outline" disabled className="whitespace-nowrap">
+                          Find IFSC
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Search by bank &amp; branch will be available soon.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className={textLabel}>Account type</Label>
+                      <Select
+                        value={paymentForm.account_type ?? 'savings'}
+                        onValueChange={(v) => setPaymentForm((p) => ({ ...p, account_type: v as any }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="savings">Savings</SelectItem>
+                          <SelectItem value="current">Current</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={savePayment}
+                      disabled={
+                        updateMutation.isPending ||
+                        !paymentDirty ||
+                        !paymentForm.account_number ||
+                        !paymentForm.ifsc ||
+                        !confirmAccount ||
+                        paymentForm.account_number !== confirmAccount
+                      }
+                    >
+                      {updateMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save bank details
+                    </Button>
+                    {hasSavedBank && (
+                      <Button type="button" variant="outline" onClick={() => { setShowBankForm(false); setConfirmAccount(''); }}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {isFoodBusiness && (
+                <>
+                  <Separator />
+                  <div className="rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-base font-semibold text-foreground">FSSAI details</p>
+                        <p className={textHint}>
+                          Required to comply with food safety regulations (restaurants / food businesses)
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Status: <span className="font-medium text-foreground">{fssaiForm.status}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label className={textLabel}>FSSAI number</Label>
+                        <Input
+                          value={fssaiForm.license_number}
+                          onChange={(e) => setFssaiForm((p) => ({ ...p, license_number: e.target.value.trim() }))}
+                          placeholder="Enter FSSAI license number"
+                          className="text-foreground"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className={textLabel}>Expiry date</Label>
+                        <Input
+                          type="date"
+                          value={fssaiForm.expiry_date}
+                          onChange={(e) => setFssaiForm((p) => ({ ...p, expiry_date: e.target.value }))}
+                          className="text-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      <Label className={textLabel}>Certificate URL</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={fssaiForm.document_url}
+                          onChange={(e) => setFssaiForm((p) => ({ ...p, document_url: e.target.value }))}
+                          placeholder="https://... (upload will be added later)"
+                          className="text-foreground"
+                        />
+                        <Button type="button" variant="outline" disabled className="whitespace-nowrap">
+                          Upload
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Upload/verification will be available soon.</p>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2">
+                      <Button onClick={saveFssai} disabled={updateMutation.isPending || !fssaiDirty}>
+                        {updateMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Save FSSAI details
+                      </Button>
+                      <Button type="button" variant="outline" disabled>
+                        Verify (coming soon)
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
-
-export default Settings;
-
+}

@@ -15,7 +15,7 @@ import { ProductForm } from "@/components/inventory/ProductForm";
 import { useProductMutations } from "@/features/vendor/hooks/useProductMutations";
 import { ROUTES } from "@/constants/routes";
 
-export default function AddProductNew() {
+export default function AddProduct() {
   const navigate = useNavigate();
   const { createProduct } = useProductMutations();
 

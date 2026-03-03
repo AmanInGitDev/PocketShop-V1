@@ -36,7 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/constants/routes";
 
-export default function InventoryNew() {
+export default function Inventory() {
   const navigate = useNavigate();
   const { data: products, isLoading } = useProducts();
   const { deleteProduct } = useProductMutations();

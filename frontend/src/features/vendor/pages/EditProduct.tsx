@@ -16,7 +16,7 @@ import { useProduct } from "@/features/vendor/hooks/useProducts";
 import { useProductMutations } from "@/features/vendor/hooks/useProductMutations";
 import { ROUTES } from "@/constants/routes";
 
-export default function EditProductNew() {
+export default function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: product, isLoading } = useProduct(id);

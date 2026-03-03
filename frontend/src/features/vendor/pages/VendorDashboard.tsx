@@ -18,17 +18,17 @@ import { OrderProvider } from '@/context/OrderProvider';
 import { SupabaseOrderRepository } from '@/features/vendor/services/supabaseOrderRepository';
 
 // Lazy load dashboard sub-routes for code splitting
-const DashboardOverview = lazy(() => import('./DashboardNew'));
+const DashboardOverview = lazy(() => import('./Dashboard'));
 const Orders = lazy(() => import('./Orders'));
-const Inventory = lazy(() => import('./InventoryNew'));
-const AddProduct = lazy(() => import('./AddProductNew'));
-const EditProduct = lazy(() => import('./EditProductNew'));
-const Insights = lazy(() => import('./AnalyticsNew'));
-const Storefront = lazy(() => import('./StorefrontNew'));
-const Payouts = lazy(() => import('./PaymentsNew'));
-const Settings = lazy(() => import('./SettingsNew'));
+const Inventory = lazy(() => import('./Inventory'));
+const AddProduct = lazy(() => import('./AddProduct'));
+const EditProduct = lazy(() => import('./EditProduct'));
+const Insights = lazy(() => import('./Analytics'));
+const Storefront = lazy(() => import('./Storefront'));
+const Payouts = lazy(() => import('./Payouts'));
+const Settings = lazy(() => import('./Settings'));
 const Kitchen = lazy(() => import('./Kitchen'));
-const OrderDetail = lazy(() => import('./OrderDetailNew'));
+const OrderDetail = lazy(() => import('./OrderDetail'));
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
