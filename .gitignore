@@ -13,9 +13,11 @@ dist/
 build/
 *.local
 
-# Environment variables
+# Environment variables (never commit secrets)
 .env
 .env.local
+.env.local.backup
+.env*.backup
 .env.development.local
 .env.test.local
 .env.production.local

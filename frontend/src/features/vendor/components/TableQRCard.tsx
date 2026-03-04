@@ -141,9 +141,10 @@ export function TableQRCard({
 }: TableQRCardProps) {
   const totalTables = tableConfig?.total_tables ?? tables.length;
   const useSimpleLayout = totalTables <= 10 || tableConfig?.mode === 'simple';
-  const displayTables = useSimpleLayout
-    ? [...tables].sort((a, b) => a.display_order - b.display_order).slice(0, totalTables)
-    : tables;
+  // Always limit to configured total to avoid duplicates when config was reduced
+  const displayTables = [...tables]
+    .sort((a, b) => a.display_order - b.display_order)
+    .slice(0, totalTables);
 
   return (
     <Card className="overflow-hidden border-0 shadow-xl transition-shadow duration-300 hover:shadow-2xl dark:border dark:border-white/10 dark:bg-card">
@@ -193,7 +194,7 @@ export function TableQRCard({
           />
         ) : (
           <VirtualStorefrontTables
-            tables={tables}
+            tables={displayTables}
             vendorId={vendorId}
             onDownloadAll={onDownloadAll}
             onDownloadTable={onDownloadTable}

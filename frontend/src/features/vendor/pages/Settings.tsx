@@ -14,13 +14,19 @@ import { updateVendorProfile } from '@/features/vendor/services/vendorService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
@@ -34,6 +40,7 @@ import {
   Bell,
   Clock,
   CreditCard,
+  ChevronDown,
   Loader2,
   Save,
   ImageIcon,
@@ -100,6 +107,16 @@ type ProfileFormState = {
   banner_color: string;
 };
 
+const SETTINGS_SECTIONS = [
+  { value: 'business', label: 'Business', icon: Building2 },
+  { value: 'profile', label: 'Profile', icon: User },
+  { value: 'layout', label: 'Layout', icon: LayoutGrid },
+  { value: 'offers', label: 'Offers', icon: Tag },
+  { value: 'operations', label: 'Operations', icon: Clock },
+  { value: 'notifications', label: 'Notifications', icon: Bell },
+  { value: 'payment', label: 'Payment', icon: CreditCard },
+] as const;
+
 const BANNER_COLOR_PRESETS = [
   { value: '#f97316', label: 'Orange' },
   { value: '#3b82f6', label: 'Blue' },
@@ -147,11 +164,18 @@ export default function Settings() {
     isSavingLayout,
   } = useVendorTables();
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const defaultTab = ['business', 'profile', 'layout', 'offers', 'operations', 'notifications', 'payment'].includes(tabParam || '')
+  const activeTab = ['business', 'profile', 'layout', 'offers', 'operations', 'notifications', 'payment'].includes(tabParam || '')
     ? tabParam!
     : 'business';
+  const setActiveTab = (tab: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+  };
 
   const [businessForm, setBusinessForm] = useState<BusinessFormState>({
     business_name: '',
@@ -467,6 +491,28 @@ export default function Settings() {
     }
   };
 
+  const removeRestaurantImage = (urlToRemove: string) => {
+    const next = restaurantImages.filter((url) => url !== urlToRemove);
+    setRestaurantImages(next);
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    const currentFood = (meta.food_images as string[]) ?? foodImages;
+    updateMutation.mutate({
+      metadata: { ...meta, restaurant_images: next, food_images: currentFood },
+    });
+    setBaseline((prev) => (prev ? { ...prev, restaurantImages: next } : prev));
+  };
+
+  const removeFoodImage = (urlToRemove: string) => {
+    const next = foodImages.filter((url) => url !== urlToRemove);
+    setFoodImages(next);
+    const meta = (vendor?.metadata as Record<string, unknown>) ?? {};
+    const currentRestaurant = (meta.restaurant_images as string[]) ?? restaurantImages;
+    updateMutation.mutate({
+      metadata: { ...meta, restaurant_images: currentRestaurant, food_images: next },
+    });
+    setBaseline((prev) => (prev ? { ...prev, foodImages: next } : prev));
+  };
+
   const saveBusiness = () => {
     updateMutation.mutate({
       business_name: businessForm.business_name,
@@ -629,48 +675,55 @@ export default function Settings() {
   const savedAccountLast4 = (baseline?.paymentForm.account_number || '').slice(-4);
   const hasSavedBank = !!baseline?.paymentForm.account_number && !!baseline?.paymentForm.ifsc;
 
+  const currentSection = SETTINGS_SECTIONS.find((x) => x.value === activeTab);
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Settings</h2>
-        <p className={textHint}>
-          Manage your account, business, and preferences
-        </p>
+    <div className="animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Settings</h2>
+          <p className={textHint}>
+            Manage your account, business, and preferences
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full sm:w-[220px] justify-between font-medium shrink-0 border-primary/50 data-[state=open]:border-primary data-[state=open]:bg-primary/10"
+            >
+              {currentSection ? (
+                <span className="flex items-center gap-2">
+                  <currentSection.icon className="h-4 w-4 shrink-0" />
+                  {currentSection.label}
+                </span>
+              ) : (
+                'Choose section'
+              )}
+              <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[220px]">
+            {SETTINGS_SECTIONS.map((s) => {
+              const isActive = activeTab === s.value;
+              return (
+                <DropdownMenuItem
+                  key={s.value}
+                  onClick={() => setActiveTab(s.value)}
+                  className={`flex items-center gap-2 ${isActive ? 'bg-primary/15 text-primary font-semibold' : ''}`}
+                >
+                  <s.icon className="h-4 w-4" />
+                  {s.label}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 gap-2 h-auto p-1 bg-muted/50">
-          <TabsTrigger value="business" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Business
-          </TabsTrigger>
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="layout" className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Layout
-          </TabsTrigger>
-          <TabsTrigger value="offers" className="flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Offers
-          </TabsTrigger>
-          <TabsTrigger value="operations" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Operations
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="payment" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Payment
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="business" className="mt-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div>
+        <TabsContent value="business" className="mt-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-foreground">Business Information</CardTitle>
@@ -804,12 +857,21 @@ export default function Settings() {
                         {restaurantImages.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {restaurantImages.map((url) => (
-                              <img
-                                key={url}
-                                src={url}
-                                alt="Restaurant"
-                                className="h-16 w-24 rounded-md object-cover border border-border"
-                              />
+                              <div key={url} className="relative">
+                                <img
+                                  src={url}
+                                  alt="Restaurant"
+                                  className="h-16 w-24 rounded-md object-cover border border-border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeRestaurantImage(url)}
+                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 shadow-sm"
+                                  aria-label="Remove image"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}
@@ -842,12 +904,21 @@ export default function Settings() {
                         {foodImages.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {foodImages.map((url) => (
-                              <img
-                                key={url}
-                                src={url}
-                                alt="Food"
-                                className="h-16 w-24 rounded-md object-cover border border-border"
-                              />
+                              <div key={url} className="relative">
+                                <img
+                                  src={url}
+                                  alt="Food"
+                                  className="h-16 w-24 rounded-md object-cover border border-border"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeFoodImage(url)}
+                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 shadow-sm"
+                                  aria-label="Remove image"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}
@@ -1430,6 +1501,7 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

@@ -58,19 +58,39 @@ export function useVendorTables() {
 
       const definitions = computeTablesFromConfig(config);
 
-      // Check if we already have tables - if reconfiguring, we need to handle carefully
+      // Fetch existing tables with display_order for reassignment
       const { data: existing } = await supabase
         .from('vendor_tables')
-        .select('id')
-        .eq('vendor_id', vendorId);
+        .select('id, display_order')
+        .eq('vendor_id', vendorId)
+        .order('display_order', { ascending: true });
 
-      if ((existing?.length ?? 0) > 0) {
-        // Existing tables - don't delete (printed QRs!). Only allow adding new tables
-        // For simplicity: if count matches, no op. If config asks for more, add new ones.
-        const toAdd = definitions.length - (existing?.length ?? 0);
+      const existingList = existing ?? [];
+
+      if (existingList.length > 0) {
+        // Reassign zone + table_code to match config: ≤10 = 1,2,3... ; ≥11 = N-T1, S-T1, etc.
+        const sorted = [...existingList].sort((a, b) => a.display_order - b.display_order);
+        const updateResults = await Promise.all(
+          sorted.slice(0, definitions.length).map((tbl, i) => {
+            const def = definitions[i]!;
+            return supabase
+              .from('vendor_tables')
+              .update({
+                table_code: def.table_code,
+                zone: def.zone,
+                display_order: i,
+              })
+              .eq('id', tbl.id)
+              .eq('vendor_id', vendorId);
+          })
+        );
+        const updateError = updateResults.find((r) => r.error);
+        if (updateError?.error) throw updateError.error;
+
+        const toAdd = definitions.length - existingList.length;
         if (toAdd <= 0) return { config, created: 0 };
 
-        const startIdx = existing!.length;
+        const startIdx = existingList.length;
         const newDefs = definitions.slice(startIdx);
         const inserts = newDefs.map((d, i) => ({
           vendor_id: vendorId,
