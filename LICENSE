@@ -1,21 +1,15 @@
-MIT License
+Copyright (c) 2026 Aman Momin
 
-Copyright (c) 2025 Aman Momin
+1. Limited Grant of Use
+Permission is hereby granted to any person to use and execute this software solely for the purpose of identifying, testing, and reporting bugs or security vulnerabilities.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+2. Prohibitions and Restrictions
+  - Non-Commercial Use: This software may not be used, in whole or in part, for any commercial purpose or financial gain.
+  - Product Restriction: This software may not be sold, licensed, or distributed as a standalone product or as part of a larger product suite.
+  - No Redistribution: You may not modify, merge, publish, or redistribute the source code or binaries without express written permission from Aman        Momin.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+3. Mandatory Reporting Requirement
+Any security breach, vulnerability, or bug discovered during the use of this software must be reported directly and privately to the owner (Aman Momin) immediately. Public disclosure or disclosure to third parties is prohibited until a fix has been issued or written consent is provided.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+4. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
