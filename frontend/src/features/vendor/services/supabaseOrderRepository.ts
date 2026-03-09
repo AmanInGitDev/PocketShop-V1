@@ -91,9 +91,10 @@ function mapPaymentMethod(v?: string | null): Order['paymentMethod'] {
 
 export class SupabaseOrderRepository implements IOrderRepository {
   async fetchOrders(vendorId: string): Promise<Order[]> {
+    // Use orders.* only – base schema has payment_status on orders. If payments table exists, optional join can be added.
     const { data, error } = await supabase
       .from('orders')
-      .select('*, payments(payment_status)')
+      .select('*')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: false });
 

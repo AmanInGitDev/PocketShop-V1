@@ -33,7 +33,7 @@ const OrderDetail = lazy(() => import('./OrderDetail'));
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading, onboardingStatus } = useAuth();
-  const { data: vendor } = useVendor();
+  const { data: vendor, isLoading: vendorLoading } = useVendor();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const orderRepo = useMemo(() => new SupabaseOrderRepository(), []);
 
@@ -77,8 +77,8 @@ const VendorDashboard: React.FC = () => {
     return () => { mounted = false; };
   }, [user, loading, onboardingStatus, navigate]);
 
-  // Show loading while checking auth or onboarding
-  if (loading || checkingOnboarding) {
+  // Show loading while checking auth, onboarding, or vendor profile
+  if (loading || checkingOnboarding || vendorLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -94,8 +94,25 @@ const VendorDashboard: React.FC = () => {
     return null;
   }
 
+  // Must have a valid vendor profile – never use 'vendor-demo' for real API calls (causes 400s)
+  if (!vendor?.id) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <p className="text-gray-600 mb-4">Vendor profile not found. Please complete onboarding.</p>
+          <button
+            onClick={() => navigate(ROUTES.VENDOR_ONBOARDING_STAGE_1)}
+            className="text-blue-600 hover:underline font-medium"
+          >
+            Go to onboarding
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Orders are stored by vendor_profiles.id (not auth user id). Use Supabase repo for real orders.
-  const vendorId = vendor?.id ?? 'vendor-demo';
+  const vendorId = vendor.id;
 
   return (
     <DashboardLayout>

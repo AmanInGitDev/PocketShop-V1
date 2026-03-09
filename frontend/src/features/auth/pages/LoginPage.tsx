@@ -13,6 +13,7 @@ import {
   ArrowLeft, 
   Eye, 
   EyeOff, 
+  Home,
   LogIn,
   UserPlus,
   AlertCircle,
@@ -475,10 +476,16 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
             <span className="logo-text">PocketShop</span>
           </div>
           
-          <Link to={ROUTES.BUSINESS} className="back-link">
-            <ArrowLeft className="back-icon" />
-            Back
-          </Link>
+          <div className="auth-header-actions">
+            <Link to={ROUTES.HOME} className="back-link">
+              <Home className="back-icon" />
+              Home
+            </Link>
+            <Link to={ROUTES.BUSINESS} className="back-link">
+              <ArrowLeft className="back-icon" />
+              Back
+            </Link>
+          </div>
         </header>
 
         {/* Main Content */}
@@ -526,7 +533,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
             </div>
 
             {(location.state as any)?.message === 'confirm_email' && (
-              <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              <div className="confirm-email-banner">
                 Please confirm your email before continuing. Check your inbox and click the confirmation link.
               </div>
             )}

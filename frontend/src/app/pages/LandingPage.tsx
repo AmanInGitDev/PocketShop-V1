@@ -16,14 +16,21 @@ import Logo from '@/features/common/components/Logo';
 import LocationDetector, { LocationDetectorRef } from '@/features/common/components/LocationDetector';
 import PlacesAutocomplete from '@/features/common/components/PlacesAutocomplete';
 
-// Category card images (from public folder - avoids Vite bundling issues with large PNGs)
+// Category card images (from assets - uses your transparent PNGs)
+import imgQuickBites from '@/assets/images/categories/quick-bites.png';
+import imgFineDining from '@/assets/images/categories/fine-dining.png';
+import imgFashion from '@/assets/images/categories/fashion.png';
+import imgSalons from '@/assets/images/categories/salons.png';
+import imgMedicare from '@/assets/images/categories/medicare.png';
+import imgLocalStores from '@/assets/images/categories/local-stores.png';
+
 const CATEGORY_IMAGES = {
-  fashion: '/images/categories/fashion.png',
-  salons: '/images/categories/salons.png',
-  quickBites: '/images/categories/quick-bites.png',
-  medicare: '/images/categories/medicare.png',
-  fineDining: '/images/categories/fine-dining.png',
-  localStores: '/images/categories/local-stores.png',
+  fashion: imgFashion,
+  salons: imgSalons,
+  quickBites: imgQuickBites,
+  medicare: imgMedicare,
+  fineDining: imgFineDining,
+  localStores: imgLocalStores,
 } as const;
 
 
@@ -31,6 +38,7 @@ const LandingPage: React.FC = () => {
   const [searchLocation, setSearchLocation] = useState('');
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
   const desktopLocationBtnRef = useRef<LocationDetectorRef>(null);
   const mobileLocationBtnRef = useRef<LocationDetectorRef>(null);
   const [footerAccordions, setFooterAccordions] = useState({
@@ -100,7 +108,8 @@ const LandingPage: React.FC = () => {
 
   const handleLoginClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate(ROUTES.LOGIN);
+    // Open role selection so users can choose Customer vs Business
+    setShowRoleSelector(true);
   };
 
   // Handle location detection
@@ -298,6 +307,76 @@ const LandingPage: React.FC = () => {
         </div>
       </header>
 
+      {/* Role Selection Modal for Sign In */}
+      {showRoleSelector && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+          onClick={() => setShowRoleSelector(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-slate-950/90 border border-white/15 shadow-2xl p-6 sm:p-7 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold">Sign in to PocketShop</h2>
+                <p className="mt-1 text-sm text-white/70">
+                  Choose whether you&apos;re a customer or a business. Each has its own account and dashboard.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRoleSelector(false)}
+                className="rounded-full p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRoleSelector(false);
+                  navigate(ROUTES.CUSTOMER_AUTH);
+                }}
+                className="w-full flex items-center gap-3 rounded-xl bg-white text-slate-900 px-4 py-3.5 text-sm sm:text-base font-semibold shadow-md hover:shadow-lg transition-shadow"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-sm font-bold">
+                  C
+                </span>
+                <div className="flex-1 text-left">
+                  <div>Continue as Customer</div>
+                  <p className="text-xs sm:text-[13px] font-normal text-slate-600">
+                    Track orders, save details and discover local offers.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRoleSelector(false);
+                  navigate(ROUTES.LOGIN);
+                }}
+                className="w-full flex items-center gap-3 rounded-xl bg-purple-600/90 px-4 py-3.5 text-sm sm:text-base font-semibold text-white shadow-md hover:bg-purple-600 hover:shadow-lg transition-all"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/80 text-white text-sm font-bold">
+                  B
+                </span>
+                <div className="flex-1 text-left">
+                  <div>Continue as Business</div>
+                  <p className="text-xs sm:text-[13px] font-normal text-purple-100/80">
+                    Sign in to your vendor dashboard and manage orders.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Magicpin Style: Prominent Search */}
       <section className="relative z-10 pt-20 md:pt-24 pb-12 md:pb-16 lg:pt-28 lg:pb-24">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
@@ -485,9 +564,9 @@ const LandingPage: React.FC = () => {
               <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Going Out
               </span>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <img src={CATEGORY_IMAGES.quickBites} alt="Quick Bites" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden">
+                  <img src={CATEGORY_IMAGES.quickBites} alt="Quick Bites" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -506,9 +585,9 @@ const LandingPage: React.FC = () => {
               <span className="inline-flex items-center self-start rounded-full bg-emerald-500 text-white text-[10px] font-semibold px-2.5 py-0.5 mb-3">
                 Going Out
               </span>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-                  <img src={CATEGORY_IMAGES.fineDining} alt="Fine Dining" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden">
+                  <img src={CATEGORY_IMAGES.fineDining} alt="Fine Dining" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -524,9 +603,9 @@ const LandingPage: React.FC = () => {
               <div className="absolute top-2 right-2 z-10">
                 <Lock className="w-4 h-4 text-gray-500" />
               </div>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
-                  <img src={CATEGORY_IMAGES.fashion} alt="Fashion" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.fashion} alt="Fashion" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -542,9 +621,9 @@ const LandingPage: React.FC = () => {
               <div className="absolute top-2 right-2 z-10">
                 <Lock className="w-4 h-4 text-gray-500" />
               </div>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
-                  <img src={CATEGORY_IMAGES.salons} alt="Salons" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.salons} alt="Salons" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -560,9 +639,9 @@ const LandingPage: React.FC = () => {
               <div className="absolute top-2 right-2 z-10">
                 <Lock className="w-4 h-4 text-gray-500" />
               </div>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
-                  <img src={CATEGORY_IMAGES.medicare} alt="Medicare" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.medicare} alt="Medicare" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -578,9 +657,9 @@ const LandingPage: React.FC = () => {
               <div className="absolute top-2 right-2 z-10">
                 <Lock className="w-4 h-4 text-gray-500" />
               </div>
-              <div className="text-center mb-3 flex-1">
-                <div className="w-24 h-24 mx-auto relative flex items-center justify-center grayscale opacity-70">
-                  <img src={CATEGORY_IMAGES.localStores} alt="Local Stores" className="w-full h-full object-contain" />
+              <div className="text-center mb-3 flex-1 flex items-center justify-center min-h-[88px] sm:min-h-[100px]">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 mx-auto flex items-center justify-center overflow-hidden grayscale opacity-70">
+                  <img src={CATEGORY_IMAGES.localStores} alt="Local Stores" className="max-w-full max-h-full w-auto h-auto object-contain object-center" />
                 </div>
               </div>
               <div className="text-center">
@@ -664,108 +743,177 @@ const LandingPage: React.FC = () => {
       )}
 
       {/* Split View - Customer & Business Sections */}
-      <section className="relative z-10 py-16 bg-black/20 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+      <section className="relative z-10 py-20 md:py-24 bg-black/30 backdrop-blur-xl">
+        {/* Decorative background bars behind cards */}
+        <div className="pointer-events-none absolute inset-0 opacity-40">
+          <div className="mx-auto flex h-full max-w-6xl gap-4 px-4">
+            <div className="hidden md:block h-full w-16 rounded-3xl bg-gradient-to-b from-purple-500/50 via-purple-700/30 to-transparent" />
+            <div className="hidden md:block h-full w-10 rounded-3xl bg-gradient-to-b from-purple-400/40 via-purple-600/20 to-transparent" />
+            <div className="ml-auto flex h-full gap-4">
+              <div className="h-full w-10 rounded-3xl bg-gradient-to-b from-purple-400/40 via-purple-600/20 to-transparent" />
+              <div className="h-full w-16 rounded-3xl bg-gradient-to-b from-purple-500/50 via-purple-700/30 to-transparent" />
+            </div>
+          </div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10 md:mb-14">
+            <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-purple-200/80 uppercase">
+              Choose your journey
+            </p>
+            <h2 className="mt-3 text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+              Built for shoppers and local businesses
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
             {/* Customer Section */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 flex flex-col">
-              <div className="mb-6">
-                <span className="text-purple-300 text-sm font-semibold uppercase tracking-wide">
-                  Customer Section
-                </span>
-                <h2 className="text-2xl md:text-4xl font-bold text-white mt-2 leading-tight">
-                  Find Amazing Local Deals!
-                </h2>
+            <div className="group relative">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/60 via-fuchsia-500/40 to-indigo-500/40 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
+              <div className="relative bg-white/10 backdrop-blur-2xl rounded-3xl p-7 sm:p-8 border border-white/15 shadow-[0_18px_45px_rgba(15,23,42,0.6)] flex flex-col h-full">
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div>
+                    <span className="inline-flex items-center rounded-full bg-purple-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-purple-200">
+                      Customer section
+                    </span>
+                    <h3 className="mt-3 text-2xl md:text-3xl font-bold text-white leading-tight">
+                      Find Amazing Local Deals
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Customer Icon */}
+                <div className="mb-6 flex items-center gap-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-purple-500/30 rounded-2xl flex items-center justify-center shadow-inner">
+                    <svg
+                      className="w-9 h-9 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-white/70 max-w-xs">
+                    Discover nearby places to eat and hang out, with rewards every time you step out.
+                  </p>
+                </div>
+
+                {/* Customer Benefits */}
+                <ul className="space-y-3 text-sm sm:text-base text-white/90 flex-1">
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-purple-500/30 text-xs text-purple-100">
+                      •
+                    </span>
+                    <span>Exclusive offers from local favourites</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-purple-500/30 text-xs text-purple-100">
+                      •
+                    </span>
+                    <span>Automatic cashback rewards on every visit</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-purple-500/30 text-xs text-purple-100">
+                      •
+                    </span>
+                    <span>Smart discovery for cafes, quick bites & more</span>
+                  </li>
+                </ul>
+
+                <button className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(168,85,247,0.6)] transition-all duration-200 hover:shadow-[0_16px_40px_rgba(168,85,247,0.8)] hover:-translate-y-0.5 w-full">
+                  Start Shopping
+                </button>
               </div>
-
-              {/* Customer Icon */}
-              <div className="w-20 h-20 mb-6 bg-purple-500/30 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-
-              {/* Customer Benefits */}
-              <ul className="space-y-3 flex-1">
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-400 mr-3">•</span>
-                  Exclusive Offers
-                </li>
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-400 mr-3">•</span>
-                  Cashback Rewards
-                </li>
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-400 mr-3">•</span>
-                  Easy Discovery
-                </li>
-              </ul>
-
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors mt-8 w-full">
-                Start Shopping
-              </button>
             </div>
 
             {/* Business Section */}
-            <div className="bg-gradient-to-br from-purple-600/30 to-purple-800/30 backdrop-blur-md rounded-2xl p-8 border border-purple-400/30 flex flex-col">
-              <div className="mb-6">
-                <span className="text-purple-200 text-sm font-semibold uppercase tracking-wide">
-                  Business Section
-                </span>
-                <h2 className="text-2xl md:text-4xl font-bold text-white mt-2 leading-tight">
-                  Grow Your Local Business!
-                </h2>
-              </div>
+            <div className="group relative">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-400/70 via-indigo-500/60 to-sky-500/50 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
+              <div className="relative bg-gradient-to-br from-purple-600/40 via-purple-800/40 to-slate-900/60 backdrop-blur-2xl rounded-3xl p-7 sm:p-8 border border-purple-300/40 shadow-[0_18px_45px_rgba(15,23,42,0.8)] flex flex-col h-full">
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div>
+                    <span className="inline-flex items-center rounded-full bg-purple-900/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-purple-100">
+                      Business section
+                    </span>
+                    <h3 className="mt-3 text-2xl md:text-3xl font-bold text-white leading-tight">
+                      Grow Your Local Business
+                    </h3>
+                  </div>
+                  <span className="hidden md:inline-flex items-center rounded-full bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-300 border border-emerald-400/30">
+                    For cafes, restaurants & salons
+                  </span>
+                </div>
 
-              {/* Business Icon - Storefront/Growth Icon */}
-              <div className="w-20 h-20 mb-6 bg-purple-400/40 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                {/* Business Icon - Storefront/Growth Icon */}
+                <div className="mb-6 flex items-center gap-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-purple-500/40 rounded-2xl flex items-center justify-center shadow-inner">
+                    <svg
+                      className="w-9 h-9 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-purple-50/80 max-w-xs">
+                    Turn every table or storefront into a smart, QR-powered sales engine.
+                  </p>
+                </div>
+
+                {/* Business Features */}
+                <ul className="space-y-3 text-sm sm:text-base text-white/95 flex-1">
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/25 text-xs text-emerald-100">
+                      •
+                    </span>
+                    <span>Reach more nearby customers without extra ad spend</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/25 text-xs text-emerald-100">
+                      •
+                    </span>
+                    <span>Run targeted offers that actually drive footfall</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/25 text-xs text-emerald-100">
+                      •
+                    </span>
+                    <span>Track sales, repeat visits and campaign ROI in one place</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={handleBusinessClick}
+                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-white/90 px-6 py-3 text-sm font-semibold text-purple-800 shadow-[0_10px_30px_rgba(15,23,42,0.8)] transition-all duration-200 hover:bg-white hover:-translate-y-0.5 w-full"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
+                  Get Started
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
               </div>
-
-              {/* Business Features */}
-              <ul className="space-y-3 flex-1">
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-200 mr-3">•</span>
-                  Reach More Customers
-                </li>
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-200 mr-3">•</span>
-                  Targeted Ads
-                </li>
-                <li className="flex items-center text-white/90">
-                  <span className="text-purple-200 mr-3">•</span>
-                  Sales Tracking
-                </li>
-              </ul>
-
-              <button
-                onClick={handleBusinessClick}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full mt-8"
-              >
-                Get Started
-              </button>
             </div>
           </div>
         </div>

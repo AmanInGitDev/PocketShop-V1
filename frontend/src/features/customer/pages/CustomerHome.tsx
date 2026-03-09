@@ -16,10 +16,12 @@ import {
   ShoppingBag,
   User,
 } from 'lucide-react';
+import imgQuickBites from '@/assets/images/categories/quick-bites.png';
+import imgFineDining from '@/assets/images/categories/fine-dining.png';
 
 const CATEGORY_IMAGES = {
-  quickBites: '/images/categories/quick-bites.png',
-  fineDining: '/images/categories/fine-dining.png',
+  quickBites: imgQuickBites,
+  fineDining: imgFineDining,
 };
 
 export default function CustomerHome() {

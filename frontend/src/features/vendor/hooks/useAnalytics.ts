@@ -44,31 +44,50 @@ export const useAnalytics = (days: number = 30) => {
         return acc;
       }, {} as Record<number, number>);
 
+      // Fetch products for category & name lookup used in analytics
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, category')
+        .eq('vendor_id', vendor.id);
+
+      if (productsError && productsError.code !== '42P01') {
+        throw productsError;
+      }
+
+      const productLookup = (products || []).reduce((map, product: any) => {
+        map[product.id] = {
+          name: product.name,
+          category: product.category,
+        };
+        return map;
+      }, {} as Record<string, { name: string | null; category: string | null }>);
+
       // Calculate product performance
       // Items are stored as JSONB array in orders.items
       const productStats = orders?.reduce((acc, order) => {
         const items = order.items || [];
         if (Array.isArray(items)) {
           items.forEach((item: any) => {
-          const productId = item.product_id;
-            const productName = item.name || 'Unknown';
-            const category = 'Uncategorized'; // Category not stored in items JSONB
-          
-          if (!acc[productId]) {
-            acc[productId] = {
-              id: productId,
-              name: productName,
-              category,
-              totalSold: 0,
-              revenue: 0,
-              orders: 0,
-            };
-          }
-          
+            const productId = item.product_id;
+            const productMeta = productLookup[productId] || {};
+            const productName = productMeta.name || item.name || 'Unknown';
+            const category = productMeta.category || 'Uncategorized';
+
+            if (!acc[productId]) {
+              acc[productId] = {
+                id: productId,
+                name: productName,
+                category,
+                totalSold: 0,
+                revenue: 0,
+                orders: 0,
+              };
+            }
+
             acc[productId].totalSold += item.quantity || 0;
             acc[productId].revenue += Number(item.subtotal || (item.price * item.quantity) || 0);
-          acc[productId].orders += 1;
-        });
+            acc[productId].orders += 1;
+          });
         }
         return acc;
       }, {} as Record<string, any>);
