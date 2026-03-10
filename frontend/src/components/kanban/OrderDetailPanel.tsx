@@ -11,6 +11,7 @@
  */
 
 import React, { useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Clock,
@@ -23,13 +24,26 @@ import {
   Truck,
   AlertCircle,
 } from 'lucide-react';
+import { AcceptanceCountdown } from '@/components/orders/AcceptanceCountdown';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { Order, OrderStatus } from '@/types';
+import { useProducts } from '@/features/vendor/hooks/useProducts';
 
 export interface OrderDetailPanelProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
-  onChangeStatus: (orderId: string, newStatus: OrderStatus) => Promise<void>;
+  onChangeStatus: (orderId: string, newStatus: OrderStatus, options?: { markPaymentReceived?: boolean }) => Promise<void>;
+  onViewInOrderHistory?: () => void;
 }
 
 /**
@@ -208,8 +222,19 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
   isOpen,
   onClose,
   onChangeStatus,
+  onViewInOrderHistory,
 }) => {
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [codConfirmOpen, setCodConfirmOpen] = React.useState(false);
+  const [pendingCompleteStatus, setPendingCompleteStatus] = React.useState<OrderStatus | null>(null);
+  const { data: products } = useProducts();
+  const preparationMinutes = React.useMemo(() => {
+    if (!order?.items?.length || !products?.length) return undefined;
+    const map: Record<string, number> = {};
+    products.forEach((p: any) => { map[p.id] = p.preparation_time_minutes ?? 15; });
+    const total = order.items.reduce((sum, it) => sum + (map[it.itemId] ?? 15) * (it.qty ?? 1), 0);
+    return Math.max(total, 15);
+  }, [order?.items, products]);
 
   // Close on Escape key
   useEffect(() => {
@@ -254,32 +279,44 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
   }, [order.items]);
 
   const handleStatusChange = async (newStatus: OrderStatus) => {
+    const isCOD = (order.paymentMethod ?? '').toString().toUpperCase() === 'CASH';
+    // For Cash orders: require confirmation before Mark as Ready and before Complete
+    const needsCodConfirm = isCOD && (newStatus === 'READY' || newStatus === 'COMPLETED');
+    if (needsCodConfirm) {
+      setPendingCompleteStatus(newStatus);
+      setCodConfirmOpen(true);
+      return;
+    }
+    await executeStatusChange(newStatus);
+  };
+
+  const executeStatusChange = async (newStatus: OrderStatus, markPaymentReceived = false) => {
     setIsProcessing(true);
     try {
-      await onChangeStatus(order.id, newStatus);
-      // Close panel after successful status change (optional)
-      // onClose();
+      await onChangeStatus(order.id, newStatus, markPaymentReceived ? { markPaymentReceived: true } : undefined);
     } catch (error) {
       console.error('Failed to change status:', error);
     } finally {
       setIsProcessing(false);
+      setCodConfirmOpen(false);
+      setPendingCompleteStatus(null);
     }
   };
 
-  return (
+  const panel = (
     <>
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/60 z-[100] transition-opacity backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Slide-over Panel */}
+      {/* Slide-over Panel - rendered via portal to ensure it's above dashboard layout */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 right-0 z-[101] w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
@@ -288,9 +325,9 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <h2 id="order-detail-title" className="text-xl font-bold text-gray-900">
+              <h2 id="order-detail-title" className="text-xl font-bold text-gray-900 dark:text-slate-100">
                 Order #{orderNumber}
               </h2>
               <span
@@ -303,7 +340,7 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Close panel"
             >
               <X className="w-6 h-6" />
@@ -317,22 +354,40 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
               {/* Customer & Order Type */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-gray-400" />
+                  <User className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                   <div>
-                    <p className="text-sm text-gray-500">Customer</p>
-                    <p className="text-base font-medium text-gray-900">{customerName}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Customer</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-slate-100">{customerName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {getOrderTypeIcon(order.orderType)}
                   <div>
-                    <p className="text-sm text-gray-500">Order Type</p>
-                    <p className="text-base font-medium text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Order Type</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-slate-100">
                       {order.orderType?.replace('_', ' ') ?? 'Unknown'}
                     </p>
                   </div>
                 </div>
               </div>
+
+              {/* 5-minute acceptance timer (NEW orders only) */}
+              {order.status === 'NEW' && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3">
+                  <AcceptanceCountdown createdAt={order.createdAt} status={order.status} variant="full" />
+                </div>
+              )}
+
+              {/* Preparation Time */}
+              {preparationMinutes != null && (
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-gray-400 dark:text-slate-500" />
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Est. preparation time</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-slate-100">{preparationMinutes} min</p>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Info */}
               <div className="grid grid-cols-2 gap-4">
@@ -384,10 +439,10 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
 
               {/* Items Table */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Items</h3>
-                <div className="overflow-hidden border border-gray-200 rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3">Items</h3>
+                <div className="overflow-hidden border border-gray-200 dark:border-slate-700 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                    <thead className="bg-gray-50 dark:bg-slate-800/50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Item
@@ -403,10 +458,10 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
                       {order.items.map((item, index) => (
                         <tr key={item.id ?? index}>
-                          <td className="px-4 py-3 text-sm text-gray-900">{item.name || 'Item'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-slate-100">{item.name || 'Item'}</td>
                           <td className="px-4 py-3 text-sm text-gray-500 text-right">{item.qty}</td>
                           <td className="px-4 py-3 text-sm text-gray-500 text-right">
                             ₹{item.price.toFixed(2)}
@@ -433,12 +488,28 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                 </div>
               </div>
 
+              {/* View in Order History */}
+              {onViewInOrderHistory && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onViewInOrderHistory();
+                    }}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    View more in Order History →
+                  </button>
+                </div>
+              )}
+
               {/* Event Log */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Event Log</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3">Event Log</h3>
                 <div className="space-y-3">
                   {eventLog.map((event) => (
-                    <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
                       <div className="flex-shrink-0 mt-0.5">
                         <div className="w-2 h-2 bg-blue-600 rounded-full" />
                       </div>
@@ -456,7 +527,7 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
 
           {/* Footer - Action Buttons */}
           {statusActions.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
               <div className="flex items-center gap-3">
                 {statusActions.map((action) => (
                   <button
@@ -473,8 +544,33 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
           )}
         </div>
       </div>
-    </>
+        {/* COD completion confirmation */}
+        <AlertDialog open={codConfirmOpen} onOpenChange={setCodConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cash on Delivery</AlertDialogTitle>
+              <AlertDialogDescription>
+                Has cash been collected from the customer? Please verify manually before proceeding. Do not mark as Ready or Complete for unpaid orders.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingCompleteStatus(null)}>
+                No, not yet
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => pendingCompleteStatus && executeStatusChange(pendingCompleteStatus, true)}
+              >
+                Yes, received
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        </>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(panel, document.body)
+    : null;
 };
 
 export default OrderDetailPanel;

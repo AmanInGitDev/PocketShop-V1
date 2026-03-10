@@ -63,6 +63,8 @@ export interface Order {
   orderNumber?: string;
   paymentMethod?: 'GOOGLE_PAY' | 'PAYTM' | 'PHONEPE' | 'CASH' | 'CARD';
   itemsCount?: number;
+  /** Total preparation time in minutes (sum of product prep times). Used for overdue highlight. */
+  preparationMinutes?: number;
 }
 
 /** Vendor event log entry (used by EventLogger) */

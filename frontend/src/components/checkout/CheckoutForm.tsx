@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 import type { StructuredOffer } from "@/features/storefront/utils/offerUtils";
-import { findOfferByCode } from "@/features/storefront/utils/offerUtils";
+import { findOfferByCodeWithEligibility } from "@/features/storefront/utils/offerUtils";
 
 interface CheckoutFormProps {
   onBack: () => void;
@@ -22,10 +22,14 @@ interface CheckoutFormProps {
   /** Discount when promo applied */
   discountAmount?: number;
   discountLabel?: string;
+  /** Items where coupon does not apply (vendor marked as non-applicable) */
+  nonEligibleItemNames?: string[];
   appliedPromoCode?: string;
   onApplyPromo?: (code: string) => void;
   onRemovePromo?: () => void;
   offers?: StructuredOffer[];
+  /** Products for coupon eligibility (vendor can mark some items as non-applicable) */
+  products?: { id: string; coupon_applicable?: boolean }[];
 }
 
 export function CheckoutForm({
@@ -33,10 +37,12 @@ export function CheckoutForm({
   onCheckout,
   discountAmount = 0,
   discountLabel,
+  nonEligibleItemNames = [],
   appliedPromoCode = "",
   onApplyPromo,
   onRemovePromo,
   offers = [],
+  products = [],
 }: CheckoutFormProps) {
   const { cartItems, getTotalAmount, deleteFromCart } = useCart();
   const [promoInput, setPromoInput] = useState("");
@@ -230,8 +236,18 @@ export function CheckoutForm({
                         toast.error("Enter a promo code");
                         return;
                       }
-                      const sub = getTotalAmount();
-                      const result = findOfferByCode(offers, code, sub);
+                      const cartForEligibility = cartItems.map((i) => ({
+                        productId: i.productId,
+                        quantity: i.quantity,
+                        price: i.price,
+                        name: i.name,
+                      }));
+                      const result = findOfferByCodeWithEligibility(
+                        offers,
+                        code,
+                        cartForEligibility,
+                        products
+                      );
                       if (result) {
                         onApplyPromo?.(code);
                         toast.success("Promo applied!");
@@ -257,6 +273,11 @@ export function CheckoutForm({
                   <span>{discountLabel || "Discount"}</span>
                   <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
+                {nonEligibleItemNames.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Coupon not applicable on: {nonEligibleItemNames.join(", ")}
+                  </p>
+                )}
               </>
             )}
             <div className="flex justify-between items-center">

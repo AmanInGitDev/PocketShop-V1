@@ -6,9 +6,9 @@
  * but wired to the shared OrderProvider + VendorOrdersKanban.
  */
 
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Clock, Package, TrendingUp, IndianRupee, Zap } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Clock, Package, TrendingUp, IndianRupee, Zap, Download } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import VendorOrdersKanban from '@/components/kanban/VendorOrdersKanban';
 import { POSMode } from '@/components/orders/POSMode';
@@ -18,13 +18,23 @@ import type { Order, OrderStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { format, subDays, startOfDay, startOfWeek } from 'date-fns';
 
 const Orders: React.FC = () => {
   const [posMode, setPosMode] = useState(false);
+  const [historyTimeFilter, setHistoryTimeFilter] = useState<'week' | '15d' | '1m'>('week');
+  const [searchParams] = useSearchParams();
   const { orders, selectedOrder, openOrder, changeOrderStatus } = useOrderContext();
+
+  useEffect(() => {
+    if (searchParams.get('scroll') === 'history') {
+      const el = document.getElementById('order-history-section');
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, [searchParams]);
 
   const stats = useMemo(() => {
     if (!orders || orders.length === 0) {
@@ -54,13 +64,29 @@ const Orders: React.FC = () => {
     };
   }, [orders]);
 
+  const historyOrdersFiltered = useMemo(() => {
+    const list = (orders || []).filter(
+      (o) => o.status === 'COMPLETED' || o.status === 'CANCELLED',
+    );
+    const now = new Date();
+    let cutoff: Date;
+    if (historyTimeFilter === 'week') {
+      cutoff = startOfWeek(now);
+    } else if (historyTimeFilter === '15d') {
+      cutoff = startOfDay(subDays(now, 15));
+    } else {
+      cutoff = startOfDay(subDays(now, 30));
+    }
+    return list.filter((o) => new Date(o.createdAt) >= cutoff);
+  }, [orders, historyTimeFilter]);
+
   const completedOrders = useMemo(
-    () => (orders || []).filter((o) => o.status === 'COMPLETED'),
-    [orders],
+    () => historyOrdersFiltered.filter((o) => o.status === 'COMPLETED'),
+    [historyOrdersFiltered],
   );
   const cancelledOrders = useMemo(
-    () => (orders || []).filter((o) => o.status === 'CANCELLED'),
-    [orders],
+    () => historyOrdersFiltered.filter((o) => o.status === 'CANCELLED'),
+    [historyOrdersFiltered],
   );
 
   const completionRate =
@@ -70,8 +96,17 @@ const Orders: React.FC = () => {
     openOrder(null);
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    await changeOrderStatus(orderId, newStatus);
+  const scrollToOrderHistory = () => {
+    const el = document.getElementById('order-history-section');
+    el?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: OrderStatus,
+    options?: { markPaymentReceived?: boolean }
+  ) => {
+    await changeOrderStatus(orderId, newStatus, options);
   };
 
   // NOTE: History view approximates the original Completed/Cancelled list UI from the
@@ -237,13 +272,59 @@ const Orders: React.FC = () => {
       <VendorOrdersKanban />
 
       {/* Order History (Completed / Cancelled) */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
+      <section id="order-history-section" className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">Order History</h3>
             <p className="text-sm text-muted-foreground">
               Review completed and cancelled orders
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border bg-muted/50 p-0.5 gap-0.5">
+              {(['week', '15d', '1m'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setHistoryTimeFilter(v)}
+                  className={`h-7 rounded px-2.5 text-xs font-medium transition-colors ${
+                    historyTimeFilter === v
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {v === 'week' ? 'Week' : v === '15d' ? '15 days' : '1 month'}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => {
+                const rows = [
+                  ['Order #', 'Customer', 'Status', 'Total', 'Items', 'Date'],
+                  ...historyOrdersFiltered.map((o) => [
+                    o.orderNumber ?? o.id,
+                    o.customerName ?? 'Guest',
+                    o.status,
+                    o.total?.toFixed(0) ?? '',
+                    (o.itemsCount ?? o.items?.length ?? 0).toString(),
+                    format(new Date(o.createdAt), 'yyyy-MM-dd HH:mm'),
+                  ]),
+                ];
+                const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `order-history-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
           </div>
         </div>
 
@@ -295,6 +376,7 @@ const Orders: React.FC = () => {
         isOpen={!!selectedOrder}
         onClose={handleClosePanel}
         onChangeStatus={handleStatusChange}
+        onViewInOrderHistory={scrollToOrderHistory}
       />
     </div>
   );

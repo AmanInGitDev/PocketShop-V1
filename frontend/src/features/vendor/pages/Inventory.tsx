@@ -7,7 +7,7 @@
  * product catalog inside the vendor dashboard.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +23,13 @@ import {
   Grid3x3, 
   List, 
   Filter, 
-  X 
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/features/vendor/hooks/useProducts";
 import { useProductMutations } from "@/features/vendor/hooks/useProductMutations";
+import { useVendor } from "@/features/vendor/hooks/useVendor";
+import { useToast } from "@/hooks/use-toast";
 import { ProductCard } from "@/components/inventory/ProductCard";
 import { BulkActions } from "@/components/inventory/BulkActions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,11 +38,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/constants/routes";
 
+const DAILY_RESET_KEY = "pocketshop_vendor_daily_reset_date";
+
 export default function Inventory() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { data: vendor } = useVendor();
   const { data: products, isLoading } = useProducts();
-  const { deleteProduct } = useProductMutations();
+  const { deleteProduct, updateProduct, resetDailyStock } = useProductMutations();
   const [searchQuery, setSearchQuery] = useState("");
+  const hasCheckedDailyReset = useRef(false);
+
+  // Auto daily reset on first visit of the day (once per vendor per day)
+  useEffect(() => {
+    if (!vendor?.id || hasCheckedDailyReset.current || !products) return;
+    const today = new Date().toDateString();
+    const storageKey = `${DAILY_RESET_KEY}_${vendor.id}`;
+    const lastReset = typeof localStorage !== "undefined" ? localStorage.getItem(storageKey) : null;
+    if (lastReset === today) return;
+
+    const hasQuantityProducts = products.some((p: any) => p.availability_mode === "quantity" && p.daily_quantity != null);
+    hasCheckedDailyReset.current = true;
+    if (!hasQuantityProducts) return;
+
+    resetDailyStock.mutate(
+      { silent: true },
+      {
+        onSuccess: () => {
+          localStorage.setItem(storageKey, today);
+          toast({
+            title: "Inventory refreshed",
+            description: "Check your inventory — it's been reset to daily quantities.",
+          });
+        },
+      }
+    );
+  }, [vendor?.id, products, resetDailyStock, toast]);
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "unavailable" | "low-stock">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -51,9 +84,11 @@ export default function Inventory() {
     if (!products) return null;
 
     const totalProducts = products.length;
-    const lowStockProducts = products.filter((p: any) =>
-      p.stock_quantity <= (p.low_stock_threshold || 10) && p.stock_quantity > 0
-    ).length;
+    const lowStockProducts = products.filter((p: any) => {
+      if (p.availability_mode === 'requirement') return false;
+      const threshold = p.low_stock_threshold ?? 10;
+      return (p.stock_quantity ?? 0) <= threshold && (p.stock_quantity ?? 0) > 0;
+    }).length;
     const outOfStockProducts = products.filter((p: any) => p.stock_quantity === 0).length;
     const totalValue = products.reduce(
       (sum: number, p: any) => sum + (p.price * p.stock_quantity),
@@ -82,12 +117,14 @@ export default function Inventory() {
   const filteredProducts = products?.filter((product: any) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category?.toLowerCase().includes(searchQuery.toLowerCase());
+      product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.tags?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === "all" || product.category === selectedCategory;
     
-    const isLowStock = product.stock_quantity <= (product.low_stock_threshold || 10);
+    const isLowStock = product.availability_mode !== 'requirement' &&
+      (product.stock_quantity ?? 0) <= (product.low_stock_threshold || 10);
     
     switch (filterStatus) {
       case "available":
@@ -101,8 +138,9 @@ export default function Inventory() {
     }
   });
 
-  const lowStockCount = products?.filter((p: any) => 
-    p.stock_quantity <= (p.low_stock_threshold || 10)
+  const lowStockCount = products?.filter((p: any) =>
+    p.availability_mode !== 'requirement' &&
+    (p.stock_quantity ?? 0) <= (p.low_stock_threshold || 10)
   ).length || 0;
 
   return (
@@ -114,7 +152,7 @@ export default function Inventory() {
             Manage your product catalog and stock levels
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <BulkActions />
           <Button onClick={() => navigate(`${ROUTES.VENDOR_DASHBOARD_INVENTORY}/add`)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -286,6 +324,11 @@ export default function Inventory() {
               key={product.id}
               product={product}
               onDelete={(id) => deleteProduct.mutate(id)}
+              onToggleAvailability={
+                product.availability_mode === "requirement"
+                  ? (id, is_available) => updateProduct.mutate({ id, is_available })
+                  : undefined
+              }
               variant={viewMode}
             />
           ))}

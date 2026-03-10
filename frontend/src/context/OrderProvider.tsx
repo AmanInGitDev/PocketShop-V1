@@ -22,7 +22,7 @@ export type OrderContextType = {
   error: string | null;
   selectedOrder: Order | null;
   refresh: () => Promise<void>;
-  changeOrderStatus: (orderId: string, newStatus: string) => Promise<void>;
+  changeOrderStatus: (orderId: string, newStatus: string, options?: { markPaymentReceived?: boolean }) => Promise<void>;
   openOrder: (orderId: string | null) => void;
 };
 
@@ -147,7 +147,11 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
   /**
    * Change order status with optimistic updates and rollback on error
    */
-  const changeOrderStatus = async (orderId: string, newStatus: string): Promise<void> => {
+  const changeOrderStatus = async (
+    orderId: string,
+    newStatus: string,
+    options?: { markPaymentReceived?: boolean }
+  ): Promise<void> => {
     // Snapshot current state for potential rollback
     lastSnapshotRef.current = orders.map((o) => ({
       ...o,
@@ -165,6 +169,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
     const optimistic: Order = {
       ...prev,
       status: newStatus as Order['status'],
+      ...(options?.markPaymentReceived && { paymentStatus: 'PAID' as const }),
       version: prev.version + 1,
       updatedAt: new Date().toISOString(),
     };
@@ -175,7 +180,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({
 
     try {
       // Call repository to persist change
-      const updated = await repository.changeOrderStatus(vendorId, orderId, newStatus);
+      const updated = await repository.changeOrderStatus(vendorId, orderId, newStatus, undefined, options);
 
       // Merge authoritative result from server
       setOrders((s) =>

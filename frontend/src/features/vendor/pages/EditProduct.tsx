@@ -47,7 +47,7 @@ export default function EditProduct() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
+    <div className="space-y-6 animate-fade-in w-full max-w-6xl mx-auto">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(ROUTES.VENDOR_DASHBOARD_INVENTORY)}>
           <ArrowLeft className="h-4 w-4" />
@@ -71,9 +71,22 @@ export default function EditProduct() {
               name: product.name,
               description: product.description ?? "",
               price: Number(product.price),
+              availability_mode: product.availability_mode ?? "quantity",
               stock_quantity: product.stock_quantity ?? 0,
+              daily_quantity: product.daily_quantity ?? 100,
               low_stock_threshold: product.low_stock_threshold ?? 10,
               category: product.category ?? "",
+              tags: product.tags ?? "",
+              sku: product.sku ?? "",
+              unit_of_measure: product.unit_of_measure ?? "per piece",
+              allergens: product.allergens ?? "",
+              ingredients: product.ingredients ?? "",
+              internal_notes: product.internal_notes ?? "",
+              min_order_quantity: product.min_order_quantity ?? 1,
+              promo_price: product.promo_price ?? null,
+              promo_valid_until: product.promo_valid_until ?? null,
+              coupon_applicable: product.coupon_applicable ?? true,
+              preparation_time_minutes: product.preparation_time_minutes ?? 15,
               is_available: product.is_available ?? true,
               image_url: product.image_url,
             }}

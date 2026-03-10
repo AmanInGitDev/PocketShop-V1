@@ -214,23 +214,31 @@ export default function OrderConfirmation() {
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-4">
-          {vendorId && (
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={() => navigate(`/order-tracking/${order.id}`)}
+            className="w-full"
+          >
+            Track Order Status
+          </Button>
+          <div className="flex gap-4">
+            {vendorId && (
+              <Button
+                onClick={() => navigate(`/storefront/${vendorId}`)}
+                variant="outline"
+                className="flex-1"
+              >
+                Back to Store
+              </Button>
+            )}
             <Button
-              onClick={() => navigate(`/storefront/${vendorId}`)}
+              onClick={() => navigate('/')}
               variant="outline"
               className="flex-1"
             >
-              Back to Store
+              Go to Home
             </Button>
-          )}
-          <Button
-            onClick={() => navigate('/')}
-            variant="outline"
-            className="flex-1"
-          >
-            Go to Home
-          </Button>
+          </div>
         </div>
       </div>
     </div>

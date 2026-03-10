@@ -41,7 +41,8 @@ export interface IOrderRepository {
     vendorId: string,
     orderId: string,
     newStatus: string,
-    clientTxnId?: string
+    clientTxnId?: string,
+    options?: { markPaymentReceived?: boolean }
   ): Promise<Order>;
 
   /**

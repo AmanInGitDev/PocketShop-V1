@@ -146,7 +146,8 @@ export class DemoOrderRepository implements IOrderRepository {
     vendorId: string,
     orderId: string,
     newStatus: string,
-    _clientTxnId?: string
+    _clientTxnId?: string,
+    options?: { markPaymentReceived?: boolean }
   ): Promise<Order> {
     await delay();
 
@@ -176,6 +177,7 @@ export class DemoOrderRepository implements IOrderRepository {
     const updated: Order = {
       ...current,
       status: target,
+      ...(options?.markPaymentReceived && { paymentStatus: 'PAID' as const }),
       version: current.version + 1,
       updatedAt: new Date().toISOString(),
     };

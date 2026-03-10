@@ -1,7 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useVendor } from './useVendor';
-import { startOfDay, subDays, format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import {
+  startOfDay,
+  endOfDay,
+  subDays,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  format,
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+} from 'date-fns';
 
 export const useAnalytics = (days: number = 30) => {
   const { data: vendor } = useVendor();
@@ -11,7 +22,7 @@ export const useAnalytics = (days: number = 30) => {
     queryFn: async () => {
       if (!vendor?.id) throw new Error('No vendor ID');
 
-      const startDate = startOfDay(subDays(new Date(), days));
+      const startDate = startOfDay(subDays(new Date(), Math.max(days, 365)));
 
       // Fetch orders (items are stored as JSONB in orders table)
       const { data: orders, error: ordersError } = await supabase
@@ -30,12 +41,35 @@ export const useAnalytics = (days: number = 30) => {
         throw ordersError;
       }
 
-      // Calculate daily sales
-      const salesByDay = orders?.reduce((acc, order) => {
-        const day = format(parseISO(order.created_at), 'MMM dd');
+      // Calculate daily sales (key: yyyy-MM-dd for correct sort)
+      const salesByDayRaw = orders?.reduce((acc, order) => {
+        const day = format(parseISO(order.created_at), 'yyyy-MM-dd');
         acc[day] = (acc[day] || 0) + Number(order.total_amount);
         return acc;
       }, {} as Record<string, number>);
+
+      // Calculate monthly sales (key: yyyy-MM for correct sort)
+      const salesByMonthRaw = orders?.reduce((acc, order) => {
+        const month = format(parseISO(order.created_at), 'yyyy-MM');
+        acc[month] = (acc[month] || 0) + Number(order.total_amount);
+        return acc;
+      }, {} as Record<string, number>);
+
+      const salesByDay = Object.entries(salesByDayRaw || {})
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, amount]) => ({
+          date: format(parseISO(day), 'MMM dd'),
+          label: format(parseISO(day), 'MMM dd'),
+          amount,
+        }));
+
+      const salesByMonth = Object.entries(salesByMonthRaw || {})
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, amount]) => ({
+          date: format(parseISO(month + '-01'), 'MMM yy'),
+          label: format(parseISO(month + '-01'), 'MMM yy'),
+          amount,
+        }));
 
       // Calculate hourly distribution (peak hours)
       const ordersByHour = orders?.reduce((acc, order) => {
@@ -126,6 +160,38 @@ export const useAnalytics = (days: number = 30) => {
       const thisWeekRevenue = thisWeekOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
       const lastWeekRevenue = lastWeekOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
+      // Day comparison (today vs yesterday)
+      const todayStart = startOfDay(new Date());
+      const todayEnd = endOfDay(new Date());
+      const yesterdayStart = startOfDay(subDays(new Date(), 1));
+      const yesterdayEnd = endOfDay(subDays(new Date(), 1));
+      const todayOrders = orders?.filter((o) => {
+        const d = new Date(o.created_at);
+        return d >= todayStart && d <= todayEnd;
+      }) || [];
+      const yesterdayOrders = orders?.filter((o) => {
+        const d = new Date(o.created_at);
+        return d >= yesterdayStart && d <= yesterdayEnd;
+      }) || [];
+      const todayRevenue = todayOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+      const yesterdayRevenue = yesterdayOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+      // Month comparison (this month vs last month)
+      const thisMonthStart = startOfMonth(new Date());
+      const thisMonthEnd = endOfMonth(new Date());
+      const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
+      const lastMonthEnd = endOfMonth(subMonths(new Date(), 1));
+      const thisMonthOrders = orders?.filter((o) => {
+        const d = new Date(o.created_at);
+        return d >= thisMonthStart && d <= thisMonthEnd;
+      }) || [];
+      const lastMonthOrders = orders?.filter((o) => {
+        const d = new Date(o.created_at);
+        return d >= lastMonthStart && d <= lastMonthEnd;
+      }) || [];
+      const thisMonthRevenue = thisMonthOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+      const lastMonthRevenue = lastMonthOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
       // Build engagement heatmap: 7 days x 24 hours
       const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const heatmap = daysOfWeek.map((label, dayIndex) => ({
@@ -180,11 +246,8 @@ export const useAnalytics = (days: number = 30) => {
         averageOrderValue: orders?.length 
           ? (orders.reduce((sum, o) => sum + Number(o.total_amount), 0) / orders.length)
           : 0,
-        salesByDay: Object.entries(salesByDay || {}).map(([date, amount]) => ({
-          date,
-          label: date,
-          amount,
-        })),
+        salesByDay,
+        salesByMonth,
         peakHours: Object.entries(ordersByHour || {})
           .map(([hour, count]) => ({
             hour: parseInt(hour),
@@ -216,6 +279,26 @@ export const useAnalytics = (days: number = 30) => {
             ? ((thisWeekOrders.length - lastWeekOrders.length) / lastWeekOrders.length) * 100
             : 0,
         },
+        dayComparison: {
+          today: { revenue: todayRevenue, orders: todayOrders.length },
+          yesterday: { revenue: yesterdayRevenue, orders: yesterdayOrders.length },
+          revenueGrowth: yesterdayRevenue > 0 
+            ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 
+            : (todayRevenue > 0 ? 100 : 0),
+          orderGrowth: yesterdayOrders.length > 0
+            ? ((todayOrders.length - yesterdayOrders.length) / yesterdayOrders.length) * 100
+            : (todayOrders.length > 0 ? 100 : 0),
+        },
+        monthComparison: {
+          thisMonth: { revenue: thisMonthRevenue, orders: thisMonthOrders.length },
+          lastMonth: { revenue: lastMonthRevenue, orders: lastMonthOrders.length },
+          revenueGrowth: lastMonthRevenue > 0 
+            ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+            : (thisMonthRevenue > 0 ? 100 : 0),
+          orderGrowth: lastMonthOrders.length > 0
+            ? ((thisMonthOrders.length - lastMonthOrders.length) / lastMonthOrders.length) * 100
+            : (thisMonthOrders.length > 0 ? 100 : 0),
+        },
         heatmap,
         conversionFunnel,
         performanceScore,
@@ -232,6 +315,7 @@ function getEmptyAnalytics() {
     totalOrders: 0,
     averageOrderValue: 0,
     salesByDay: [],
+    salesByMonth: [],
     peakHours: [],
     topProducts: [],
     categoryPerformance: [],
@@ -239,6 +323,18 @@ function getEmptyAnalytics() {
     weeklyComparison: {
       thisWeek: { revenue: 0, orders: 0 },
       lastWeek: { revenue: 0, orders: 0 },
+      revenueGrowth: 0,
+      orderGrowth: 0,
+    },
+    dayComparison: {
+      today: { revenue: 0, orders: 0 },
+      yesterday: { revenue: 0, orders: 0 },
+      revenueGrowth: 0,
+      orderGrowth: 0,
+    },
+    monthComparison: {
+      thisMonth: { revenue: 0, orders: 0 },
+      lastMonth: { revenue: 0, orders: 0 },
       revenueGrowth: 0,
       orderGrowth: 0,
     },

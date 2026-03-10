@@ -25,11 +25,12 @@ import type { CheckoutFormData } from "@/schemas/checkoutSchema";
 import { ActiveOrdersWidget } from "@/components/storefront/ActiveOrdersWidget";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
-import { formatOfferText, formatOfferShort, findOfferByCode, type StructuredOffer } from "@/features/storefront/utils/offerUtils";
+import { formatOfferText, formatOfferShort, findOfferByCodeWithEligibility, type StructuredOffer } from "@/features/storefront/utils/offerUtils";
 import { getNextReopeningText } from "@/features/storefront/utils/hoursUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 function MenuItemRow({
   product,
@@ -38,6 +39,7 @@ function MenuItemRow({
   removeFromCart,
   toast,
   isDisabled = false,
+  onImageClick,
 }: {
   product: any;
   getItemQuantity: (id: string) => number;
@@ -45,14 +47,21 @@ function MenuItemRow({
   removeFromCart: (id: string) => void;
   toast: { error: (m: string) => void };
   isDisabled?: boolean;
+  onImageClick?: (product: any) => void;
 }) {
   const quantity = getItemQuantity(product.id);
-  const isOutOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
+  const isRequirementBased = product.availability_mode === "requirement";
+  const isOutOfStock = isRequirementBased
+    ? !product.is_available
+    : (product.stock_quantity !== null && product.stock_quantity <= 0);
   const isLowStock =
+    !isRequirementBased &&
     product.stock_quantity !== null &&
     product.stock_quantity > 0 &&
     product.stock_quantity <= (product.low_stock_threshold || 0);
-  const maxQuantity = product.stock_quantity !== null ? product.stock_quantity : 999;
+  const maxQuantity = isRequirementBased || product.stock_quantity == null
+    ? 999
+    : product.stock_quantity;
   const canAddMore = quantity < maxQuantity;
 
   return (
@@ -82,7 +91,7 @@ function MenuItemRow({
         {product.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
         )}
-        {!isOutOfStock && product.stock_quantity !== null && (
+        {!isOutOfStock && !isRequirementBased && product.stock_quantity != null && (
           <p className="text-[11px] text-muted-foreground">
             {product.stock_quantity} left
             {isLowStock ? " · Low stock" : ""}
@@ -91,7 +100,13 @@ function MenuItemRow({
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
         {product.image_url && (
-          <div className="relative h-20 w-24 overflow-hidden rounded-xl bg-muted dark:bg-slate-800">
+          <div
+            className={`relative h-20 w-24 overflow-hidden rounded-xl bg-muted dark:bg-slate-800 ${onImageClick ? "cursor-pointer" : ""}`}
+            onClick={() => onImageClick?.(product)}
+            role={onImageClick ? "button" : undefined}
+            tabIndex={onImageClick ? 0 : undefined}
+            onKeyDown={onImageClick ? (e) => e.key === "Enter" && onImageClick(product) : undefined}
+          >
             <LazyImage
               src={product.image_url}
               alt={product.name}
@@ -274,6 +289,7 @@ export default function PublicStorefront() {
   const isPickup = searchParams.get("pickup") === "1";
   const {
     cart,
+    cartItems,
     addToCart,
     removeFromCart,
     clearCart,
@@ -285,6 +301,7 @@ export default function PublicStorefront() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [imagePreviewProduct, setImagePreviewProduct] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [onlyVeg, setOnlyVeg] = useState(false);
@@ -383,7 +400,6 @@ export default function PublicStorefront() {
         .from('products')
         .select('*')
         .eq('vendor_id', vendorId)
-        .eq('is_available', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -391,6 +407,11 @@ export default function PublicStorefront() {
     },
     enabled: !!vendorId,
   });
+
+  const isProductOutOfStock = (p: { availability_mode?: string; is_available?: boolean; stock_quantity?: number | null }) => {
+    const req = p.availability_mode === "requirement";
+    return req ? !p.is_available : (p.stock_quantity != null && p.stock_quantity <= 0);
+  };
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -423,10 +444,10 @@ export default function PublicStorefront() {
     });
   }, [products, searchQuery, onlyVeg]);
 
-  // Sidebar: all categories from productsForSidebar (static - never filters by selected category)
+  // Sidebar: all categories from productsForSidebar; out-of-stock products go into "Out of Stock"
   const sidebarGroups = useMemo(() => {
     const groups = productsForSidebar.reduce<Record<string, any[]>>((acc, product) => {
-      const key = product.category || "Recommended";
+      const key = isProductOutOfStock(product) ? "Out of Stock" : (product.category || "Recommended");
       if (!acc[key]) acc[key] = [];
       acc[key].push(product);
       return acc;
@@ -473,15 +494,35 @@ export default function PublicStorefront() {
 
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const subtotal = getTotalAmount();
-  const appliedOffer = useMemo(
-    () => (appliedPromoCode ? findOfferByCode(offers, appliedPromoCode, subtotal) : null),
-    [offers, appliedPromoCode, subtotal]
-  );
+  const appliedOffer = useMemo(() => {
+    if (!appliedPromoCode) return null;
+    const cartForEligibility = cartItems.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      price: i.price,
+      name: i.name,
+    }));
+    return findOfferByCodeWithEligibility(
+      offers,
+      appliedPromoCode,
+      cartForEligibility,
+      products ?? []
+    );
+  }, [offers, appliedPromoCode, cartItems, products]);
   const discountAmount = appliedOffer?.discount ?? 0;
   const discountLabel = appliedOffer ? formatOfferText(appliedOffer.offer) : undefined;
+  const nonEligibleItemNames = appliedOffer?.nonEligibleItemNames ?? [];
 
   const productGroups = useMemo(() => {
-    return { groups: sidebarGroups, categoryKeys: Object.keys(sidebarGroups) };
+    const keys = Object.keys(sidebarGroups);
+    const sorted = [...keys].sort((a, b) => {
+      if (a === "Out of Stock") return 1;
+      if (b === "Out of Stock") return -1;
+      if (a === "All time favorites") return -1;
+      if (b === "All time favorites") return 1;
+      return a.localeCompare(b);
+    });
+    return { groups: sidebarGroups, categoryKeys: sorted };
   }, [sidebarGroups]);
 
   const handleCheckout = async (
@@ -778,10 +819,12 @@ export default function PublicStorefront() {
             onCheckout={handleCheckout}
             discountAmount={discountAmount}
             discountLabel={discountLabel}
+            nonEligibleItemNames={nonEligibleItemNames}
             appliedPromoCode={appliedPromoCode}
             onApplyPromo={setAppliedPromoCode}
             onRemovePromo={() => setAppliedPromoCode("")}
             offers={offers}
+            products={products ?? []}
           />
         ) : (
           <>
@@ -873,7 +916,9 @@ export default function PublicStorefront() {
                       >
                         All ({productsForSidebar.length})
                       </button>
-                      {Object.entries(sidebarGroups).map(([category, items]) => (
+                      {productGroups.categoryKeys.map((category) => {
+                        const items = sidebarGroups[category] ?? [];
+                        return (
                         <button
                           key={category}
                           type="button"
@@ -886,7 +931,8 @@ export default function PublicStorefront() {
                         >
                           {category} ({items.length})
                         </button>
-                      ))}
+                      );
+                      })}
                     </nav>
                   </aside>
                   <div className="flex-1 min-w-0">
@@ -918,6 +964,7 @@ export default function PublicStorefront() {
                             removeFromCart={removeFromCart}
                             toast={toast}
                             isDisabled={isStoreClosed}
+                            onImageClick={setImagePreviewProduct}
                           />
                         ))}
                       </div>
@@ -932,7 +979,9 @@ export default function PublicStorefront() {
                     defaultValue={productGroups.categoryKeys}
                     className="space-y-2"
                   >
-                    {Object.entries(productGroups.groups).map(([category, items]) => (
+                    {productGroups.categoryKeys.map((category) => {
+                      const items = productGroups.groups[category] ?? [];
+                      return (
                       <AccordionItem key={category} value={category} className="border-b border-gray-100 dark:border-slate-700 last:border-0">
                         <AccordionTrigger className="text-base font-semibold px-0 text-foreground hover:no-underline hover:text-foreground">
                           <div className="flex items-center justify-between w-full">
@@ -950,11 +999,13 @@ export default function PublicStorefront() {
                               removeFromCart={removeFromCart}
                               toast={toast}
                               isDisabled={isStoreClosed}
+                              onImageClick={setImagePreviewProduct}
                             />
                           ))}
                         </AccordionContent>
                       </AccordionItem>
-                    ))}
+                    );
+                    })}
                   </Accordion>
                 </div>
               </>
@@ -971,6 +1022,30 @@ export default function PublicStorefront() {
           discountLabel={discountLabel}
         />
       )}
+
+      {/* Image preview modal */}
+      <Dialog open={!!imagePreviewProduct} onOpenChange={(open) => !open && setImagePreviewProduct(null)}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-0 bg-transparent shadow-none">
+          {imagePreviewProduct && (
+            <div className="rounded-xl overflow-hidden bg-background shadow-xl">
+              <div className="aspect-square max-h-[85vh] w-full bg-muted">
+                <img
+                  src={imagePreviewProduct.image_url}
+                  alt={imagePreviewProduct.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="p-4 bg-background">
+                <h3 className="text-lg font-semibold">{imagePreviewProduct.name}</h3>
+                <p className="text-primary font-bold mt-0.5">₹{Number(imagePreviewProduct.price).toFixed(2)}</p>
+                {imagePreviewProduct.description && (
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{imagePreviewProduct.description}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

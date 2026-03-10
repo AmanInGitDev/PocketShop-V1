@@ -1,6 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Edit, Trash2, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/constants/routes";
@@ -22,19 +23,24 @@ interface ProductCardProps {
     name: string;
     description?: string;
     price: number;
-    stock_quantity: number;
+    stock_quantity?: number;
     low_stock_threshold?: number;
     category?: string;
+    tags?: string;
     image_url?: string;
     is_available: boolean;
     diet_type?: string;
+    availability_mode?: "quantity" | "requirement";
   };
   onDelete: (id: string) => void;
+  onToggleAvailability?: (id: string, is_available: boolean) => void;
   variant?: "grid" | "list";
 }
 
-export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCardProps) => {
-  const isLowStock = product.stock_quantity <= (product.low_stock_threshold || 10);
+export const ProductCard = ({ product, onDelete, onToggleAvailability, variant = "grid" }: ProductCardProps) => {
+  const isRequirementBased = product.availability_mode === "requirement";
+  const isLowStock = !isRequirementBased &&
+    (product.stock_quantity ?? 0) <= (product.low_stock_threshold || 10);
 
   if (variant === "list") {
     return (
@@ -51,10 +57,14 @@ export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCard
               No Image
             </div>
           )}
-          {product.category && (
-            <Badge className="absolute left-1.5 top-1.5 rounded-full bg-orange-500 text-white text-[10px] px-1.5 py-0">
-              {product.category}
-            </Badge>
+          {product.tags && (
+            <div className="absolute left-1.5 top-1.5 flex flex-wrap gap-1">
+              {product.tags.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+                <Badge key={tag} className="rounded-full bg-orange-500 text-white text-[10px] px-1.5 py-0">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex-1 flex flex-col min-w-0 p-4">
@@ -70,13 +80,24 @@ export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCard
             <span className="font-bold text-primary shrink-0">₹{product.price.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <span className="text-xs text-muted-foreground">
-              {product.stock_quantity} in stock
-            </span>
+            {isRequirementBased ? (
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={product.is_available}
+                  onCheckedChange={(v) => onToggleAvailability?.(product.id, v)}
+                  disabled={!onToggleAvailability}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {product.is_available ? "In stock" : "Out of stock"}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {(product.stock_quantity ?? 0)} in stock
+              </span>
+            )}
             {product.category && (
-              <Badge variant="outline" className="text-xs">
-                {product.category}
-              </Badge>
+              <Badge variant="outline" className="text-xs">{product.category}</Badge>
             )}
             {isLowStock && (
               <Badge variant="destructive" className="text-xs">
@@ -137,10 +158,14 @@ export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCard
             No Image
           </div>
         )}
-        {product.category && (
-          <Badge className="absolute left-2 top-2 rounded-full bg-orange-500 text-white text-[10px] px-2 py-0.5">
-            {product.category}
-          </Badge>
+        {product.tags && (
+          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+            {product.tags.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+              <Badge key={tag} className="rounded-full bg-orange-500 text-white text-[10px] px-2 py-0.5">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         )}
         {product.diet_type && (
           <div className="absolute left-2 bottom-2 flex items-center gap-1 text-[10px] font-medium">
@@ -175,9 +200,11 @@ export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCard
       <CardContent className="flex-1 p-3 flex flex-col">
         <h3 className="font-semibold text-base mb-0.5 line-clamp-1">{product.name}</h3>
         {product.category && (
-          <Badge variant="outline" className="mb-1.5 text-xs">
-            {product.category}
-          </Badge>
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            <Badge variant="outline" className="text-xs">
+              {product.category}
+            </Badge>
+          </div>
         )}
         {product.description && (
           <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">
@@ -188,20 +215,35 @@ export const ProductCard = ({ product, onDelete, variant = "grid" }: ProductCard
           <div className="flex justify-between items-center">
             <span className="text-base font-bold text-primary">₹{product.price.toFixed(2)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-green-500 dark:bg-green-400 transition-all"
-                style={{
-                  width: `${Math.min(100, (product.stock_quantity / Math.max(50, (product.low_stock_threshold || 10) * 5)) * 100)}%`,
-                }}
+          {isRequirementBased ? (
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={product.is_available}
+                onCheckedChange={(v) => onToggleAvailability?.(product.id, v)}
+                disabled={!onToggleAvailability}
               />
+              <span className="text-xs font-medium text-muted-foreground">
+                {product.is_available ? "In stock" : "Out of stock"}
+              </span>
             </div>
-            <span className="text-xs font-medium text-green-600 dark:text-green-400 shrink-0">
-              {product.stock_quantity}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">in stock</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-green-500 dark:bg-green-400 transition-all"
+                    style={{
+                      width: `${Math.min(100, ((product.stock_quantity ?? 0) / Math.max(50, (product.low_stock_threshold || 10) * 5)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-green-600 dark:text-green-400 shrink-0">
+                  {product.stock_quantity ?? 0}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">in stock</p>
+            </>
+          )}
         </div>
       </CardContent>
       <CardFooter className="p-3 pt-0 gap-2">

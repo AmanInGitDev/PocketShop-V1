@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   Info,
 } from 'lucide-react';
+import { AcceptanceCountdown } from '@/components/orders/AcceptanceCountdown';
 import type { Order, OrderStatus } from '@/types';
 
 export interface OrderCardProps {
@@ -30,6 +31,8 @@ export interface OrderCardProps {
   onQuickAction?: (orderId: string, newStatus: OrderStatus) => void;
   onViewMore: (orderId: string) => void;
   isDragging?: boolean;
+  /** Highlight when order exceeds 2× preparation time (depends on #7) */
+  isOverdue?: boolean;
 }
 
 /**
@@ -127,6 +130,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onQuickAction,
   onViewMore,
   isDragging = false,
+  isOverdue = false,
 }) => {
   const {
     attributes,
@@ -189,7 +193,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       data-testid={`order-card-${order.id}`}
       className={`bg-white dark:bg-gray-800/80 rounded-md shadow-md border-l-4 ${borderColor} p-4 mb-3 hover:shadow-lg transition-shadow ${
         isDragging ? 'ring-2 ring-blue-500' : ''
-      }`}
+      } ${isOverdue ? 'ring-2 ring-destructive/70 border-destructive/50' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`Order ${orderNumber} from ${customerName}, ${formattedTotal}`}
@@ -238,13 +242,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       </div>
 
       {/* Quick Actions & Time */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Clock className="w-3 h-3" aria-hidden="true" />
-          <time dateTime={order.createdAt} title={new Date(order.createdAt).toLocaleString()}>
-            {time} • {timeAgo}
-          </time>
-        </div>
+      <div className="flex flex-col gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+        {order.status === 'NEW' && (
+          <AcceptanceCountdown createdAt={order.createdAt} status={order.status} variant="compact" />
+        )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Clock className="w-3 h-3" aria-hidden="true" />
+            <time dateTime={order.createdAt} title={new Date(order.createdAt).toLocaleString()}>
+              {time} • {timeAgo}
+            </time>
+          </div>
         <div className="flex items-center gap-2">
           {nextStatus && actionLabel && onQuickAction && (
             <button
@@ -258,10 +266,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <button
             onClick={handleViewMore}
             className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-            aria-label={`View details for order ${orderNumber}`}
+          aria-label={`View details for order ${orderNumber}`}
           >
             View
           </button>
+        </div>
         </div>
       </div>
     </article>

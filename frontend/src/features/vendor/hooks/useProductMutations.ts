@@ -14,10 +14,23 @@ export const useProductMutations = () => {
       name: string;
       description?: string;
       price: number;
+      availability_mode?: "quantity" | "requirement";
       stock_quantity: number;
+      daily_quantity?: number | null;
       low_stock_threshold?: number;
       category?: string;
+      tags?: string;
+      sku?: string;
+      unit_of_measure?: string;
+      allergens?: string;
+      ingredients?: string;
+      internal_notes?: string;
+      min_order_quantity?: number;
+      promo_price?: number | null;
+      promo_valid_until?: string | null;
+      coupon_applicable?: boolean;
       image_url?: string;
+      preparation_time_minutes?: number;
       is_available: boolean;
     }) => {
       let vendorId = vendor?.id;
@@ -84,10 +97,23 @@ export const useProductMutations = () => {
       name?: string;
       description?: string;
       price?: number;
+      availability_mode?: "quantity" | "requirement";
       stock_quantity?: number;
+      daily_quantity?: number | null;
       low_stock_threshold?: number;
       category?: string;
+      tags?: string;
+      sku?: string;
+      unit_of_measure?: string;
+      allergens?: string;
+      ingredients?: string;
+      internal_notes?: string;
+      min_order_quantity?: number;
+      promo_price?: number | null;
+      promo_valid_until?: string | null;
+      coupon_applicable?: boolean;
       image_url?: string;
+      preparation_time_minutes?: number;
       is_available?: boolean;
     }) => {
       const { data, error } = await supabase
@@ -169,11 +195,52 @@ export const useProductMutations = () => {
     },
   });
 
+  const resetDailyStock = useMutation({
+    mutationFn: async (opts?: { silent?: boolean }) => {
+      if (!vendor?.id) throw new Error('No vendor ID');
+      const { data: quantityProducts, error: fetchError } = await supabase
+        .from('products')
+        .select('id, daily_quantity')
+        .eq('vendor_id', vendor.id)
+        .eq('availability_mode', 'quantity')
+        .not('daily_quantity', 'is', null);
+
+      if (fetchError) throw fetchError;
+      if (!quantityProducts?.length) return { count: 0 };
+
+      for (const p of quantityProducts) {
+        const { error } = await supabase
+          .from('products')
+          .update({ stock_quantity: p.daily_quantity ?? 0 })
+          .eq('id', p.id);
+        if (error) throw error;
+      }
+      return { count: quantityProducts.length };
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      if (!variables?.silent) {
+        toast({
+          title: 'Daily stock reset',
+          description: data.count > 0 ? `Reset ${data.count} product(s) to daily quantity` : 'No quantity-based products to reset',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reset daily stock',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     createProduct,
     updateProduct,
     deleteProduct,
     uploadImage,
+    resetDailyStock,
   };
 };
 

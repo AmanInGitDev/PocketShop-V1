@@ -67,3 +67,47 @@ export function findOfferByCode(
 
   return { offer, discount };
 }
+
+/** Cart item with productId for eligibility lookup */
+export type CartItemForEligibility = { productId: string; quantity: number; price: number; name: string };
+
+/** Product with coupon_applicable flag */
+export type ProductForEligibility = { id: string; coupon_applicable?: boolean };
+
+/**
+ * Apply offer with coupon eligibility.
+ * Discount applies only to items where product.coupon_applicable !== false.
+ * Returns discount amount and list of item names not eligible for coupon.
+ */
+export function findOfferByCodeWithEligibility(
+  offers: StructuredOffer[],
+  code: string,
+  cartItems: CartItemForEligibility[],
+  products: ProductForEligibility[]
+): { offer: StructuredOffer; discount: number; nonEligibleItemNames: string[] } | null {
+  const normalized = code.trim().toUpperCase();
+  if (!normalized) return null;
+
+  const offer = offers.find((o) => (o.promo_code || '').trim().toUpperCase() === normalized);
+  if (!offer) return null;
+
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  let eligibleSubtotal = 0;
+  const nonEligibleItemNames: string[] = [];
+
+  for (const item of cartItems) {
+    const product = productMap.get(item.productId);
+    const isApplicable = product?.coupon_applicable !== false;
+    const itemTotal = item.price * item.quantity;
+    if (isApplicable) {
+      eligibleSubtotal += itemTotal;
+    } else {
+      nonEligibleItemNames.push(item.name);
+    }
+  }
+
+  const discount = computeDiscount(offer, eligibleSubtotal);
+  if (discount <= 0) return null;
+
+  return { offer, discount, nonEligibleItemNames };
+}

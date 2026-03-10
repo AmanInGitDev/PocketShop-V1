@@ -12,6 +12,16 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DndContext,
   DragOverlay,
   closestCorners,
@@ -32,6 +42,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Clock, AlertCircle, Inbox, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
 import { useOrderContext } from '@/context/OrderProvider';
+import { useProducts } from '@/features/vendor/hooks/useProducts';
 import type { Order, OrderStatus } from '@/types';
 import { OrderCard } from './OrderCard';
 
@@ -134,6 +145,7 @@ interface KanbanColumnProps {
   orders: Order[];
   onViewMore: (orderId: string) => void;
   onQuickAction: (orderId: string, newStatus: OrderStatus) => void;
+  isOverdueMap?: Record<string, boolean>;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -141,6 +153,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   orders,
   onViewMore,
   onQuickAction,
+  isOverdueMap = {},
 }) => {
   const orderIds = useMemo(() => orders.map((o) => o.id), [orders]);
   
@@ -200,6 +213,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 actionLabel={column.actionLabel}
                 onQuickAction={onQuickAction}
                 onViewMore={onViewMore}
+                isOverdue={isOverdueMap[order.id]}
               />
             ))
           ) : (
@@ -241,7 +255,42 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
  */
 export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId: _vendorId }) => {
   const { orders, loading, error, changeOrderStatus, openOrder } = useOrderContext();
+  const [codConfirmOpen, setCodConfirmOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const { data: products } = useProducts();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+
+  const productPrepMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (products || []).forEach((p: any) => {
+      const mins = p.preparation_time_minutes ?? 15;
+      map[p.id] = mins;
+    });
+    return map;
+  }, [products]);
+
+  const ordersWithPrep = useMemo(() => {
+    return orders.map((o) => {
+      const prepMins = (o.items || []).reduce((sum: number, it: any) => {
+        const mins = productPrepMap[it.itemId] ?? 15;
+        return sum + mins * (it.qty ?? 1);
+      }, 0);
+      const prepMinutes = Math.max(prepMins, 15);
+      return { ...o, preparationMinutes: prepMinutes };
+    });
+  }, [orders, productPrepMap]);
+
+  const isOverdueMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    const now = Date.now();
+    ordersWithPrep.forEach((o) => {
+      if (o.status !== 'IN_PROGRESS' || !o.preparationMinutes) return;
+      const startedAt = new Date(o.updatedAt).getTime();
+      const twicePrepMs = 2 * o.preparationMinutes * 60 * 1000;
+      map[o.id] = now - startedAt > twicePrepMs;
+    });
+    return map;
+  }, [ordersWithPrep]);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -255,7 +304,7 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
     })
   );
 
-  // Group orders by status
+  // Group orders by status (use ordersWithPrep for preparationMinutes)
   const ordersByColumn = useMemo(() => {
     const grouped: Record<ColumnId, Order[]> = {
       NEW: [],
@@ -263,7 +312,7 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
       READY: [],
     };
 
-    orders.forEach((order) => {
+    ordersWithPrep.forEach((order) => {
       if (order.status === 'NEW') {
         grouped.NEW.push(order);
       } else if (order.status === 'IN_PROGRESS') {
@@ -281,13 +330,13 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
     });
 
     return grouped;
-  }, [orders]);
+  }, [ordersWithPrep]);
 
   // Get active order being dragged
   const activeOrder = useMemo(() => {
     if (!activeId) return null;
-    return orders.find((o) => o.id === activeId) || null;
-  }, [activeId, orders]);
+    return ordersWithPrep.find((o) => o.id === activeId) || null;
+  }, [activeId, ordersWithPrep]);
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
@@ -308,7 +357,7 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
     const targetColumn = COLUMNS.find((col) => col.id === targetColumnId);
     if (!targetColumn) {
       // Might be dropping on another order in a column - find which column
-      const targetOrder = orders.find((o) => o.id === targetColumnId);
+      const targetOrder = ordersWithPrep.find((o) => o.id === targetColumnId);
       if (targetOrder) {
         const targetCol = COLUMNS.find((col) => col.status === targetOrder.status);
         if (targetCol && targetCol.id) {
@@ -319,37 +368,64 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
     }
 
     // Find current order
-    const order = orders.find((o) => o.id === orderId);
+    const order = ordersWithPrep.find((o) => o.id === orderId);
     if (!order) return;
 
     // If dropping in the same column, do nothing
     if (order.status === targetColumn.status) return;
 
+    // Drag rules: cannot drag backward (IN_PROGRESS→NEW, READY→IN_PROGRESS)
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      NEW: ['IN_PROGRESS'],
+      IN_PROGRESS: ['READY'],
+      READY: ['COMPLETED'],
+      COMPLETED: [],
+      CANCELLED: [],
+    };
+    const allowed = validTransitions[order.status];
+    if (!allowed?.includes(targetColumn.status)) return;
+
     await handleStatusChange(orderId, targetColumn.status);
   };
 
-  // Helper to handle status change with error handling
+  // For Cash orders, require confirmation before Mark as Ready or Complete
+  const maybeRequireCodConfirm = (orderId: string, newStatus: OrderStatus): boolean => {
+    const order = ordersWithPrep.find((o) => o.id === orderId);
+    const isCOD = (order?.paymentMethod ?? '').toString().toUpperCase() === 'CASH';
+    const needsConfirm = isCOD && (newStatus === 'READY' || newStatus === 'COMPLETED');
+    if (needsConfirm) {
+      setPendingStatusChange({ orderId, newStatus });
+      setCodConfirmOpen(true);
+      return true;
+    }
+    return false;
+  };
+
+  const executeStatusChange = async (
+    orderId: string,
+    newStatus: OrderStatus,
+    markPaymentReceived = false
+  ) => {
+    try {
+      await changeOrderStatus(orderId, newStatus, markPaymentReceived ? { markPaymentReceived: true } : undefined);
+    } catch (err) {
+      console.error('Failed to change order status:', err);
+    } finally {
+      setCodConfirmOpen(false);
+      setPendingStatusChange(null);
+    }
+  };
+
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      await changeOrderStatus(orderId, newStatus);
-    } catch (err) {
-      // Error handling is done in OrderProvider (rollback happens automatically)
-      console.error('Failed to change order status:', err);
-    }
+    if (maybeRequireCodConfirm(orderId, newStatus)) return;
+    await executeStatusChange(orderId, newStatus);
   };
 
-  // Handle drag over (for visual feedback)
-  const handleDragOver = (_event: DragOverEvent) => {
-    // Visual feedback is handled by CSS classes
-  };
+  const handleDragOver = (_event: DragOverEvent) => {};
 
-  // Handle quick action button click
   const handleQuickAction = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      await changeOrderStatus(orderId, newStatus);
-    } catch (err) {
-      console.error('Failed to change order status:', err);
-    }
+    if (maybeRequireCodConfirm(orderId, newStatus)) return;
+    await executeStatusChange(orderId, newStatus);
   };
 
   // Handle view more
@@ -399,9 +475,30 @@ export const VendorOrdersKanban: React.FC<VendorOrdersKanbanProps> = ({ vendorId
               orders={ordersByColumn[column.id]}
               onViewMore={handleViewMore}
               onQuickAction={handleQuickAction}
+              isOverdueMap={isOverdueMap}
             />
           ))}
         </div>
+
+        {/* COD confirmation – when marking Cash order as Ready or Complete from Kanban */}
+        <AlertDialog open={codConfirmOpen} onOpenChange={setCodConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cash on Delivery</AlertDialogTitle>
+              <AlertDialogDescription>
+                Has cash been collected from the customer? Please verify manually before proceeding. Do not mark as Ready or Complete for unpaid orders.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingStatusChange(null)}>
+                No, not yet
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => pendingStatusChange && executeStatusChange(pendingStatusChange.orderId, pendingStatusChange.newStatus, true)}>
+                Yes, received
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Drag Overlay - Shows the card being dragged */}
         <DragOverlay dropAnimation={null}>

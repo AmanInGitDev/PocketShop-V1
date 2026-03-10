@@ -145,13 +145,19 @@ export class SupabaseOrderRepository implements IOrderRepository {
     vendorId: string,
     orderId: string,
     newStatus: string,
-    _clientTxnId?: string
+    _clientTxnId?: string,
+    options?: { markPaymentReceived?: boolean }
   ): Promise<Order> {
     const dbStatus = UI_TO_DB_STATUS[newStatus as OrderStatus] ?? newStatus;
 
+    const orderUpdate: Record<string, unknown> = { status: dbStatus };
+    if (options?.markPaymentReceived) {
+      orderUpdate.payment_status = 'paid';
+    }
+
     const { data, error } = await supabase
       .from('orders')
-      .update({ status: dbStatus })
+      .update(orderUpdate)
       .eq('id', orderId)
       .eq('vendor_id', vendorId)
       .select()
@@ -159,6 +165,13 @@ export class SupabaseOrderRepository implements IOrderRepository {
 
     if (error) throw error;
     if (!data) throw new Error('Order not found');
+
+    if (options?.markPaymentReceived) {
+      await supabase
+        .from('payments')
+        .update({ payment_status: 'completed' })
+        .eq('order_id', orderId);
+    }
 
     return mapDbOrderToOrder(data);
   }
