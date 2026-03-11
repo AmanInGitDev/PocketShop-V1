@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import StatusToggle from '@/components/common/StatusToggle';
 import { useVendorStatusContext } from '@/features/vendor/context/VendorStatusContext';
+import { useProfileCompletion } from '@/features/vendor/hooks/useProfileCompletion';
+import { useProfileCompletionModal } from '@/features/vendor/context/ProfileCompletionModalContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { GoOnlineOutsideHoursModal } from '@/components/vendor/GoOnlineOutsideHoursModal';
@@ -46,8 +48,20 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
     isInExtendedSession,
     minutesRemainingInExtendedSession,
   } = useVendorStatusContext();
+  const { canGoOnline, percentage } = useProfileCompletion();
+  const { openProfileCompletionModal } = useProfileCompletionModal();
+
+  /** When profile incomplete and trying to go online, show modal instead. Allow going offline anytime. */
+  const statusToggleDisabled = isToggling;
+  const statusToggleTitle = !isOnline && !canGoOnline
+    ? `Profile incomplete (${percentage}%) — click to see what to fill`
+    : isOnline ? 'Click to go offline' : 'Click to go online';
 
   const handleStatusToggle = async () => {
+    if (!isOnline && !canGoOnline) {
+      openProfileCompletionModal();
+      return;
+    }
     const result = await toggleStatus();
     if (result.success === false && 'needExtensionModal' in result && result.needExtensionModal) {
       setShowGoOnlineModal(true);
@@ -108,11 +122,12 @@ const TopNavbar: React.FC<TopNavbarProps> = ({
                   onExtend={() => extendSession(30)}
                 />
               )}
-              <span className="relative z-[60] inline-flex items-center h-9">
+              <span className="relative z-[60] inline-flex items-center h-9" title={statusToggleTitle}>
                 <StatusToggle
                   online={isOnline}
                   onToggle={handleStatusToggle}
-                  disabled={isToggling}
+                  disabled={statusToggleDisabled}
+                  title={statusToggleTitle}
                 />
               </span>
               <ThemeToggle />

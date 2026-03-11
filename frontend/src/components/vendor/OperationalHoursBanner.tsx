@@ -13,6 +13,7 @@ interface OperationalHoursBannerProps {
   timeFormatted: string;
   onAction: () => void;
   isActioning?: boolean;
+  disabled?: boolean;
 }
 
 export function OperationalHoursBanner({
@@ -21,6 +22,7 @@ export function OperationalHoursBanner({
   timeFormatted,
   onAction,
   isActioning = false,
+  disabled = false,
 }: OperationalHoursBannerProps) {
   const isClosing = variant === 'closing';
   const label = isClosing
@@ -42,7 +44,7 @@ export function OperationalHoursBanner({
         variant="outline"
         className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
         onClick={onAction}
-        disabled={isActioning}
+        disabled={isActioning || disabled}
       >
         {isActioning ? buttonLoadingText : buttonText}
       </Button>

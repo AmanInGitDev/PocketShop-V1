@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { ROUTES } from '@/constants/routes';
 import { preloadNextOnboardingStage } from '@/utils/preloaders';
 import { InputField } from '@/features/common/components/shared/InputField';
-import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
 const OnboardingStage2: React.FC = () => {
@@ -112,29 +111,23 @@ const OnboardingStage2: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center px-4 py-12">
       {/* Header */}
-      <div className="border-b border-[#E8E8E8] px-6 py-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#1C1C1C]">Operational Details</h1>
-          <p className="text-[#7E8C97] mt-1">Step 2 of 3</p>
-        </div>
+      <div className="text-center mb-8 max-w-[600px] w-full">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#111827] tracking-tight">
+          Operational Details
+        </h1>
+        <p className="text-[#6B7280] mt-1.5 text-sm">Step 2 of 3</p>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-8">
-        <div className="max-w-2xl mx-auto">
-          <StageIndicator
-            currentStage={2}
-            totalStages={3}
-            stageLabels={['Restaurant', 'Operations', 'Plans']}
-          />
-
-          <form onSubmit={handleNext} className="space-y-6">
-            {/* Location Information */}
-            <div className="bg-[#F5F5F5] rounded-lg p-6 space-y-4">
-              <h3 className="text-lg font-bold text-[#1C1C1C]">Location Information</h3>
-
+      {/* Card */}
+      <div className="w-full max-w-[600px]">
+        <form onSubmit={handleNext}>
+          <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xl p-10 space-y-6">
+            {/* Location */}
+            <div>
+              <h2 className="text-base font-semibold text-[#111827]">Location information</h2>
+              <p className="mt-1 text-sm text-[#6B7280]">Where is your restaurant located?</p>
               <InputField
                 label="Address"
                 placeholder="Street address"
@@ -142,7 +135,6 @@ const OnboardingStage2: React.FC = () => {
                 onChange={(e) => updateData({ address: e.target.value })}
                 error={errors.address}
               />
-
               <div className="grid grid-cols-2 gap-4">
                 <InputField
                   label="City"
@@ -178,18 +170,19 @@ const OnboardingStage2: React.FC = () => {
             </div>
 
             {/* Working Days */}
-            <div className="bg-[#F5F5F5] rounded-lg p-6 space-y-4">
-              <h3 className="text-lg font-bold text-[#1C1C1C]">Working Days</h3>
-              <div className="grid grid-cols-2 gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[#111827]">Working days</h2>
+              <p className="mt-1 text-sm text-[#6B7280]">Select days you operate</p>
+              <div className="grid grid-cols-2 gap-3 mt-3">
                 {weekDays.map((day) => (
-                  <label key={day} className="flex items-center space-x-3 cursor-pointer">
+                  <label key={day} className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={data.workingDays.includes(day)}
                       onChange={() => toggleWorkingDay(day)}
-                      className="w-4 h-4 rounded accent-[#EF4F5F] cursor-pointer"
+                      className="w-4 h-4 rounded border-[#E5E7EB] text-[#5522E2] focus:ring-[#5522E2]/25 cursor-pointer"
                     />
-                    <span className="text-[#1C1C1C] font-medium">{day}</span>
+                    <span className="text-sm text-[#374151] font-medium">{day}</span>
                   </label>
                 ))}
               </div>
@@ -200,33 +193,34 @@ const OnboardingStage2: React.FC = () => {
 
             {/* Error message */}
             {errors.submit && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {errors.submit}
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-4 pt-4">
-              <Button
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <button
                 type="button"
-                variant="outline"
-                size="lg"
                 onClick={() => previousStage()}
-                className="flex-1"
+                className="flex-1 px-8 py-3.5 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] font-medium text-sm hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 transition-all"
               >
                 Back
-              </Button>
-              <Button
+              </button>
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="flex-1"
+                disabled={isLoading}
+                className="flex-1 px-8 py-3.5 rounded-lg bg-[#5522E2] hover:bg-[#4A1EC9] text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 focus:ring-offset-2 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                Continue to Plans
-              </Button>
+                {isLoading ? 'Saving…' : 'Save & Continue'}
+              </button>
             </div>
-          </form>
+          </div>
+        </form>
+
+        {/* Progress dots */}
+        <div className="flex justify-center mt-10">
+          <StageIndicator currentStage={2} totalStages={3} />
         </div>
       </div>
     </div>

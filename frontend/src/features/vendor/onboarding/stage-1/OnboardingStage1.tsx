@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { ROUTES } from '@/constants/routes';
 import { preloadNextOnboardingStage } from '@/utils/preloaders';
 import { InputField } from '@/features/common/components/shared/InputField';
-import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
 const OnboardingStage1: React.FC = () => {
@@ -215,29 +214,29 @@ const OnboardingStage1: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center px-4 py-12">
       {/* Header */}
-      <div className="border-b border-[#E8E8E8] px-6 py-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#1C1C1C]">Complete Your Profile</h1>
-          <p className="text-[#7E8C97] mt-1">Step 1 of 3</p>
-        </div>
+      <div className="text-center mb-8 max-w-[600px] w-full">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#111827] tracking-tight">
+          Complete your restaurant profile
+        </h1>
+        <p className="text-[#6B7280] mt-1.5 text-sm">
+          Step 1 of 3 · Tell us about your restaurant so customers recognize you.
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-8">
-        <div className="max-w-2xl mx-auto">
-          <StageIndicator
-            currentStage={1}
-            totalStages={3}
-            stageLabels={['Restaurant', 'Operations', 'Plans']}
-          />
+      {/* Card */}
+      <div className="w-full max-w-[600px]">
+        <form onSubmit={handleNext}>
+          <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xl p-10 space-y-6">
+            <div>
+              <h2 className="text-base font-semibold text-[#111827]">Restaurant information</h2>
+              <p className="mt-1 text-sm text-[#6B7280]">
+                These details appear on orders and in your storefront.
+              </p>
+            </div>
 
-          <form onSubmit={handleNext} className="space-y-6">
-            <div className="bg-[#F5F5F5] rounded-lg p-6 space-y-6">
-              <h3 className="text-lg font-bold text-[#1C1C1C]">Restaurant Information</h3>
-
-              <InputField
+            <InputField
                 label="Restaurant Name"
                 placeholder="e.g., Golden Dragon Restaurant"
                 value={data.restaurantName}
@@ -253,12 +252,16 @@ const OnboardingStage1: React.FC = () => {
                 error={errors.ownerName}
               />
 
-              <div>
-                <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                   Restaurant Type
                 </label>
                 <select
-                  className="w-full px-4 py-3 border-2 border-[#E8E8E8] rounded-lg font-medium focus:border-[#EF4F5F] focus:ring-2 focus:ring-[#EF4F5F] focus:outline-none transition-all"
+                  className={`w-full px-5 py-3.5 rounded-lg border text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 focus:border-[#5522E2] transition-all ${
+                    errors.restaurantType
+                      ? 'border-[#E83935] focus:ring-[#E83935]/25 focus:border-[#E83935]'
+                      : 'border-[#E5E7EB]'
+                  }`}
                   value={data.restaurantType}
                   onChange={(e) => updateData({ restaurantType: e.target.value })}
                 >
@@ -273,12 +276,16 @@ const OnboardingStage1: React.FC = () => {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
                   Business Category
                 </label>
                 <select
-                  className="w-full px-4 py-3 border-2 border-[#E8E8E8] rounded-lg font-medium focus:border-[#EF4F5F] focus:ring-2 focus:ring-[#EF4F5F] focus:outline-none transition-all"
+                  className={`w-full px-5 py-3.5 rounded-lg border text-[#111827] bg-white focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 focus:border-[#5522E2] transition-all ${
+                    errors.businessCategory
+                      ? 'border-[#E83935] focus:ring-[#E83935]/25 focus:border-[#E83935]'
+                      : 'border-[#E5E7EB]'
+                  }`}
                   value={data.businessCategory}
                   onChange={(e) => updateData({ businessCategory: e.target.value })}
                 >
@@ -295,28 +302,30 @@ const OnboardingStage1: React.FC = () => {
                   <p className="text-sm text-[#E83935] mt-1">{errors.businessCategory}</p>
                 )}
               </div>
-            </div>
 
             {/* Error message */}
             {errors.submit && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {errors.submit}
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 pt-4">
-              <Button
+            {/* Primary Button */}
+            <div className="flex justify-end pt-2">
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="flex-1"
+                disabled={isLoading}
+                className="w-full md:w-auto px-8 py-3.5 rounded-lg bg-[#5522E2] hover:bg-[#4A1EC9] text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 focus:ring-offset-2 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                Continue to Operations
-              </Button>
+                {isLoading ? 'Saving…' : 'Continue to Operations'}
+              </button>
             </div>
-          </form>
+          </div>
+        </form>
+
+        {/* Progress dots */}
+        <div className="flex justify-center mt-10">
+          <StageIndicator currentStage={1} totalStages={3} />
         </div>
       </div>
     </div>

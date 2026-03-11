@@ -33,6 +33,7 @@ import TopNavbar from '@/components/common/TopNavbar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { OperationalHoursBanner } from '@/components/vendor/OperationalHoursBanner';
 import { VendorStatusProvider, useVendorStatusContext } from '@/features/vendor/context/VendorStatusContext';
+import { useProfileCompletion } from '@/features/vendor/hooks/useProfileCompletion';
 import logoImage from '@/assets/images/logo.png';
 
 interface DashboardLayoutProps {
@@ -81,6 +82,7 @@ const DashboardLayoutInner: React.FC<DashboardLayoutProps> = ({ children }) => {
     extendPastClosing,
     goOnlineWithExtension,
   } = useVendorStatusContext();
+  const { canGoOnline, percentage, missingRequired } = useProfileCompletion();
 
   const handleNavigation = (path: string, openInNewTab?: boolean) => {
     if (openInNewTab) {
@@ -158,8 +160,29 @@ const DashboardLayoutInner: React.FC<DashboardLayoutProps> = ({ children }) => {
               timeFormatted={operationalInfo.openingTimeFormatted}
               onAction={() => goOnlineWithExtension(30)}
               isActioning={isToggling}
+              disabled={!canGoOnline}
             />
           )}
+
+        {/* Profile incomplete banner - always visible when profile &lt; 100% */}
+        {!canGoOnline && (
+          <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/50 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Profile incomplete ({percentage}%)
+              </span>
+              <span className="text-xs text-amber-700 dark:text-amber-300 truncate">
+                {missingRequired.length > 0 && `Missing: ${missingRequired.slice(0, 3).join(', ')}${missingRequired.length > 3 ? '…' : ''}`}
+              </span>
+            </div>
+            <button
+              onClick={() => navigate(ROUTES.VENDOR_DASHBOARD_SETTINGS)}
+              className="text-sm font-medium text-amber-800 dark:text-amber-200 hover:underline underline-offset-2 shrink-0"
+            >
+              Finish setup →
+            </button>
+          </div>
+        )}
 
         <div className="flex">
         {/* Sidebar - Logo + Navigation, collapsible on desktop */}

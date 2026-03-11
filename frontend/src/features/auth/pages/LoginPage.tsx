@@ -123,6 +123,7 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
     }
   };
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
+  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
 
   // Register form state
   const [registerFormData, setRegisterFormData] = useState<RegisterFormData>({
@@ -153,17 +154,28 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
   const [emailSent, setEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string>('');
 
+  const resetRegisterFlow = () => {
+    setRegisterStep(1);
+    setErrors({});
+  };
+
   const validateRegisterForm = (): boolean => {
     const newErrors: FormErrors = {};
-
-    if (!registerFormData.businessName.trim()) {
-      newErrors.businessName = 'Business name is required';
-    }
 
     if (!registerFormData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(registerFormData.email)) {
       newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!registerFormData.mobileNumber.trim()) {
+      newErrors.mobileNumber = 'Mobile number is required';
+    } else if (!/^\+?[1-9]\d{0,15}$/.test(registerFormData.mobileNumber.replace(/\s/g, ''))) {
+      newErrors.mobileNumber = 'Please enter a valid mobile number';
+    }
+
+    if (!registerFormData.businessName.trim()) {
+      newErrors.businessName = 'Business name is required';
     }
 
     if (!registerFormData.password) {
@@ -176,6 +188,19 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (registerFormData.password !== registerFormData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateRegisterStep1 = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!registerFormData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(registerFormData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!registerFormData.mobileNumber.trim()) {
@@ -271,7 +296,11 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!validateRegisterForm()) {
+      return;
+    }
+
     if (!validateRegisterForm()) {
       return;
     }
@@ -466,503 +495,566 @@ const VendorAuth: React.FC<VendorAuthProps> = ({ mode: initialMode }) => {
     return <RegisterConfirm email={registeredEmail} />;
   }
 
+  const handleRegisterNextStep = () => {
+    if (validateRegisterStep1()) {
+      setRegisterStep(2);
+    }
+  };
+
+  const handleRegisterBackStep = () => {
+    setRegisterStep(1);
+  };
+
   return (
     <div className="vendor-auth">
-      <div className="auth-container">
-        {/* Header */}
-        <header className="auth-header">
-          <div className="header-logo">
-            <img src={logoImage} alt="PocketShop Logo" className="logo-icon" />
-            <span className="logo-text">PocketShop</span>
-          </div>
-          
-          <div className="auth-header-actions">
-            <Link to={ROUTES.HOME} className="back-link">
-              <Home className="back-icon" />
-              Home
-            </Link>
-            <Link to={ROUTES.BUSINESS} className="back-link">
-              <ArrowLeft className="back-icon" />
-              Back
-            </Link>
-          </div>
-        </header>
+      <div className="auth-split">
+        <div className="auth-left">
+          <div className="auth-container">
+            {/* Header */}
+            <header className="auth-header">
+              <Link to={ROUTES.HOME} className="header-logo" aria-label="Go to home">
+                <img src={logoImage} alt="PocketShop Logo" className="logo-icon" />
+                <span className="logo-text">PocketShop</span>
+              </Link>
 
-        {/* Main Content */}
-        <div className="auth-content">
-          <div className="auth-card">
-            {/* Mode Toggle */}
-            <div className="mode-toggle">
-              <button
-                type="button"
-                className={`mode-btn ${mode === 'login' ? 'active' : ''}`}
-                onClick={() => {
-                  setMode('login');
-                  navigate(ROUTES.LOGIN);
-                  setErrors({});
-                  setOtpSent(false);
-                }}
-              >
-                <LogIn className="mode-icon" />
-                Login
-              </button>
-              <button
-                type="button"
-                className={`mode-btn ${mode === 'register' ? 'active' : ''}`}
-                onClick={() => {
-                  setMode('register');
-                  navigate(ROUTES.REGISTER);
-                  setErrors({});
-                  setOtpSent(false);
-                }}
-              >
-                <UserPlus className="mode-icon" />
-                Register
-              </button>
-            </div>
-
-            <div className="card-header">
-              <h1 className="card-title">
-                {mode === 'register' ? 'Join PocketShop' : 'Welcome Back'}
-              </h1>
-              <p className="card-subtitle">
-                {mode === 'register' 
-                  ? 'Create your account and start building your smart storefront'
-                  : 'Sign in to your PocketShop account'}
-              </p>
-            </div>
-
-            {(location.state as any)?.message === 'confirm_email' && (
-              <div className="confirm-email-banner">
-                Please confirm your email before continuing. Check your inbox and click the confirmation link.
+              <div className="auth-header-actions">
+                <Link to={ROUTES.HOME} className="back-link">
+                  <Home className="back-icon" />
+                  Home
+                </Link>
+                <Link to={ROUTES.BUSINESS} className="back-link">
+                  <ArrowLeft className="back-icon" />
+                  Back
+                </Link>
               </div>
-            )}
+            </header>
 
-            {/* Google OAuth Button - Only show on Login, not Register */}
-            {mode === 'login' && (
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={googleLoading || isSubmitting || otpLoading}
-              className="btn btn-google"
-            >
-              {googleLoading ? (
-                <>
-                  <Loader2 className="btn-icon spinning" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <svg className="btn-icon" width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Sign in with Google
-                </>
-              )}
-            </button>
-            )}
-
-            {/* Divider - Only show on Login (when Google button is visible) */}
-            {mode === 'login' && (
-            <div className="divider">
-              <span>or</span>
-            </div>
-            )}
-
-            {/* Register Form */}
-            {mode === 'register' && (
-              <form onSubmit={handleRegisterSubmit} className="auth-form">
-                <div className="form-group">
-                  <label htmlFor="businessName" className="form-label">
-                    Business Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="businessName"
-                    name="businessName"
-                    value={registerFormData.businessName}
-                    onChange={handleRegisterInputChange}
-                    className={`form-input ${errors.businessName ? 'error' : ''}`}
-                    placeholder="Enter your business name"
-                  />
-                  {errors.businessName && (
-                    <div className="form-error">
-                      <AlertCircle className="error-icon" />
-                      {errors.businessName}
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email" className="form-label">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={registerFormData.email}
-                    onChange={handleRegisterInputChange}
-                    className={`form-input ${errors.email ? 'error' : ''}`}
-                    placeholder="Enter your email address"
-                    autoComplete="email"
-                  />
-                  {errors.email && (
-                    <div className="form-error">
-                      <AlertCircle className="error-icon" />
-                      {errors.email}
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="mobileNumber" className="form-label">
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="tel"
-                    id="mobileNumber"
-                    name="mobileNumber"
-                    value={registerFormData.mobileNumber}
-                    onChange={handleRegisterInputChange}
-                    className={`form-input ${errors.mobileNumber ? 'error' : ''}`}
-                    placeholder="Enter your mobile number"
-                    autoComplete="tel"
-                  />
-                  {errors.mobileNumber && (
-                    <div className="form-error">
-                      <AlertCircle className="error-icon" />
-                      {errors.mobileNumber}
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="password" className="form-label">
-                      Password *
-                    </label>
-                    <div className="password-input">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        id="password"
-                        name="password"
-                        value={registerFormData.password}
-                        onChange={handleRegisterInputChange}
-                        className={`form-input ${errors.password ? 'error' : ''}`}
-                        placeholder="Create a password"
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <div className="form-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.password}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="confirmPassword" className="form-label">
-                      Confirm Password *
-                    </label>
-                    <div className="password-input">
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={registerFormData.confirmPassword}
-                        onChange={handleRegisterInputChange}
-                        className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-                        placeholder="Confirm your password"
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
-                    {errors.confirmPassword && (
-                      <div className="form-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.confirmPassword}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Submit Error/Success */}
-                {errors.submit && (
-                  <div className={errors.success ? "submit-success" : "submit-error"}>
-                    {!errors.success && <AlertCircle className="error-icon" />}
-                    {errors.submit}
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-lg submit-btn"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="btn-icon spinning" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="btn-icon" />
-                      Register
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* Login Forms */}
-            {mode === 'login' && (
-              <>
-                {/* Login Method Toggle */}
-                <div className="login-method-toggle">
+            {/* Form */}
+            <div className="auth-content auth-content--left">
+              <div className="auth-card auth-card--light">
+                {/* Mode Toggle */}
+                <div className="mode-toggle">
                   <button
                     type="button"
-                    className={`method-btn ${loginMethod === 'email' ? 'active' : ''}`}
+                    className={`mode-btn ${mode === 'login' ? 'active' : ''}`}
                     onClick={() => {
-                      setLoginMethod('email');
+                      setMode('login');
+                      navigate(ROUTES.LOGIN);
+                      resetRegisterFlow();
                       setOtpSent(false);
-                      setErrors({});
                     }}
                   >
-                    <Mail className="method-icon" />
-                    Email
+                    <LogIn className="mode-icon" />
+                    Login
                   </button>
                   <button
                     type="button"
-                    className={`method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
+                    className={`mode-btn ${mode === 'register' ? 'active' : ''}`}
                     onClick={() => {
-                      setLoginMethod('phone');
+                      setMode('register');
+                      navigate(ROUTES.REGISTER);
+                      resetRegisterFlow();
                       setOtpSent(false);
-                      setErrors({});
                     }}
                   >
-                    <Phone className="method-icon" />
-                    Phone OTP
+                    <UserPlus className="mode-icon" />
+                    Register
                   </button>
                 </div>
 
-                {/* Email/Password Form */}
-                {loginMethod === 'email' && (
-                  <form onSubmit={handleEmailLoginSubmit} className="auth-form">
-                    <div className="form-group">
-                      <label htmlFor="email" className="form-label">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={emailFormData.email}
-                        onChange={handleEmailInputChange}
-                        className={`form-input ${errors.email ? 'error' : ''}`}
-                        placeholder="Enter your email address"
-                        autoComplete="email"
-                      />
-                      {errors.email && (
-                        <div className="form-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.email}
-                        </div>
-                      )}
-                    </div>
+                <div className="card-header">
+                  <h1 className="card-title">
+                    {mode === 'register' ? 'Sign up' : 'Welcome back'}
+                  </h1>
+                  <p className="card-subtitle">
+                    {mode === 'register'
+                      ? 'Create your vendor account to start selling on PocketShop.'
+                      : 'Sign in to your vendor account.'}
+                  </p>
+                </div>
 
-                    <div className="form-group">
-                      <label htmlFor="password" className="form-label">
-                        Password
-                      </label>
-                      <div className="password-input">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          id="password"
-                          name="password"
-                          value={emailFormData.password}
-                          onChange={handleEmailInputChange}
-                          className={`form-input ${errors.password ? 'error' : ''}`}
-                          placeholder="Enter your password"
-                          autoComplete="current-password"
-                        />
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff /> : <Eye />}
-                        </button>
-                      </div>
-                      {errors.password && (
-                        <div className="form-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.password}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Submit Error */}
-                    {errors.submit && (
-                      <div className="submit-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.submit}
-                      </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      className="btn btn-primary btn-lg submit-btn"
-                      disabled={isSubmitting || safeLoading || googleLoading || otpLoading}
-                    >
-                      {isSubmitting || safeLoading ? (
-                        <>
-                          <Loader2 className="btn-icon spinning" />
-                          Signing In...
-                        </>
-                      ) : (
-                        <>
-                          <LogIn className="btn-icon" />
-                          Sign In
-                        </>
-                      )}
-                    </button>
-                  </form>
+                {(location.state as any)?.message === 'confirm_email' && (
+                  <div className="confirm-email-banner">
+                    Please confirm your email before continuing. Check your inbox and click the confirmation link.
+                  </div>
                 )}
 
-                {/* Phone OTP Form */}
-                {loginMethod === 'phone' && (
-                  <form onSubmit={otpSent ? handleVerifyOTP : undefined} className="auth-form">
-                    <div className="form-group">
-                      <label htmlFor="phone" className="form-label">
-                        Mobile Number
-                      </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={phoneFormData.phone}
-                        onChange={handlePhoneInputChange}
-                        className={`form-input ${errors.phone ? 'error' : ''}`}
-                        placeholder="Enter your mobile number"
-                        autoComplete="tel"
-                        disabled={otpSent}
-                      />
-                      {errors.phone && (
-                        <div className="form-error">
-                          <AlertCircle className="error-icon" />
-                          {errors.phone}
-                        </div>
-                      )}
-                    </div>
+                {/* Google OAuth Button - Only show on Login, not Register */}
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={googleLoading || isSubmitting || otpLoading}
+                    className="btn btn-google"
+                  >
+                    {googleLoading ? (
+                      <>
+                        <Loader2 className="btn-icon spinning" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="btn-icon" width="20" height="20" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Sign in with Google
+                      </>
+                    )}
+                  </button>
+                )}
 
-                    {otpSent && (
-                      <div className="form-group">
-                        <label htmlFor="otp" className="form-label">
-                          Enter OTP
-                        </label>
-                        <input
-                          type="text"
-                          id="otp"
-                          name="otp"
-                          value={phoneFormData.otp}
-                          onChange={handlePhoneInputChange}
-                          className={`form-input ${errors.otp ? 'error' : ''}`}
-                          placeholder="Enter 6-digit OTP"
-                          maxLength={6}
-                          pattern="[0-9]{6}"
-                        />
-                        {errors.otp && (
-                          <div className="form-error">
-                            <AlertCircle className="error-icon" />
-                            {errors.otp}
+                {/* Divider - Only show on Login */}
+                {mode === 'login' && (
+                  <div className="divider">
+                    <span>or</span>
+                  </div>
+                )}
+
+                {/* Register Form */}
+                {mode === 'register' && (
+                  <form onSubmit={handleRegisterSubmit} className="auth-form">
+                    <div className="step-indicator">
+                      <div className={`step-dot ${registerStep === 1 ? 'active' : ''}`}>1</div>
+                      <div className="step-line" />
+                      <div className={`step-dot ${registerStep === 2 ? 'active' : ''}`}>2</div>
+                    </div>
+                    <p className="step-caption">
+                      {registerStep === 1
+                        ? 'Step 1 of 2 — Email & mobile'
+                        : 'Step 2 of 2 — Business & password'}
+                    </p>
+
+                    {registerStep === 1 && (
+                      <>
+                        <div className="form-group">
+                          <label htmlFor="email" className="form-label">
+                            Email Address *
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={registerFormData.email}
+                            onChange={handleRegisterInputChange}
+                            className={`form-input ${errors.email ? 'error' : ''}`}
+                            placeholder="Enter your email"
+                            autoComplete="email"
+                          />
+                          {errors.email && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.email}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="mobileNumber" className="form-label">
+                            Mobile Number *
+                          </label>
+                          <input
+                            type="tel"
+                            id="mobileNumber"
+                            name="mobileNumber"
+                            value={registerFormData.mobileNumber}
+                            onChange={handleRegisterInputChange}
+                            className={`form-input ${errors.mobileNumber ? 'error' : ''}`}
+                            placeholder="Enter your mobile number"
+                            autoComplete="tel"
+                          />
+                          {errors.mobileNumber && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.mobileNumber}
+                            </div>
+                          )}
+                        </div>
+
+                        {errors.submit && (
+                          <div className={errors.success ? 'submit-success' : 'submit-error'}>
+                            {!errors.success && <AlertCircle className="error-icon" />}
+                            {errors.submit}
                           </div>
                         )}
+
                         <button
                           type="button"
-                          onClick={() => {
-                            setOtpSent(false);
-                            setPhoneFormData(prev => ({ ...prev, otp: '' }));
-                          }}
-                          className="link text-sm mt-2"
+                          className="btn btn-primary btn-lg submit-btn"
+                          onClick={handleRegisterNextStep}
+                          disabled={isSubmitting}
                         >
-                          Change number
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="btn-icon spinning" />
+                              Checking...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="btn-icon" />
+                              Continue
+                            </>
+                          )}
                         </button>
-                      </div>
+                      </>
                     )}
 
-                    {/* Submit Error */}
-                    {errors.submit && (
-                      <div className="submit-error">
-                        <AlertCircle className="error-icon" />
-                        {errors.submit}
-                      </div>
-                    )}
+                    {registerStep === 2 && (
+                      <>
+                        <div className="form-group">
+                          <label htmlFor="businessName" className="form-label">
+                            Business Name *
+                          </label>
+                          <input
+                            type="text"
+                            id="businessName"
+                            name="businessName"
+                            value={registerFormData.businessName}
+                            onChange={handleRegisterInputChange}
+                            className={`form-input ${errors.businessName ? 'error' : ''}`}
+                            placeholder="Enter your business name"
+                          />
+                          {errors.businessName && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.businessName}
+                            </div>
+                          )}
+                        </div>
 
-                    {/* Submit/Verify Button */}
-                    {!otpSent ? (
-                      <button
-                        type="button"
-                        onClick={handleSendOTP}
-                        className="btn btn-primary btn-lg submit-btn"
-                        disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
-                      >
-                        {otpLoading ? (
-                          <>
-                            <Loader2 className="btn-icon spinning" />
-                            Sending OTP...
-                          </>
-                        ) : (
-                          <>
-                            <Smartphone className="btn-icon" />
-                            Send OTP
-                          </>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="password" className="form-label">
+                              Password *
+                            </label>
+                            <div className="password-input">
+                              <input
+                                type={showPassword ? 'text' : 'password'}
+                                id="password"
+                                name="password"
+                                value={registerFormData.password}
+                                onChange={handleRegisterInputChange}
+                                className={`form-input ${errors.password ? 'error' : ''}`}
+                                placeholder="Create a password"
+                                autoComplete="new-password"
+                              />
+                              <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowPassword(!showPassword)}
+                              >
+                                {showPassword ? <EyeOff /> : <Eye />}
+                              </button>
+                            </div>
+                            <p className="helper-text">At least 6 characters.</p>
+                            {errors.password && (
+                              <div className="form-error">
+                                <AlertCircle className="error-icon" />
+                                {errors.password}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="confirmPassword" className="form-label">
+                              Confirm Password *
+                            </label>
+                            <div className="password-input">
+                              <input
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                value={registerFormData.confirmPassword}
+                                onChange={handleRegisterInputChange}
+                                className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
+                                placeholder="Confirm your password"
+                                autoComplete="new-password"
+                              />
+                              <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              >
+                                {showConfirmPassword ? <EyeOff /> : <Eye />}
+                              </button>
+                            </div>
+                            {errors.confirmPassword && (
+                              <div className="form-error">
+                                <AlertCircle className="error-icon" />
+                                {errors.confirmPassword}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {errors.submit && (
+                          <div className={errors.success ? 'submit-success' : 'submit-error'}>
+                            {!errors.success && <AlertCircle className="error-icon" />}
+                            {errors.submit}
+                          </div>
                         )}
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-lg submit-btn"
-                        disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
-                      >
-                        {otpLoading ? (
-                          <>
-                            <Loader2 className="btn-icon spinning" />
-                            Verifying...
-                          </>
-                        ) : (
-                          <>
-                            <LogIn className="btn-icon" />
-                            Verify OTP
-                          </>
-                        )}
-                      </button>
+
+                        <div className="step-actions">
+                          <button
+                            type="button"
+                            className="btn step-back-link"
+                            onClick={handleRegisterBackStep}
+                            disabled={isSubmitting}
+                          >
+                            Back
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn btn-primary btn-lg submit-btn"
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="btn-icon spinning" />
+                                Creating...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="btn-icon" />
+                                Register
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
                     )}
                   </form>
                 )}
-              </>
-            )}
+
+                {/* Login Forms */}
+                {mode === 'login' && (
+                  <>
+                    <div className="login-method-toggle">
+                      <button
+                        type="button"
+                        className={`method-btn ${loginMethod === 'email' ? 'active' : ''}`}
+                        onClick={() => {
+                          setLoginMethod('email');
+                          setOtpSent(false);
+                          setErrors({});
+                        }}
+                      >
+                        <Mail className="method-icon" />
+                        Email
+                      </button>
+                      <button
+                        type="button"
+                        className={`method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
+                        onClick={() => {
+                          setLoginMethod('phone');
+                          setOtpSent(false);
+                          setErrors({});
+                        }}
+                      >
+                        <Phone className="method-icon" />
+                        Phone OTP
+                      </button>
+                    </div>
+
+                    {loginMethod === 'email' && (
+                      <form onSubmit={handleEmailLoginSubmit} className="auth-form">
+                        <div className="form-group">
+                          <label htmlFor="email" className="form-label">
+                            Email Address
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={emailFormData.email}
+                            onChange={handleEmailInputChange}
+                            className={`form-input ${errors.email ? 'error' : ''}`}
+                            placeholder="Enter your email"
+                            autoComplete="email"
+                          />
+                          {errors.email && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.email}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="password" className="form-label">
+                            Password
+                          </label>
+                          <div className="password-input">
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              id="password"
+                              name="password"
+                              value={emailFormData.password}
+                              onChange={handleEmailInputChange}
+                              className={`form-input ${errors.password ? 'error' : ''}`}
+                              placeholder="Enter your password"
+                              autoComplete="current-password"
+                            />
+                            <button
+                              type="button"
+                              className="password-toggle"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? <EyeOff /> : <Eye />}
+                            </button>
+                          </div>
+                          {errors.password && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.password}
+                            </div>
+                          )}
+                        </div>
+
+                        {errors.submit && (
+                          <div className="submit-error">
+                            <AlertCircle className="error-icon" />
+                            {errors.submit}
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-lg submit-btn"
+                          disabled={isSubmitting || safeLoading || googleLoading || otpLoading}
+                        >
+                          {isSubmitting || safeLoading ? (
+                            <>
+                              <Loader2 className="btn-icon spinning" />
+                              Signing In...
+                            </>
+                          ) : (
+                            <>
+                              <LogIn className="btn-icon" />
+                              Sign In
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+
+                    {loginMethod === 'phone' && (
+                      <form onSubmit={otpSent ? handleVerifyOTP : undefined} className="auth-form">
+                        <div className="form-group">
+                          <label htmlFor="phone" className="form-label">
+                            Mobile Number
+                          </label>
+                          <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            value={phoneFormData.phone}
+                            onChange={handlePhoneInputChange}
+                            className={`form-input ${errors.phone ? 'error' : ''}`}
+                            placeholder="Enter your mobile number"
+                            autoComplete="tel"
+                            disabled={otpSent}
+                          />
+                          {errors.phone && (
+                            <div className="form-error">
+                              <AlertCircle className="error-icon" />
+                              {errors.phone}
+                            </div>
+                          )}
+                        </div>
+
+                        {otpSent && (
+                          <div className="form-group">
+                            <label htmlFor="otp" className="form-label">
+                              Enter OTP
+                            </label>
+                            <input
+                              type="text"
+                              id="otp"
+                              name="otp"
+                              value={phoneFormData.otp}
+                              onChange={handlePhoneInputChange}
+                              className={`form-input ${errors.otp ? 'error' : ''}`}
+                              placeholder="Enter 6-digit OTP"
+                              maxLength={6}
+                              pattern="[0-9]{6}"
+                            />
+                            {errors.otp && (
+                              <div className="form-error">
+                                <AlertCircle className="error-icon" />
+                                {errors.otp}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOtpSent(false);
+                                setPhoneFormData(prev => ({ ...prev, otp: '' }));
+                              }}
+                              className="link text-sm mt-2"
+                            >
+                              Change number
+                            </button>
+                          </div>
+                        )}
+
+                        {errors.submit && (
+                          <div className="submit-error">
+                            <AlertCircle className="error-icon" />
+                            {errors.submit}
+                          </div>
+                        )}
+
+                        {!otpSent ? (
+                          <button
+                            type="button"
+                            onClick={handleSendOTP}
+                            className="btn btn-primary btn-lg submit-btn"
+                            disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
+                          >
+                            {otpLoading ? (
+                              <>
+                                <Loader2 className="btn-icon spinning" />
+                                Sending OTP...
+                              </>
+                            ) : (
+                              <>
+                                <Smartphone className="btn-icon" />
+                                Send OTP
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="submit"
+                            className="btn btn-primary btn-lg submit-btn"
+                            disabled={otpLoading || isSubmitting || googleLoading || safeLoading}
+                          >
+                            {otpLoading ? (
+                              <>
+                                <Loader2 className="btn-icon spinning" />
+                                Verifying...
+                              </>
+                            ) : (
+                              <>
+                                <LogIn className="btn-icon" />
+                                Verify OTP
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </form>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+
+        <div className="auth-right" aria-hidden="true" />
       </div>
     </div>
   );

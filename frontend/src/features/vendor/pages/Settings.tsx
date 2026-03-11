@@ -671,6 +671,7 @@ export default function Settings() {
 
   const textLabel = 'text-sm font-medium text-foreground';
   const textHint = 'text-sm text-slate-400 dark:text-slate-400';
+  const RequiredStar = () => <span className="text-destructive">*</span>;
   const isFoodBusiness = ['restaurant', 'food', 'cafe'].includes((businessForm.business_type || '').toLowerCase());
   const savedAccountLast4 = (baseline?.paymentForm.account_number || '').slice(-4);
   const hasSavedBank = !!baseline?.paymentForm.account_number && !!baseline?.paymentForm.ifsc;
@@ -733,7 +734,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label className={textLabel}>Business name</Label>
+                <Label className={textLabel}>Business name <RequiredStar /></Label>
                 <Input
                   value={businessForm.business_name}
                   onChange={(e) => setBusinessForm((p) => ({ ...p, business_name: e.target.value }))}
@@ -742,7 +743,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className={textLabel}>Business type</Label>
+                <Label className={textLabel}>Business type <RequiredStar /></Label>
                 <Select
                   value={businessForm.business_type}
                   onValueChange={(v) => setBusinessForm((p) => ({ ...p, business_type: v }))}
@@ -771,7 +772,7 @@ export default function Settings() {
               </div>
               <Separator />
               <div className="space-y-2">
-                <Label className={textLabel}>Address</Label>
+                <Label className={textLabel}>Address <RequiredStar /></Label>
                 <Input
                   value={businessForm.address}
                   onChange={(e) => setBusinessForm((p) => ({ ...p, address: e.target.value }))}
@@ -781,7 +782,7 @@ export default function Settings() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className={textLabel}>City</Label>
+                  <Label className={textLabel}>City <RequiredStar /></Label>
                   <Input
                     value={businessForm.city}
                     onChange={(e) => setBusinessForm((p) => ({ ...p, city: e.target.value }))}
@@ -946,7 +947,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label className={textLabel}>Owner name</Label>
+                <Label className={textLabel}>Owner name <RequiredStar /></Label>
                 <Input
                   value={profileForm.owner_name}
                   onChange={(e) => setProfileForm((p) => ({ ...p, owner_name: e.target.value }))}
@@ -955,7 +956,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className={textLabel}>Email</Label>
+                <Label className={textLabel}>Email <RequiredStar /></Label>
                 <Input
                   type="email"
                   value={profileForm.email}
@@ -965,7 +966,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className={textLabel}>Mobile number</Label>
+                <Label className={textLabel}>Mobile number <RequiredStar /></Label>
                 <Input
                   value={profileForm.mobile_number}
                   onChange={(e) => setProfileForm((p) => ({ ...p, mobile_number: e.target.value }))}
@@ -983,7 +984,7 @@ export default function Settings() {
                   Wide image spanning the top of your storefront, or a solid color.
                 </p>
                 <div className="space-y-2">
-                  <Label className={textLabel}>Header image</Label>
+                  <Label className={textLabel}>Header image (optional)</Label>
                   <Input
                     value={profileForm.banner_url}
                     onChange={(e) => setProfileForm((p) => ({ ...p, banner_url: e.target.value }))}
@@ -1019,7 +1020,7 @@ export default function Settings() {
 
               <Separator />
               <div className="space-y-2">
-                <Label className={textLabel}>Logo</Label>
+                <Label className={textLabel}>Logo (optional)</Label>
                 <p className={textHint}>
                   Small circular icon shown next to your business name (e.g. brand mark). Separate from the header image.
                 </p>
@@ -1180,12 +1181,12 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="text-foreground">Operations</CardTitle>
               <CardDescription className={textHint}>
-                Working days and hours (same hours apply to all selected days)
+                Working days and hours required to go online. Default 9:00–22:00 is typical for restaurants — adjust as needed.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label className={textLabel}>Mark open days</Label>
+                <Label className={textLabel}>Mark open days <RequiredStar /></Label>
                 <p className={textHint}>Don&apos;t forget to uncheck your off-day.</p>
                 <div className="flex flex-wrap gap-3 pt-1">
                   {WEEKDAYS.map((day) => {
@@ -1216,7 +1217,7 @@ export default function Settings() {
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className={textLabel}>Open time</Label>
+                  <Label className={textLabel}>Open time <RequiredStar /></Label>
                   <Input
                     type="time"
                     value={operationalHours.open}
@@ -1225,7 +1226,7 @@ export default function Settings() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className={textLabel}>Close time</Label>
+                  <Label className={textLabel}>Close time <RequiredStar /></Label>
                   <Input
                     type="time"
                     value={operationalHours.close}
@@ -1303,7 +1304,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="text-foreground">Payment & Payouts</CardTitle>
               <CardDescription className={textHint}>
-                Bank account for receiving payouts (stored securely)
+                Bank account for receiving payouts (stored securely). Optional for going online — required only when you want to withdraw earnings.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

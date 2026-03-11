@@ -6,6 +6,7 @@ import { preloadNextOnboardingStage, preloadDashboard } from '@/utils/preloaders
 import { Button } from '@/features/common/components/shared/Button';
 import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 import { ROUTES } from '@/constants/routes';
+import { ChevronLeft } from 'lucide-react';
 
 interface PlanOption {
   id: 'free' | 'pro';
@@ -196,24 +197,29 @@ const OnboardingStage3: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b border-[#E8E8E8] px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#1C1C1C]">Choose Your Plan</h1>
-          <p className="text-[#7E8C97] mt-1">Step 3 of 3</p>
+    <div className="min-h-screen bg-[#F9FAFB] font-sans">
+      {/* Header with Back button */}
+      <div className="border-b border-[#E5E7EB] px-6 py-4 bg-white">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => previousStage()}
+            className="flex items-center gap-1.5 text-[#6B7280] hover:text-[#111827] font-medium text-sm transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-[#111827]">Choose Your Plan</h1>
+            <p className="text-[#6B7280] mt-1 text-sm">Step 3 of 3</p>
+          </div>
+          <div className="w-14" aria-hidden />
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-6 py-8">
+      <div className="px-6 py-10">
         <div className="max-w-4xl mx-auto">
-          <StageIndicator
-            currentStage={3}
-            totalStages={3}
-            stageLabels={['Restaurant', 'Operations', 'Plans']}
-          />
-
           {/* Plans Grid */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             {PLANS.map((plan) => (
@@ -271,22 +277,14 @@ const OnboardingStage3: React.FC = () => {
 
           {/* Error message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
               {error}
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => previousStage()}
-              className="flex-1"
-            >
-              Back
-            </Button>
+          {/* Progress dots - bottom */}
+          <div className="flex justify-center mt-10">
+            <StageIndicator currentStage={3} totalStages={3} />
           </div>
         </div>
       </div>

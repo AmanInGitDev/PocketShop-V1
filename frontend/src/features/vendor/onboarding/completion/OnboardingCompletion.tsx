@@ -4,13 +4,13 @@ import { useOnboarding } from '@/features/vendor/context/OnboardingContext';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { ROUTES } from '@/constants/routes';
-import { Button } from '@/features/common/components/shared/Button';
+import { StageIndicator } from '@/features/common/components/shared/StageIndicator';
 
 const OnboardingCompletion: React.FC = () => {
   const navigate = useNavigate();
   const { data, resetOnboarding, updateData } = useOnboarding();
   const { user, setOnboardingStatus } = useAuth();
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [subscribeUpdates, setSubscribeUpdates] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [loadingData, setLoadingData] = useState(true);
@@ -70,11 +70,6 @@ const OnboardingCompletion: React.FC = () => {
 
   const handleCompleteOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!termsAccepted) {
-      setError('You must accept the terms and conditions to complete onboarding.');
-      return;
-    }
 
     setIsLoading(true);
     setError('');
@@ -171,6 +166,7 @@ const OnboardingCompletion: React.FC = () => {
         ...currentMetadata,
         business_category: finalData.businessCategory,
         selected_plan: finalData.selectedPlan,
+        weekly_updates_opt_in: subscribeUpdates,
       };
 
       // Ensure email is set
@@ -245,122 +241,81 @@ const OnboardingCompletion: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center px-4 py-12">
       {/* Header */}
-      <div className="border-b border-[#E8E8E8] px-6 py-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#1C1C1C]">Complete Registration</h1>
-          <p className="text-[#7E8C97] mt-1">Final step - Review & Accept Terms</p>
-        </div>
+      <div className="text-center mb-8 max-w-[600px] w-full">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#111827] tracking-tight">
+          Setup complete
+        </h1>
+        <p className="text-[#6B7280] mt-1.5 text-sm">Your PocketShop account is ready.</p>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Summary */}
-          <div className="bg-[#F5F5F5] rounded-lg p-6 mb-8 space-y-4">
-            <h3 className="text-lg font-bold text-[#1C1C1C]">Onboarding Summary</h3>
+      {/* Card */}
+      <div className="w-full max-w-[600px]">
+        <form onSubmit={handleCompleteOnboarding}>
+          <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xl p-10 space-y-6">
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium text-[#6B7280]">
+                  Nice work! Your vendor account is set up.
+                </p>
+                <p className="text-xs text-[#9CA3AF]">
+                  You can change these preferences anytime from Settings.
+                </p>
+              </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[#7E8C97]">Restaurant Name</span>
-                <span className="font-medium text-[#1C1C1C]">
-                  {(profileData?.business_name || data.restaurantName) || 'Not provided'}
-                </span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between bg-[#F9FAFB] rounded-xl px-4 py-3 border border-[#E5E7EB]">
+                  <div>
+                    <p className="text-sm font-medium text-[#111827]">Subscribe to weekly product updates</p>
+                    <p className="text-xs text-[#6B7280]">
+                      Short email once a week with improvements and tips.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSubscribeUpdates((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      subscribeUpdates ? 'bg-[#5522E2]' : 'bg-[#E5E7EB]'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        subscribeUpdates ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <a
+                  href="https://www.linkedin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center text-sm font-medium text-[#5522E2] hover:text-[#4A1EC9]"
+                >
+                  Follow us on LinkedIn
+                </a>
               </div>
-              <div className="border-t border-[#E8E8E8]" />
-              <div className="flex justify-between">
-                <span className="text-[#7E8C97]">Owner Name</span>
-                <span className="font-medium text-[#1C1C1C]">
-                  {(profileData?.owner_name || data.ownerName) || 'Not provided'}
-                </span>
-              </div>
-              <div className="border-t border-[#E8E8E8]" />
-              <div className="flex justify-between">
-                <span className="text-[#7E8C97]">Location</span>
-                <span className="font-medium text-[#1C1C1C]">
-                  {((profileData?.city || data.city) && (profileData?.state || data.state)) 
-                    ? `${profileData?.city || data.city}, ${profileData?.state || data.state}` 
-                    : 'Not provided'}
-                </span>
-              </div>
-              <div className="border-t border-[#E8E8E8]" />
-              <div className="flex justify-between">
-                <span className="text-[#7E8C97]">Working Days</span>
-                <span className="font-medium text-[#1C1C1C]">
-                  {((profileData?.working_days || data.workingDays)?.length > 0) 
-                    ? `${(profileData?.working_days || data.workingDays).length} days selected` 
-                    : 'Not provided'}
-                </span>
-              </div>
-              <div className="border-t border-[#E8E8E8]" />
-              <div className="flex justify-between">
-                <span className="text-[#7E8C97]">Plan</span>
-                <span className="font-medium text-[#1C1C1C]">
-                  {(profileData?.metadata?.selected_plan || data.selectedPlan) 
-                    ? ((profileData?.metadata?.selected_plan || data.selectedPlan) === 'free' ? 'Free Plan' : 'Pro Plan') 
-                    : 'Not selected'}
-                </span>
-              </div>
+
+              {error && (
+                <div className="bg-[#E8352F] bg-opacity-10 border border-[#E83935] rounded-lg p-3">
+                  <p className="text-[#E83935] text-sm font-medium">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full px-8 py-3.5 rounded-lg bg-[#5522E2] hover:bg-[#4A1EC9] text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#5522E2]/25 focus:ring-offset-2 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                {isLoading ? 'Taking you to dashboard…' : 'Go to dashboard'}
+              </button>
             </div>
-          </div>
-
-          {/* Terms & Conditions */}
-          <form onSubmit={handleCompleteOnboarding} className="space-y-6">
-            <div className="bg-white border-2 border-[#E8E8E8] rounded-lg p-6">
-              <h4 className="font-bold text-[#1C1C1C] mb-4">Terms & Conditions</h4>
-              <div className="bg-[#F5F5F5] rounded p-4 h-48 overflow-y-auto mb-4 text-sm text-[#7E8C97]">
-                <p className="mb-3">
-                  By registering with PocketShop, you agree to our Terms of Service and Privacy
-                  Policy. You confirm that all information provided is accurate and truthful.
-                </p>
-                <p className="mb-3">
-                  You agree to maintain the security of your account and are responsible for all
-                  activities under your account. PocketShop reserves the right to suspend or
-                  terminate accounts that violate our policies.
-                </p>
-                <p className="mb-3">
-                  You grant PocketShop permission to display your business information, menu items,
-                  and other content you provide through the platform. You are responsible for
-                  ensuring you have all necessary rights and permissions for any content you upload.
-                </p>
-                <p>
-                  By continuing, you acknowledge that you have read, understood, and agree to be
-                  bound by these Terms & Conditions.
-                </p>
-              </div>
-
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="w-5 h-5 rounded accent-[#EF4F5F] cursor-pointer"
-                />
-                <span className="text-[#1C1C1C] font-medium">
-                  I accept the Terms & Conditions
-                </span>
-              </label>
-            </div>
-
-            {error && (
-              <div className="bg-[#E8352F] bg-opacity-10 border border-[#E83935] rounded-lg p-3">
-                <p className="text-[#E83935] text-sm font-medium">{error}</p>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isLoading}
-              disabled={!termsAccepted || isLoading}
-              className="w-full"
-            >
-              {isLoading ? 'Completing Onboarding...' : 'Complete Onboarding & Go to Dashboard'}
-            </Button>
           </form>
-        </div>
+
+          {/* Progress dots */}
+          <div className="flex justify-center mt-10">
+            <StageIndicator currentStage={3} totalStages={3} />
+          </div>
       </div>
     </div>
   );

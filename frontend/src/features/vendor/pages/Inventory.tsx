@@ -76,7 +76,7 @@ export default function Inventory() {
   }, [vendor?.id, products, resetDailyStock, toast]);
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "unavailable" | "low-stock">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Calculate statistics (mirrors Migration_Data Inventory behavior).
   // NOTE: Visual details (icons, borders) can be tuned later for pixel-perfect parity.

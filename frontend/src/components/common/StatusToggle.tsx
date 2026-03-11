@@ -9,14 +9,17 @@ interface StatusToggleProps {
   online: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  title?: string;
 }
 
-export default function StatusToggle({ online, onToggle, disabled = false }: StatusToggleProps) {
+export default function StatusToggle({ online, onToggle, disabled = false, title }: StatusToggleProps) {
+  const defaultTitle = online ? 'Click to go offline' : 'Click to go online';
   return (
     <button
       onClick={onToggle}
       disabled={disabled}
       aria-pressed={online}
+      title={title ?? defaultTitle}
       className={`
         flex items-center justify-center gap-2 h-9 text-sm px-3 rounded-md font-medium
         transition-colors focus:outline-none focus:ring-2 focus:ring-ring
@@ -27,7 +30,6 @@ export default function StatusToggle({ online, onToggle, disabled = false }: Sta
             : 'bg-muted text-muted-foreground border border-border hover:bg-muted/80'
         }
       `}
-      title={online ? 'Click to go offline' : 'Click to go online'}
     >
       <span 
         className={`w-2 h-2 rounded-full ${
